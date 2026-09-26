@@ -1,27 +1,12 @@
 import type { App } from '../app';
 import type { Gfx } from '../engine/gfx';
 import type { Scene } from '../engine/scene';
-import { load, save } from '../engine/storage';
 import { SONGS } from '../audio/songs';
 import { SFX } from '../audio/sfx';
 import { drawMenuBackdrop, drawPanel, drawTitleBar, Menu } from '../render/ui';
+import { applyScreenOffset, loadSettings, saveSettings } from '../settings';
 import { goMainMenu } from './nav';
 import { PasswordScene } from './normal/password';
-
-export interface Settings {
-  /** Screen position nudge in pixels ("Can you read this?"). */
-  offsetY: number;
-  vibration: boolean;
-  stereo: boolean;
-}
-
-export function loadSettings(): Settings {
-  return { offsetY: 0, vibration: true, stereo: true, ...load<Partial<Settings>>('settings', {}) };
-}
-
-export function saveSettings(s: Settings): void {
-  save('settings', s);
-}
 
 const SONG_LIST = Object.keys(SONGS);
 const SFX_LIST = Object.keys(SFX);
@@ -73,6 +58,7 @@ class SoundScene implements Scene {
           change: () => {
             this.settings.stereo = !this.settings.stereo;
             saveSettings(this.settings);
+            a.setStereo(this.settings.stereo);
           },
         },
         {
@@ -158,12 +144,6 @@ class ScreenScene implements Scene {
   }
 }
 
-/** Shift the displayed picture (overscan compensation), like the PlayStation option. */
-export function applyScreenOffset(y: number): void {
-  const c = document.getElementById('screen');
-  if (c) c.style.transform = y ? `translateY(${y * 2}px)` : '';
-}
-
 class ControllerScene implements Scene {
   private settings = loadSettings();
 
@@ -174,6 +154,8 @@ class ControllerScene implements Scene {
     if (pad.pressed('left') || pad.pressed('right')) {
       this.settings.vibration = !this.settings.vibration;
       saveSettings(this.settings);
+      this.app.input.vibration = this.settings.vibration;
+      if (this.settings.vibration) this.app.input.rumble(this.app.input.menu.devices, 0.8, 250);
       this.app.audio.sfx('select');
     }
     if (pad.pressed('a') || pad.pressed('b') || pad.pressed('start') || pad.pressed('select')) {

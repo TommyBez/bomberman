@@ -9,7 +9,7 @@ import { characterSprites } from '../../gfx/battleSprites';
 import { sprites } from '../../gfx/sprites';
 import { hudIcons } from '../../render/hud';
 import { drawMenuBackdrop, drawPanel, drawTitleBar, Menu } from '../../render/ui';
-import { goMainMenu } from '../nav';
+import { goMainMenu, goTitle } from '../nav';
 import { BattleRoundScene } from './round';
 
 /** A set of games: rounds until someone (or a team) reaches the required wins. */
@@ -26,6 +26,8 @@ export class BattleMatch {
     private readonly app: App,
     readonly cfg: BattleConfig,
     private readonly onChangeStage: () => void,
+    /** Attract mode: a single all-CPU game that any button interrupts. */
+    readonly demo = false,
   ) {}
 
   start(): void {
@@ -48,6 +50,10 @@ export class BattleMatch {
 
   /** Called by the round scene when a game is over. */
   roundOver(w: BattleWorld): void {
+    if (this.demo) {
+      goTitle(this.app);
+      return;
+    }
     this.games++;
     for (let k = 0; k < 5; k++) for (let v = 0; v < 5; v++) this.report[k][v] += w.report[k][v];
     const r = w.result!;

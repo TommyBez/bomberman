@@ -8,6 +8,7 @@ import { Loop } from './engine/loop';
 import { SceneManager } from './engine/scene';
 import { Screen } from './engine/screen';
 import { BootScene } from './scenes/boot';
+import { applyScreenOffset, loadSettings } from './settings';
 
 function boot(): void {
   const canvas = document.getElementById('screen') as HTMLCanvasElement | null;
@@ -18,6 +19,10 @@ function boot(): void {
   input.attachTouch(document);
   const audio = new AudioManager(SONGS);
   input.onGesture(() => audio.unlock());
+  const settings = loadSettings();
+  audio.setStereo(settings.stereo);
+  input.vibration = settings.vibration;
+  applyScreenOffset(settings.offsetY);
 
   const app: App = {
     gfx: new Gfx(screen.ctx, SCREEN_W, SCREEN_H),

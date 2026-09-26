@@ -14,6 +14,8 @@ import { BattleRenderer } from '../../render/battleField';
 import type { View } from '../../render/field';
 import { clockText, hudIcons, hudStrip } from '../../render/hud';
 import { drawBanner } from '../../render/ui';
+import { goTitle } from '../nav';
+import { DEMO_TICKS } from './demo';
 import type { BattleMatch } from './match';
 
 type Phase = 'ready' | 'play' | 'end';
@@ -69,6 +71,11 @@ export class BattleRoundScene implements Scene {
     this.t++;
     if (this.shake > 0) this.shake--;
     const input = this.app.input;
+    if (this.match.demo && (input.menu.anyPressed() || (this.phase === 'play' && this.t > DEMO_TICKS))) {
+      input.menu.swallow();
+      goTitle(this.app);
+      return;
+    }
     if (this.phase === 'ready') {
       if (this.t > 110) {
         this.phase = 'play';
@@ -80,7 +87,7 @@ export class BattleRoundScene implements Scene {
       this.updatePause();
       return;
     }
-    if (this.phase === 'play' && input.systemPausePressed()) {
+    if (this.phase === 'play' && !this.match.demo && input.systemPausePressed()) {
       this.paused = true;
       this.pauseSel = 0;
       this.app.audio.sfx('pause');
@@ -221,6 +228,9 @@ export class BattleRoundScene implements Scene {
       let text = 'DRAW GAME';
       if (!r.draw) text = this.match.cfg.tag ? `TEAM ${r.team === 0 ? 'A' : 'B'} WINS!` : `PLAYER ${(r.winner ?? 0) + 1} WINS!`;
       drawBanner(g, text, g.height / 2 + 6, r.draw ? '#a0c0ff' : '#ffe040');
+    }
+    if (this.match.demo && Math.floor(this.app.frame / 30) % 2 === 0) {
+      g.text('DEMO PLAY', g.width / 2, g.height - 12, { align: 'center', color: '#ffe040', outline: '#000000' });
     }
     if (this.paused) {
       g.ctx.globalAlpha = 0.55;

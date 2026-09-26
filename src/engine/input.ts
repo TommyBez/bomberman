@@ -139,6 +139,8 @@ export class Input {
   touchActive = false;
   /** While typing text (passwords), letter/digit keys and Backspace are not buttons. */
   textEntry = false;
+  /** Gamepad vibration (Option → Controller). */
+  vibration = true;
 
   attach(win: Window): void {
     win.addEventListener('keydown', (e) => {
@@ -293,6 +295,19 @@ export class Input {
 
   private typing(code: string): boolean {
     return this.textEntry && (code.startsWith('Key') || code.startsWith('Digit') || code === 'Backspace');
+  }
+
+  /** Rumble every gamepad among `devices` (strength 0..1). */
+  rumble(devices: readonly DeviceId[], strength: number, ms: number): void {
+    if (!this.vibration || typeof navigator === 'undefined' || !navigator.getGamepads) return;
+    const pads = navigator.getGamepads();
+    for (const d of devices) {
+      if (!d.startsWith('pad')) continue;
+      const act = (pads[Number(d.slice(3))] as (Gamepad & { vibrationActuator?: GamepadHapticActuator | null }) | null)?.vibrationActuator;
+      if (!act || !('playEffect' in act)) continue;
+      const s = Math.max(0, Math.min(1, strength));
+      void act.playEffect('dual-rumble', { duration: ms, strongMagnitude: s, weakMagnitude: Math.min(1, s * 0.7 + 0.2) }).catch(() => {});
+    }
   }
 
   /** Names of connected gamepads (index → id). */

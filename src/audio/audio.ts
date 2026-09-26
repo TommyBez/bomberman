@@ -20,6 +20,7 @@ export class AudioManager {
   private wanted: { name: string; onEnd?: () => void } | null = null;
   private current: string | null = null;
   private lastSfx = new Map<string, number>();
+  private stereo = true;
   readonly settings: AudioSettings;
 
   constructor(private readonly songs: Record<string, SongDef>) {
@@ -51,6 +52,7 @@ export class AudioManager {
       }
       this.player = new MusicPlayer(this.synth);
       this.applyVolumes();
+      this.setStereo(this.stereo);
     }
     const ctx = this.synth.ctx;
     if (ctx.state !== 'running') {
@@ -73,6 +75,20 @@ export class AudioManager {
     this.synth.musicBus.gain.value = curve(this.settings.music) * 0.55;
     this.synth.sfxBus.gain.value = curve(this.settings.sfx) * 0.9;
     save('audio', this.settings);
+  }
+
+  /** STEREO / MONO output (mono downmixes at the destination). */
+  setStereo(on: boolean): void {
+    this.stereo = on;
+    const dest = this.synth?.ctx.destination;
+    if (!dest) return;
+    try {
+      dest.channelCountMode = 'explicit';
+      dest.channelInterpretation = 'speakers';
+      dest.channelCount = on ? Math.min(2, dest.maxChannelCount) : 1;
+    } catch {
+      // Some browsers refuse to change the destination layout; keep the default.
+    }
   }
 
   /** Start a song (restarts it if `restart`, otherwise keeps playing if already current). */

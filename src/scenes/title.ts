@@ -3,11 +3,16 @@ import { mix, type Gfx } from '../engine/gfx';
 import type { Scene } from '../engine/scene';
 import { CampaignSession } from '../game/campaign/session';
 import { sprites } from '../gfx/sprites';
+import { startDemo } from './battle/demo';
 import { goMainMenu } from './nav';
+
+const DEMO_IDLE_TICKS = 20 * 60;
 
 /** Title screen: tiled logo background, big bouncing Bomberman, PRESS START BUTTON. */
 export class TitleScene implements Scene {
   private t = 0;
+  /** Ticks without input; the demo starts after 20 seconds. */
+  private idle = 0;
 
   constructor(private readonly app: App) {}
 
@@ -22,7 +27,10 @@ export class TitleScene implements Scene {
       this.app.audio.sfx('menuOk');
       pad.swallow();
       goMainMenu(this.app);
+      return;
     }
+    this.idle = pad.anyPressed() ? 0 : this.idle + 1;
+    if (this.idle === DEMO_IDLE_TICKS) startDemo(this.app);
   }
 
   render(g: Gfx): void {

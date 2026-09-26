@@ -109,6 +109,7 @@ export class StageScene implements Scene {
         this.timer = 0;
         this.app.audio.stopMusic(0.05);
         this.app.audio.sfx('die');
+        this.app.input.rumble(pad.devices, 1, 400);
       } else if (this.world.outcome === 'clear') {
         this.phase = 'clear';
         this.timer = 0;
