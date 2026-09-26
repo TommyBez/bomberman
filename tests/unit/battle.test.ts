@@ -184,11 +184,11 @@ describe('CPU players', () => {
   it('strong CPUs rarely die by their own bombs', () => {
     let selfKills = 0;
     let deaths = 0;
-    for (let seed = 1; seed <= 6; seed++) {
+    for (let seed = 1; seed <= 16; seed++) {
       const cfg = config('beginner', 4);
       const w = new BattleWorld({ cfg, arena: ARENAS[0], seed: seed * 11 });
       const ais = w.bombers.map((b) => new CpuPlayer(w, b, 'strong'));
-      for (let t = 0; t < 60 * 60 && !w.result; t++) {
+      for (let t = 0; t < 60 * 90 && !w.result; t++) {
         w.bombers.forEach((b, i) => (b.intent = ais[i].think()));
         w.update();
       }
@@ -198,6 +198,7 @@ describe('CPU players', () => {
       }
     }
     expect(deaths).toBeGreaterThan(0);
-    expect(selfKills / Math.max(1, deaths)).toBeLessThan(0.5);
+    // Diseases (Diarrhea, Confusion…) make some self-kills unavoidable.
+    expect(selfKills / Math.max(1, deaths)).toBeLessThan(0.35);
   });
 });

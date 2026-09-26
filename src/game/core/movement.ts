@@ -28,7 +28,8 @@ export function moveBody(body: Body, dir: Dir, speed: number, canEnter: CanEnter
     const d = stepBody(body, dir, step, canEnter, assist);
     if (d <= EPS) break;
     travelled += d;
-    remaining -= step;
+    // A partial step (finishing a sideways correction) leaves the rest for moving on.
+    remaining -= d;
   }
   return travelled;
 }

@@ -1,5 +1,5 @@
 import type { Bomber, Intent } from '../core/bomber';
-import { ALL_DIRS, Cell, DX, DY, TILE, tileCenter, toTile, type Dir } from '../core/types';
+import { ALL_DIRS, Cell, DX, DY, OPPOSITE, TILE, tileCenter, toTile, type Dir } from '../core/types';
 import type { Bomb } from '../core/world';
 import type { BattleWorld } from './battleWorld';
 import { CHARACTERS, type Personality } from './characters';
@@ -15,11 +15,18 @@ interface Node {
   prev: number;
 }
 
-const DIFFICULTY: Record<ComLevel, { replan: number; slack: number; mistake: number; bombChance: number; attackRange: number }> = {
-  weak: { replan: 18, slack: 14, mistake: 0.12, bombChance: 0.35, attackRange: 3 },
-  normal: { replan: 9, slack: 8, mistake: 0.04, bombChance: 0.7, attackRange: 5 },
-  strong: { replan: 4, slack: 4, mistake: 0, bombChance: 1, attackRange: 9 },
+/**
+ * `shortExit`: with a single way out, how many steps of corridor are acceptable when an
+ * opponent within `threat` tiles could block it (more caution = shorter).
+ */
+const DIFFICULTY: Record<ComLevel, { replan: number; slack: number; mistake: number; bombChance: number; attackRange: number; shortExit: number; threat: number }> = {
+  weak: { replan: 18, slack: 14, mistake: 0.12, bombChance: 0.35, attackRange: 3, shortExit: 99, threat: 0 },
+  normal: { replan: 9, slack: 8, mistake: 0.04, bombChance: 0.7, attackRange: 5, shortExit: 2, threat: 4 },
+  strong: { replan: 4, slack: 4, mistake: 0, bombChance: 1, attackRange: 9, shortExit: 2, threat: 5 },
 };
+
+/** How long (ticks) a spot where bombing was not possible stays unattractive. */
+const TABU_TICKS = 240;
 
 /** A computer-controlled bomber. */
 export class CpuPlayer {
@@ -36,6 +43,8 @@ export class CpuPlayer {
   private danger: Float32Array;
   private dangerTick = -1;
   private cartTarget = 0;
+  /** Tiles where a bomb could not be placed safely → tick until which to avoid them. */
+  private tabu = new Map<number, number>();
 
   constructor(
     private readonly w: BattleWorld,
@@ -71,7 +80,9 @@ export class CpuPlayer {
     const inDanger = here < INF;
     this.timer--;
     const stale = this.timer <= -90;
-    if ((this.timer <= 0 && !this.path.length) || (inDanger && !this.pathSafe()) || stale) {
+    // Re-check the route every tick: new bombs can block it or put it in a blast.
+    const unsafe = this.path.length ? !this.pathSafe() : inDanger;
+    if ((this.timer <= 0 && !this.path.length) || unsafe || stale) {
       this.timer = this.diff.replan;
       this.plan();
     }
@@ -90,20 +101,24 @@ export class CpuPlayer {
   // ------------------------------------------------------------------ danger
 
   /** Ticks until each tile burns (INF = safe for the foreseeable future). */
-  private computeDanger(extra: Bomb | null = null, into: Float32Array = this.danger): void {
+  private computeDanger(extra: Bomb | null = null, into: Float32Array = this.danger, detonate: Bomb | null = null): void {
     const w = this.w;
-    if (!extra && this.dangerTick === w.tick) return;
-    if (!extra) this.dangerTick = w.tick;
+    const scratch = extra !== null || detonate !== null;
+    if (!scratch && this.dangerTick === w.tick) return;
+    if (!scratch) this.dangerTick = w.tick;
     into.fill(INF);
     for (let i = 0; i < w.flameTimer.length; i++) if (w.flameTimer[i] > 0) into[i] = 0;
     const bombs: { b: Bomb; t: number }[] = [];
     for (const b of w.bombs) {
       if (b.exploded || b.held) continue;
+      // Land mines go off whenever somebody steps on them: keep clear of our own
+      // (other players' mines are invisible).
       if (b.hidden && b.owner !== this.me) continue;
-      let t = b.fuse;
-      if (b.remote) t = b.owner === this.me ? 240 : 45;
+      let t = b.hidden ? 90 : b.fuse;
+      if (b.remote && !b.hidden) t = b.owner === this.me ? 240 : 45;
       if (b.chain >= 0) t = Math.min(t, b.chain);
       if (b.flight) t = Math.max(t, b.flight.dur - b.flight.t);
+      if (b === detonate) t = 0;
       bombs.push({ b, t });
     }
     if (extra) bombs.push({ b: extra, t: extra.fuse });
@@ -114,17 +129,17 @@ export class CpuPlayer {
       const { b, t } = bombs.shift()!;
       if (done.has(b)) continue;
       done.add(b);
-      const tx = b.flight ? b.flight.ttx : b.tx;
-      const ty = b.flight ? b.flight.tty : b.ty;
-      const blast = w.computeBlast(tx, ty, b.range, b.pierce, b, b.square);
-      for (const tile of blast.tiles) {
-        const i = this.idx(tile.x, tile.y);
-        if (t < into[i]) into[i] = t;
-      }
-      for (const h of blast.hits) {
-        if (h.kind !== 'bomb') continue;
-        const other = bombs.find((o) => o.b.tx === h.tx && o.b.ty === h.ty);
-        if (other && other.t > t) other.t = t + w.rules.chainDelay;
+      for (const [tx, ty] of this.blastOrigins(b)) {
+        const blast = w.computeBlast(tx, ty, b.range, b.pierce, b, b.square);
+        for (const tile of blast.tiles) {
+          const i = this.idx(tile.x, tile.y);
+          if (t < into[i]) into[i] = t;
+        }
+        for (const h of blast.hits) {
+          if (h.kind !== 'bomb') continue;
+          const other = bombs.find((o) => o.b.tx === h.tx && o.b.ty === h.ty);
+          if (other && other.t > t) other.t = t + w.rules.chainDelay;
+        }
       }
     }
     // Pressure blocks about to fall.
@@ -143,20 +158,72 @@ export class CpuPlayer {
     }
   }
 
+  /** Where a bomb may go off: its landing tile, or every tile ahead of a kicked bomb. */
+  private blastOrigins(b: Bomb): [number, number][] {
+    if (b.flight) return [[b.flight.ttx, b.flight.tty]];
+    const out: [number, number][] = [[b.tx, b.ty]];
+    if (!b.slide) return out;
+    const w = this.w;
+    let x = b.tx;
+    let y = b.ty;
+    for (let k = 0; k < 16; k++) {
+      const nx = x + DX[b.slide];
+      const ny = y + DY[b.slide];
+      if (!w.grid.inside(nx, ny) || w.grid.get(nx, ny) !== Cell.Floor || w.bombAt[this.idx(nx, ny)]) break;
+      x = nx;
+      y = ny;
+      out.push([x, y]);
+    }
+    return out;
+  }
+
   private pathSafe(): boolean {
     let t = 0;
+    const tt = this.tileTime;
+    const flame = this.w.rules.flameTicks;
     for (const [x, y] of this.path) {
-      t += this.tileTime;
+      // Something (a new bomb, a block) now sits on the route.
+      if (!this.walkable(x, y)) return false;
+      t += tt;
       const dt = this.danger[this.idx(x, y)];
-      if (dt <= t + this.diff.slack && dt + this.w.rules.flameTicks >= t) return false;
+      if (dt <= t + tt + this.diff.slack && dt + flame + tt / 2 + 3 >= t) return false;
     }
-    return this.path.length > 0 || this.danger[this.idx(this.me.tx, this.me.ty)] === INF;
+    const [lx, ly] = this.path[this.path.length - 1];
+    return this.danger[this.idx(lx, ly)] === INF || this.danger[this.idx(lx, ly)] > t + tt + 60;
+  }
+
+  /**
+   * Tiles the route planner keeps out of: launch pads and teleports make the arrival
+   * time unpredictable, and a stop sign freezes whoever walks onto it.
+   */
+  private avoid(x: number, y: number): boolean {
+    const f = this.w.gim.at(x, y);
+    if (!f) return false;
+    return f.kind === 'warp' || f.kind === 'trampoline' || f.kind === 'seesaw' || (f.kind === 'sign' && f.speed === 0);
+  }
+
+  /** Ticks to walk one tile in direction d, counting conveyor belts under both tiles. */
+  private stepTime(fx: number, fy: number, tx: number, ty: number, d: Dir, speed: number): number {
+    let v = speed;
+    for (const [x, y] of [[fx, fy], [tx, ty]] as const) {
+      const belt = this.w.gim.beltAt(x, y);
+      if (!belt) continue;
+      if (belt.dir === d) v += belt.speed / 2;
+      else if (belt.dir === OPPOSITE[d]) v -= belt.speed / 2;
+      else v -= belt.speed / 4; // pushed sideways: corrections cost time
+    }
+    return TILE / Math.max(0.2, v);
   }
 
   // ------------------------------------------------------------------ search
 
   private walkable(x: number, y: number): boolean {
-    return this.w.bomberCanEnter(this.me, x, y) || (x === this.me.tx && y === this.me.ty);
+    const me = this.me;
+    if (x === me.tx && y === me.ty) return true;
+    // Our own land mines are invisible to others but not to us: never step on them.
+    const bomb = this.w.bombAt[this.idx(x, y)];
+    if (bomb && bomb.hidden && bomb.owner === me) return false;
+    return this.w.bomberCanEnter(me, x, y);
   }
 
   /**
@@ -166,7 +233,7 @@ export class CpuPlayer {
   private search(danger: Float32Array, maxSteps = 40): Map<number, Node> {
     const me = this.me;
     const w = this.w;
-    const tt = this.tileTime;
+    const speed = Math.max(0.3, w.speedOf(me));
     const start: Node = { x: me.tx, y: me.ty, t: 0, first: null, prev: -1 };
     const nodes = new Map<number, Node>([[this.idx(me.tx, me.ty), start]]);
     let frontier = [start];
@@ -182,11 +249,13 @@ export class CpuPlayer {
           }
           const i = this.idx(nx, ny);
           if (nodes.has(i)) continue;
-          if (!this.walkable(nx, ny)) continue;
+          if (!this.walkable(nx, ny) || this.avoid(nx, ny)) continue;
+          const tt = this.stepTime(n.x, n.y, nx, ny, d, speed);
           const t = n.t + tt;
           const dt = danger[i];
-          // Would we be standing in fire while passing through?
-          if (dt < INF && dt <= t + tt && dt + w.rules.flameTicks + 2 >= t) continue;
+          // Would we be standing in fire while passing through? We are inside the tile
+          // from half a step before reaching its centre until half a step after.
+          if (dt < INF && dt <= t + tt && dt + w.rules.flameTicks + tt / 2 + 3 >= t) continue;
           const node: Node = { x: nx, y: ny, t, first: n.first ?? d, prev: this.idx(n.x, n.y) };
           nodes.set(i, node);
           next.push(node);
@@ -246,6 +315,7 @@ export class CpuPlayer {
       this.wantBomb = true;
       return;
     }
+    this.tabu.set(hereIdx, w.tick + TABU_TICKS);
 
     // Character specials (Advanced).
     if (w.cfg.level === 'advanced' && this.trySpecial()) return;
@@ -266,10 +336,10 @@ export class CpuPlayer {
       if (item && !item.hidden && item.burning === 0) {
         score += item.kind === 'skull' ? -4 : 3 + this.pers.greed * 4;
       }
-      // Next to soft blocks: a good place to bomb.
+      // Next to soft blocks: a good place to bomb (unless we just failed to bomb there).
       let soft = 0;
       for (const d of ALL_DIRS) if (w.grid.get(n.x + DX[d], n.y + DY[d]) === Cell.Soft) soft++;
-      score += soft * 0.8;
+      score += (this.tabu.get(i) ?? 0) > w.tick ? -1 : soft * 0.8;
       // Toward opponents.
       for (const e of enemies) {
         const dist = Math.abs(e.tx - n.x) + Math.abs(e.ty - n.y);
@@ -324,9 +394,12 @@ export class CpuPlayer {
     const mine = w.bombs.filter((b) => b.owner === me && b.remote && !b.flight && !b.held);
     if (!mine.length) return false;
     const oldest = mine.reduce((a, b) => (a.serial < b.serial ? a : b));
+    // Never detonate if the blast, or a chain reaction it sets off, would reach us.
+    const now = new Float32Array(this.danger.length);
+    this.computeDanger(null, now, oldest);
+    if (now[this.idx(me.tx, me.ty)] <= 4 * w.rules.chainDelay + 2) return false;
     const blast = w.computeBlast(oldest.tx, oldest.ty, oldest.range, oldest.pierce, oldest, oldest.square);
     const tiles = new Set(blast.tiles.map((t) => this.idx(t.x, t.y)));
-    if (tiles.has(this.idx(me.tx, me.ty))) return false;
     const enemyHit = w.alive().some((b) => b !== me && b.team !== me.team && tiles.has(this.idx(b.tx, b.ty)));
     const blocks = blast.hits.filter((h) => h.kind === 'soft').length;
     return enemyHit || (blocks > 0 && oldest.age > 200);
@@ -338,8 +411,8 @@ export class CpuPlayer {
     if (!w.canPlaceBomb(me) || me.curse === 'impotent') return false;
     if (Math.abs(me.x - tileCenter(me.tx)) > 4 || Math.abs(me.y - tileCenter(me.ty)) > 4) return false;
     if (!w.rng.chance(this.diff.bombChance)) return false;
-    const range = me.curse === 'feeble' ? 1 : me.stats.fullFire ? w.rules.maxFire : me.stats.fire;
-    const blast = w.computeBlast(me.tx, me.ty, range, me.stats.pierce, null, 0);
+    const shape = w.bombShape(me);
+    const blast = w.computeBlast(me.tx, me.ty, shape.range, shape.pierce, null, 0);
     const tiles = new Set(blast.tiles.map((t) => this.idx(t.x, t.y)));
     let value = 0;
     for (const h of blast.hits) {
@@ -353,9 +426,9 @@ export class CpuPlayer {
     if (value <= 0) return false;
     // Would we still get away?
     const fake: Bomb = {
-      id: -1, owner: me, tx: me.tx, ty: me.ty, x: me.x, y: me.y, range, fuse: w.rules.fuseTicks, remote: false, pierce: me.stats.pierce,
+      id: -1, owner: me, tx: me.tx, ty: me.ty, x: me.x, y: me.y, range: shape.range, fuse: shape.fuse, remote: false, pierce: shape.pierce,
       passers: new Set([me]), slide: null, flight: null, chain: -1, serial: 0, exploded: false, held: false, age: 0, square: 0,
-      kind: 'normal', hidden: false, conveyed: false, slideSpeed: 0, kicker: null,
+      kind: shape.kind, hidden: false, conveyed: false, slideSpeed: 0, kicker: null,
     };
     const hypo = new Float32Array(this.danger.length);
     this.computeDanger(fake, hypo);
@@ -364,10 +437,21 @@ export class CpuPlayer {
     const nodes = this.search(hypo, 12);
     w.bombAt[i] = null;
     const margin = 20 + this.pers.caution * 30;
+    // Escape routes: a careful bomber wants two ways out, so one enemy bomb can't seal it in.
+    const exits = new Set<Dir>();
+    let nearest = INF;
     for (const n of nodes.values()) {
-      if (hypo[this.idx(n.x, n.y)] === INF && n.t + margin < w.rules.fuseTicks) return true;
+      if (n.first && hypo[this.idx(n.x, n.y)] === INF && n.t + margin < shape.fuse) {
+        exits.add(n.first);
+        nearest = Math.min(nearest, n.t);
+      }
     }
-    return false;
+    if (exits.size >= 2) return true;
+    if (exits.size === 0) return false;
+    // A single way out is fine when cover is only a step or two away (round a corner),
+    // or when no opponent is close enough to cut the corridor off.
+    if (nearest <= this.diff.shortExit * this.tileTime + 2) return true;
+    return !w.alive().some((e) => e !== me && e.team !== me.team && Math.abs(e.tx - me.tx) + Math.abs(e.ty - me.ty) <= this.diff.threat);
   }
 
   private enemyAhead(range: number): boolean {
@@ -386,6 +470,8 @@ export class CpuPlayer {
     const me = this.me;
     const ch = CHARACTERS[me.character];
     if (!ch?.special || me.specialCooldown > 0 || me.weak !== 0) return false;
+    // B also detonates remote bombs if the special can't fire: don't risk our own.
+    if (me.stats.remote && this.w.bombs.some((b) => b.owner === me && b.remote && !b.exploded)) return false;
     const rng = this.w.rng;
     for (const d of ALL_DIRS) {
       const saved = me.facing;

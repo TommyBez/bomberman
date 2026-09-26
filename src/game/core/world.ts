@@ -103,6 +103,16 @@ export interface Bomb extends Body {
 
 export type BombKind = 'normal' | 'remote' | 'power' | 'rubber' | 'pierce' | 'mine' | 'super' | 'ultra';
 
+/** The properties a bomb gets when it is placed. */
+export interface BombShape {
+  fuse: number;
+  range: number;
+  remote: boolean;
+  pierce: boolean;
+  kind: BombKind;
+  hidden: boolean;
+}
+
 export interface BlastTile {
   x: number;
   y: number;
@@ -410,12 +420,29 @@ export class World {
     return true;
   }
 
-  placeBomb(b: Bomber, tx = b.tx, ty = b.ty): Bomb | null {
-    if (!this.canPlaceBomb(b, tx, ty)) return null;
+  /** The bomb `b` would place at (tx, ty) next: fuse, range and type. No side effects. */
+  bombShape(b: Bomber, tx = b.tx, ty = b.ty): BombShape {
     let fuse = this.rules.fuseTicks;
     if (b.curse === 'shortFuse') fuse = Math.floor(fuse / 3);
     if (b.curse === 'slowFuse') fuse = fuse * 2;
-    const range = b.curse === 'feeble' ? 1 : b.stats.fullFire ? this.rules.maxFire : b.stats.fire;
+    const shape: BombShape = {
+      fuse,
+      range: b.curse === 'feeble' ? 1 : b.stats.fullFire ? this.rules.maxFire : b.stats.fire,
+      remote: b.stats.remote,
+      pierce: b.stats.pierce,
+      kind: 'normal',
+      hidden: false,
+    };
+    this.shapeBomb(b, tx, ty, shape);
+    return shape;
+  }
+
+  /** Hook: special bomb types (battle). */
+  protected shapeBomb(_b: Bomber, _tx: number, _ty: number, _shape: BombShape): void {}
+
+  placeBomb(b: Bomber, tx = b.tx, ty = b.ty): Bomb | null {
+    if (!this.canPlaceBomb(b, tx, ty)) return null;
+    const shape = this.bombShape(b, tx, ty);
     const bomb: Bomb = {
       id: this.nextBombId++,
       owner: b,
@@ -423,10 +450,10 @@ export class World {
       ty,
       x: tileCenter(tx),
       y: tileCenter(ty),
-      range,
-      fuse,
-      remote: b.stats.remote,
-      pierce: b.stats.pierce,
+      range: shape.range,
+      fuse: shape.fuse,
+      remote: shape.remote,
+      pierce: shape.pierce,
       passers: new Set(),
       slide: null,
       flight: null,
@@ -436,13 +463,13 @@ export class World {
       held: false,
       age: 0,
       square: 0,
-      kind: 'normal',
-      hidden: false,
+      kind: shape.kind,
+      hidden: shape.hidden,
       conveyed: false,
       slideSpeed: this.rules.kickSpeed,
       kicker: null,
     };
-    this.configureBomb(b, bomb);
+    this.onBombPlaced(b, bomb);
     this.addPassers(bomb);
     this.bombs.push(bomb);
     this.bombAt[this.idx(tx, ty)] = bomb;
@@ -451,8 +478,8 @@ export class World {
     return bomb;
   }
 
-  /** Hook: set the special bomb type (battle). */
-  protected configureBomb(_b: Bomber, _bomb: Bomb): void {}
+  /** Hook: a bomb was just placed. */
+  protected onBombPlaced(_b: Bomber, _bomb: Bomb): void {}
 
   protected addPassers(bomb: Bomb): void {
     for (const o of this.bombers) {

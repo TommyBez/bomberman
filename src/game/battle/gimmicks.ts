@@ -342,6 +342,13 @@ export class Gimmicks {
     return this.beltReverse ? OPPOSITE[f.dir] : f.dir;
   }
 
+  /** The conveyor on a tile: where it carries bombers and how fast (px/frame). */
+  beltAt(x: number, y: number): { dir: Dir; speed: number } | null {
+    const f = this.at(x, y);
+    if (!f || f.kind !== 'conveyor') return null;
+    return { dir: this.beltDir(f), speed: BELT_SPEED * this.beltSpeed };
+  }
+
   private updateConveyors(): void {
     const w = this.w;
     const speed = BELT_SPEED * this.beltSpeed;

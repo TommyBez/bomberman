@@ -1,7 +1,7 @@
 import { Bomber, type Curse } from '../core/bomber';
 import { Grid } from '../core/grid';
 import { ALL_DIRS, Cell, DX, DY, OPPOSITE, TILE, tileCenter, toTile, type Dir } from '../core/types';
-import { World, type Blast, type Bomb } from '../core/world';
+import { World, type Blast, type Bomb, type BombShape } from '../core/world';
 import type { ArenaDef } from './arenas';
 import { CHARACTERS, PARTNERS, type PartnerKind } from './characters';
 import { LEVEL_ITEMS, type BattleConfig, type BattleItem } from './config';
@@ -278,36 +278,40 @@ export class BattleWorld extends World {
 
   // ---------------------------------------------------------------- bombs
 
-  protected override configureBomb(b: Bomber, bomb: Bomb): void {
+  protected override shapeBomb(b: Bomber, tx: number, ty: number, s: BombShape): void {
     if (b.mineNext) {
-      b.mineNext = false;
-      bomb.kind = 'mine';
-      bomb.hidden = true;
-      bomb.remote = true;
+      s.kind = 'mine';
+      s.hidden = true;
+      s.remote = true;
       return;
     }
     switch (b.stats.bombType) {
       case 'remote':
-        bomb.kind = 'remote';
-        bomb.remote = true;
+        s.kind = 'remote';
+        s.remote = true;
         break;
       case 'power':
+        // Only one Power Bomb at a time; the rest are ordinary.
         if (!this.bombs.some((o) => o.owner === b && o.kind === 'power' && !o.exploded)) {
-          bomb.kind = 'power';
-          bomb.range = BATTLE_MAX_FIRE;
+          s.kind = 'power';
+          s.range = BATTLE_MAX_FIRE;
         }
         break;
       case 'rubber':
-        bomb.kind = 'rubber';
+        s.kind = 'rubber';
         break;
       case 'pierce':
-        bomb.kind = 'pierce';
-        bomb.pierce = true;
+        s.kind = 'pierce';
+        s.pierce = true;
         break;
       default:
         break;
     }
-    if (this.gim.boosts(bomb.tx, bomb.ty)) bomb.range = BATTLE_MAX_FIRE;
+    if (this.gim.boosts(tx, ty)) s.range = BATTLE_MAX_FIRE;
+  }
+
+  protected override onBombPlaced(b: Bomber, bomb: Bomb): void {
+    if (bomb.kind === 'mine') b.mineNext = false;
   }
 
   protected override onSlideBlocked(bomb: Bomb, dir: Dir): void {
