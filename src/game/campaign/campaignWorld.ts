@@ -569,4 +569,5 @@ export class CampaignWorld extends World implements EnemyEnv {
 }
 
 /** Length of a monster's death animation (shrink + score). */
-export const ENEMY_DEATH_TICKS = 90;
+/** Monsters take about three seconds to shrink away (the Famicom original was slower). */
+export const ENEMY_DEATH_TICKS = 180;
