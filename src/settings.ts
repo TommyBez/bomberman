@@ -9,7 +9,12 @@ export interface Settings {
 }
 
 export function loadSettings(): Settings {
-  return { offsetY: 0, vibration: true, stereo: true, ...load<Partial<Settings>>('settings', {}) };
+  const s = load<Partial<Settings>>('settings', {});
+  return {
+    offsetY: typeof s.offsetY === 'number' && Math.abs(s.offsetY) <= 16 ? Math.round(s.offsetY) : 0,
+    vibration: typeof s.vibration === 'boolean' ? s.vibration : true,
+    stereo: typeof s.stereo === 'boolean' ? s.stereo : true,
+  };
 }
 
 export function saveSettings(s: Settings): void {

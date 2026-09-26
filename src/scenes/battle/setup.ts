@@ -63,11 +63,7 @@ export class BattleSetup {
   cfg: BattleConfig;
 
   constructor(private readonly app: App) {
-    const saved = load<Partial<BattleConfig> | null>('battleConfig', null);
-    this.cfg = defaultConfig();
-    if (saved) {
-      this.cfg = { ...this.cfg, ...saved, rules: { ...this.cfg.rules, ...(saved.rules ?? {}) }, players: saved.players ?? this.cfg.players };
-    }
+    this.cfg = restoreConfig(load<Partial<BattleConfig> | null>('battleConfig', null));
   }
 
   start(): void {
@@ -600,4 +596,33 @@ class HitPointScene implements Scene {
     drawPanel(g, 28, 48, 200, 130, '#28a068', '#0c4028');
     this.menu.draw(g, 44, 62, { lineH: 18, valueX: 170 });
   }
+}
+
+/** Merge a stored configuration over the defaults, dropping anything malformed. */
+function restoreConfig(saved: Partial<BattleConfig> | null): BattleConfig {
+  const cfg = defaultConfig();
+  if (!saved || typeof saved !== 'object') return cfg;
+  if (saved.mode === 'royal' || saved.mode === 'custom') cfg.mode = saved.mode;
+  if (saved.level === 'beginner' || saved.level === 'normal' || saved.level === 'advanced') cfg.level = saved.level;
+  if (typeof saved.tag === 'boolean') cfg.tag = saved.tag;
+  if (Number.isInteger(saved.stage) && saved.stage! >= 0 && saved.stage! < 8) cfg.stage = saved.stage!;
+  if (saved.rules && typeof saved.rules === 'object') {
+    for (const k of Object.keys(cfg.rules) as (keyof typeof cfg.rules)[]) {
+      const v = saved.rules[k];
+      if (typeof v === typeof cfg.rules[k]) (cfg.rules as unknown as Record<string, unknown>)[k] = v;
+    }
+  }
+  if (Array.isArray(saved.players)) {
+    cfg.players.forEach((p, i) => {
+      const q = saved.players![i];
+      if (!q || typeof q !== 'object') return;
+      if (q.type === 'human' || q.type === 'com' || q.type === 'off') p.type = q.type;
+      if (Array.isArray(q.devices)) p.devices = q.devices.filter((d) => typeof d === 'string');
+      if (typeof q.character === 'string' && CHARACTERS[q.character]) p.character = q.character;
+      if (q.team === 0 || q.team === 1) p.team = q.team;
+      if (Number.isInteger(q.hp) && q.hp >= 1 && q.hp <= 9) p.hp = q.hp;
+    });
+  }
+  if (saved.customItems && typeof saved.customItems === 'object') cfg.customItems = { ...saved.customItems };
+  return cfg;
 }

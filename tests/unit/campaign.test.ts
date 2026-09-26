@@ -131,3 +131,27 @@ describe('passwords', () => {
     expect(decodePassword('SHORT')).toBeNull();
   });
 });
+
+describe('memory card', () => {
+  it('ignores corrupted save data', async () => {
+    const store = new Map<string, string>();
+    (globalThis as { localStorage?: unknown }).localStorage = {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+    };
+    const { loadSlots, saveSlot, CampaignSession } = await import('../../src/game/campaign/session');
+    store.set('bomberman.saves', '{"not":"an array"}');
+    expect(loadSlots()).toEqual([null, null, null]);
+    store.set('bomberman.saves', JSON.stringify([{ stage: 99 }, 'junk', null]));
+    expect(loadSlots()).toEqual([null, null, null]);
+    const s = new CampaignSession('retro');
+    s.stageIndex = 11;
+    saveSlot(2, s.toSave());
+    const slots = loadSlots();
+    expect(slots[2]?.stage).toBe(12);
+    expect(CampaignSession.fromSave(slots[2]!).version).toBe('retro');
+    store.set('bomberman.topScore', '"lots"');
+    expect(CampaignSession.topScore()).toBe(0);
+    delete (globalThis as { localStorage?: unknown }).localStorage;
+  });
+});

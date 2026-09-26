@@ -31,7 +31,8 @@ export class CampaignSession {
   constructor(readonly version: Version = 'modern') {}
 
   static topScore(): number {
-    return load<number>('topScore', 0);
+    const v = load<number>('topScore', 0);
+    return typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : 0;
   }
 
   static saveTop(score: number): void {
@@ -99,8 +100,21 @@ export class CampaignSession {
 // ------------------------------------------------------------------ memory card (3 files)
 
 export function loadSlots(): (SaveData | null)[] {
-  const slots = load<(SaveData | null)[]>('saves', [null, null, null]);
-  return [0, 1, 2].map((i) => slots[i] ?? null);
+  const slots = load<unknown>('saves', null);
+  const list = Array.isArray(slots) ? slots : [];
+  return [0, 1, 2].map((i) => (validSave(list[i]) ? list[i] : null));
+}
+
+function validSave(d: unknown): d is SaveData {
+  if (!d || typeof d !== 'object') return false;
+  const s = d as Partial<SaveData>;
+  return (
+    Number.isInteger(s.stage) && s.stage! >= 1 && s.stage! <= STAGES.length &&
+    typeof s.score === 'number' && Number.isFinite(s.score) &&
+    Number.isInteger(s.lives) &&
+    (s.version === 'modern' || s.version === 'retro') &&
+    !!s.powers && typeof s.powers === 'object'
+  );
 }
 
 export function saveSlot(i: number, data: SaveData): void {

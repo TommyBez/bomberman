@@ -24,7 +24,9 @@ export class AudioManager {
   readonly settings: AudioSettings;
 
   constructor(private readonly songs: Record<string, SongDef>) {
-    this.settings = load<AudioSettings>('audio', { music: 7, sfx: 8 });
+    const stored = load<Partial<AudioSettings>>('audio', {});
+    const vol = (v: unknown, d: number): number => (typeof v === 'number' && v >= 0 && v <= 10 ? Math.round(v) : d);
+    this.settings = { music: vol(stored.music, 7), sfx: vol(stored.sfx, 8) };
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', () => {
         const ctx = this.synth?.ctx;
