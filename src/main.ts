@@ -7,6 +7,8 @@ import { Input } from './engine/input';
 import { Loop } from './engine/loop';
 import { SceneManager } from './engine/scene';
 import { Screen } from './engine/screen';
+import { sprites } from './gfx/sprites';
+import { hudIcons } from './render/hud';
 import { BootScene } from './scenes/boot';
 import { applyScreenOffset, loadSettings } from './settings';
 
@@ -32,6 +34,9 @@ function boot(): void {
     scenes: new SceneManager(),
     frame: 0,
   };
+  // Draw every sprite now, behind the LOADING text, rather than on the title's first frames.
+  sprites();
+  hudIcons();
   app.scenes.go(new BootScene(app), 0);
 
   const loop = new Loop(

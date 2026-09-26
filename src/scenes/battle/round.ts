@@ -9,6 +9,7 @@ import type { BattleItem } from '../../game/battle/config';
 import { NO_INTENT } from '../../game/core/bomber';
 import type { GameEvent } from '../../game/core/events';
 import { TILE } from '../../game/core/types';
+import { characterSprites, gimmickSprites } from '../../gfx/battleSprites';
 import { THEMES } from '../../gfx/tiles';
 import { BattleRenderer } from '../../render/battleField';
 import type { View } from '../../render/field';
@@ -54,6 +55,9 @@ export class BattleRoundScene implements Scene {
   ) {
     this.world = new BattleWorld({ cfg: match.cfg, arena, prizes, gold, seed: (Math.random() * 2 ** 31) | 0 });
     this.renderer = new BattleRenderer(this.world);
+    // Build this round's sprites now (during the menu fade), not on its first frames.
+    gimmickSprites();
+    for (const b of this.world.bombers) characterSprites(b.character, b.id, b.gold);
     const cfg = match.cfg;
     for (const b of this.world.bombers) {
       const slot = cfg.players[b.id];
