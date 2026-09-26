@@ -10,7 +10,7 @@ import type { GameEvent } from '../../game/core/events';
 import { TILE } from '../../game/core/types';
 import { THEMES, themeForStage } from '../../gfx/tiles';
 import { FieldRenderer, type Actor, type View } from '../../render/field';
-import { clockText, hudIcons, hudStrip } from '../../render/hud';
+import { clockText, HUD_HURRY, HUD_TEXT, hudIcons, hudStrip } from '../../render/hud';
 import { drawBanner, PauseMenu } from '../../render/ui';
 
 type Phase = 'card' | 'ready' | 'play' | 'dying' | 'clear';
@@ -256,43 +256,26 @@ export class StageScene implements Scene {
     if (this.paused) this.pauseMenu.draw(g);
   }
 
+  /** Score, clock, lives, bombs and fire. Retro uses the same bar as Modern, on its grey strip. */
   private renderHud(g: Gfx): void {
-    if (this.retro) {
-      this.renderRetroHud(g);
-      return;
-    }
     const w = this.world;
     const icons = hudIcons();
     const y = 12;
-    const txt = { color: '#ffffff', outline: '#000000' };
     const score = this.session.score + w.score;
-    g.text('SC', 6, y, { ...txt, color: '#ffe040' });
-    g.text(String(score).padStart(7, ' '), 20, y, txt);
+    g.text('SC', 6, y, HUD_TEXT);
+    g.text(String(score).padStart(7, ' '), 20, y, HUD_TEXT);
     const hurry = !this.bonus && w.timeLeft <= 30 * 60 && Math.floor(this.app.frame / 15) % 2 === 0;
     g.image(icons.clock, 72, y - 1);
-    g.text(clockText(w.timeLeft), 84, y, { ...txt, color: hurry ? '#ff4040' : '#ffffff' });
-    if (this.bonus) g.text('BONUS', 118, y, { ...txt, color: Math.floor(this.app.frame / 20) % 2 ? '#ffe040' : '#ff9020' });
+    g.text(clockText(w.timeLeft), 84, y, hurry ? HUD_HURRY : HUD_TEXT);
+    if (this.bonus) g.text('BONUS', 118, y, Math.floor(this.app.frame / 20) % 2 ? HUD_TEXT : HUD_HURRY);
     else {
       g.image(icons.heads[0], 118, y - 2);
-      g.text(`×${String(Math.max(0, this.session.lives)).padStart(2, '0')}`, 130, y, txt);
+      g.text(`×${String(Math.max(0, this.session.lives)).padStart(2, '0')}`, 130, y, HUD_TEXT);
     }
     g.image(icons.bomb, 162, y - 2);
-    g.text(`×${String(w.player.stats.bombs).padStart(2, '0')}`, 174, y, txt);
+    g.text(`×${String(w.player.stats.bombs).padStart(2, '0')}`, 174, y, HUD_TEXT);
     g.image(icons.fire, 206, y - 2);
-    g.text(`×${w.player.stats.fire}`, 218, y, txt);
-  }
-
-  /** The 1985 status bar: TIME, score and LEFT in black on the grey strip. */
-  private renderRetroHud(g: Gfx): void {
-    const w = this.world;
-    const y = 12;
-    const txt = { color: '#000000' };
-    const secs = Math.max(0, Math.ceil(w.timeLeft / 60));
-    const hurry = !this.bonus && secs <= 30 && Math.floor(this.app.frame / 15) % 2 === 0;
-    g.text(this.bonus ? 'BONUS' : 'TIME', 8, y, txt);
-    g.text(String(secs).padStart(3, ' '), 44, y, { color: hurry ? '#d82800' : '#000000' });
-    g.text(String(this.session.score + w.score), 164, y, { ...txt, align: 'right' });
-    g.text(`LEFT ${Math.max(0, this.session.lives)}`, 200, y, txt);
+    g.text(`×${w.player.stats.fire}`, 218, y, HUD_TEXT);
   }
 
   private renderCard(g: Gfx): void {

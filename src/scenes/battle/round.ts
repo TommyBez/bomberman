@@ -13,7 +13,7 @@ import { characterSprites, gimmickSprites } from '../../gfx/battleSprites';
 import { THEMES } from '../../gfx/tiles';
 import { BattleRenderer } from '../../render/battleField';
 import type { View } from '../../render/field';
-import { clockText, hudIcons, hudStrip } from '../../render/hud';
+import { clockText, HUD_DIM, HUD_HURRY, HUD_TEXT, hudIcons, hudStrip } from '../../render/hud';
 import { drawBanner, PauseMenu } from '../../render/ui';
 import { goTitle } from '../nav';
 import { DEMO_TICKS } from './demo';
@@ -243,10 +243,9 @@ export class BattleRoundScene implements Scene {
   private renderHud(g: Gfx): void {
     const w = this.world;
     const icons = hudIcons();
-    const txt = { color: '#ffffff', outline: '#000000' };
     g.image(icons.clock, 8, 9);
     const hurry = w.hurry && Math.floor(this.app.frame / 15) % 2 === 0;
-    g.text(w.unlimited ? '∞' : clockText(w.timeLeft), 20, 10, { ...txt, color: hurry ? '#ff4040' : '#ffffff' });
+    g.text(w.unlimited ? '∞' : clockText(w.timeLeft), 20, 10, hurry ? HUD_HURRY : HUD_TEXT);
     const cfg = this.match.cfg;
     let x = 60;
     for (let i = 0; i < 5; i++) {
@@ -256,7 +255,7 @@ export class BattleRoundScene implements Scene {
       const head = b?.gold ? icons.gold : dead ? icons.crying[i] : icons.heads[i];
       g.image(head, x, 8);
       const wins = cfg.tag ? this.match.teamWins[cfg.players[i].team] : this.match.wins[i];
-      g.text(String(wins), x + 12, 10, { ...txt, color: dead ? '#808090' : '#ffffff' });
+      g.text(String(wins), x + 12, 10, dead ? HUD_DIM : HUD_TEXT);
       if (cfg.tag) g.rect(x, 19, 10, 2, cfg.players[i].team === 0 ? '#ff5050' : '#5080ff');
       x += 38;
     }

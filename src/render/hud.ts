@@ -94,6 +94,13 @@ export function hudStrip(g: Gfx, theme: Theme, h = 32): void {
   g.rect(0, h - 2, g.width, 2, '#000000');
 }
 
+/** The golden HUD digits of the original (yellow fading to orange, black outline). */
+export const HUD_TEXT = { gradient: ['#fff070', '#ff9800'] as [string, string], outline: '#000000' };
+/** The same text while the clock is running out. */
+export const HUD_HURRY = { gradient: ['#ffb0a0', '#e82000'] as [string, string], outline: '#000000' };
+/** A knocked-out player's greyed win count. */
+export const HUD_DIM = { gradient: ['#c0c0cc', '#707080'] as [string, string], outline: '#000000' };
+
 export function clockText(ticks: number): string {
   const secs = Math.max(0, Math.ceil(ticks / 60));
   return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
