@@ -78,7 +78,7 @@ letters directly.
   - **Retro:** NES-style tiles, sprites, flames and chiptune arrangements.
 - **Progress:**
   - Game Over offers Continue, Save or Quit.
-  - 8-character passwords.
+  - 8-character passwords. The original game's stage and full-power codes work too.
   - Three memory-card save files, stored in the browser.
   - An ending with a staff roll.
 
@@ -91,7 +91,10 @@ letters directly.
   - Sudden Death, Random Position and Skull.
   - Hyper Bomber.
   - Bomber Cart: off, on or Super.
-- **24 stages**, eight each for Beginner, Normal and Advanced, with their gimmicks.
+- **24 stages**, eight each for Beginner, Normal and Advanced, with their gimmicks. Each
+  has an alternate layout with fixed blocks and a different item mix. The original's
+  battle passwords open them level by level: `56565656`, `16161616` and `49894989`,
+  typed on the password screen.
   Gimmicks include see-saws, trolleys and switches, arrows, pipes, conveyor belts and
   warps. The Advanced stages add a stomping robot, jungle tunnels, the Super Power
   arena and the Seven Seas.

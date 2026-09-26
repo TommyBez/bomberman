@@ -114,6 +114,8 @@ export interface BattleConfig {
   customItems?: Partial<Record<BattleItem, number>>;
   /** Which stage the custom counts were made for ("level:stage"); they reset per stage. */
   customFor?: string;
+  /** Play the alternate layouts (once unlocked for the level). */
+  alternate?: boolean;
 }
 
 export const DEFAULT_DEVICES: DeviceId[][] = [['kb1', 'pad0', 'touch'], ['kb2', 'pad1'], ['pad2'], ['pad3'], []];

@@ -76,3 +76,19 @@ export function decodePassword(text: string): PasswordData | null {
   if (stage > 50 || bombs > 10 || fire > 5) return null;
   return { stage, bombs, fire, modern: ((payload >>> 13) & 1) === 1 };
 }
+
+/**
+ * Codes from guides to the original PlayStation game (Arrange version): four that start
+ * at stages 10–40, and five "full power" codes for stages 1, 11, 21, 31 and 41.
+ */
+export const CLASSIC_CODES: Record<string, { stage: number; full: boolean }> = {
+  '3G59E326': { stage: 10, full: false },
+  '3D5D49C4': { stage: 20, full: false },
+  '8D5E4B26': { stage: 30, full: false },
+  '8D5A4BCE': { stage: 40, full: false },
+  '46224622': { stage: 1, full: true },
+  '10191019': { stage: 11, full: true },
+  '12221222': { stage: 21, full: true },
+  '26572657': { stage: 31, full: true },
+  '38793879': { stage: 41, full: true },
+};

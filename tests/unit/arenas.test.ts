@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { ARENAS, arenasFor } from '../../src/game/battle/arenas';
+import { ALT_CODES, alternateArena, arenaFor, ARENAS, arenasFor } from '../../src/game/battle/arenas';
+import { BattleWorld } from '../../src/game/battle/battleWorld';
+import { defaultConfig } from '../../src/game/battle/config';
+import { ALL_DIRS, Cell, DX, DY } from '../../src/game/core/types';
 
 const VALID = new Set([...'#._x12345O><^vRLUD@WTSabcde!=sPHF~biGpJw']);
 
@@ -36,6 +39,36 @@ describe('battle arenas', () => {
         expect(Object.keys(v).length).toBeGreaterThan(0);
       }
       for (const pair of a.portalPairs ?? []) for (const [x, y] of pair) expect(a.map[y][x]).toBe('p');
+    });
+  }
+});
+
+
+describe('alternate battle stages', () => {
+  it('one password per level', () => {
+    expect(new Set(Object.values(ALT_CODES))).toEqual(new Set(['beginner', 'normal', 'advanced']));
+    for (const code of Object.keys(ALT_CODES)) expect(code).toMatch(/^\d{8}$/);
+  });
+
+  for (const def of ARENAS) {
+    it(`${def.id}x: fixed blocks, same gimmicks, open starts`, () => {
+      const alt = alternateArena(def);
+      expect(alt.alternate).toBe(true);
+      expect(arenaFor(def.level, arenasFor(def.level).indexOf(def), true)).toBe(alt);
+      expect(alt.map).toHaveLength(13);
+      // Only '.' tiles change.
+      alt.map.forEach((row, y) => [...row].forEach((ch, x) => (def.map[y][x] === '.' ? expect('x_').toContain(ch) : expect(ch).toBe(def.map[y][x]))));
+      const cfg = defaultConfig();
+      cfg.level = def.level;
+      cfg.players.forEach((p) => (p.type = 'com'));
+      const w = new BattleWorld({ cfg, arena: alt, seed: 5 });
+      expect(w.grid.count(Cell.Soft)).toBeGreaterThan(5);
+      // Every bomber can step off its start tile.
+      for (const b of w.bombers) {
+        const open = ALL_DIRS.filter((d) => w.bomberCanEnter(b, b.tx + DX[d], b.ty + DY[d]));
+        expect(open.length, `start ${b.id} at ${b.tx},${b.ty}`).toBeGreaterThan(0);
+      }
+      for (let t = 0; t < 300; t++) w.update();
     });
   }
 });

@@ -1,7 +1,8 @@
 import type { App } from '../../app';
 import { mix, type Gfx } from '../../engine/gfx';
 import type { Scene } from '../../engine/scene';
-import { arenasFor } from '../../game/battle/arenas';
+import { arenaFor } from '../../game/battle/arenas';
+import { altUnlocked } from '../../game/battle/unlocks';
 import type { BattleWorld } from '../../game/battle/battleWorld';
 import { CHARACTERS } from '../../game/battle/characters';
 import { ITEM_NAMES, type BattleConfig, type BattleItem } from '../../game/battle/config';
@@ -35,7 +36,7 @@ export class BattleMatch {
   }
 
   playRound(): void {
-    const arena = arenasFor(this.cfg.level)[this.cfg.stage];
+    const arena = arenaFor(this.cfg.level, this.cfg.stage, !!this.cfg.alternate && altUnlocked(this.cfg.level));
     const prizes = this.prizes;
     const gold = this.gold;
     this.prizes = [null, null, null, null, null];

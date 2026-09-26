@@ -74,6 +74,8 @@ export interface ArenaDef {
   extraHard?: [number, number][];
   removeHard?: [number, number][];
   noSoft?: [number, number][];
+  /** The alternate ("ura") version of a stage. */
+  alternate?: boolean;
 }
 
 const STD = [
@@ -544,4 +546,66 @@ export const ARENAS: ArenaDef[] = [
 
 export function arenasFor(level: Level): ArenaDef[] {
   return ARENAS.filter((a) => a.level === level);
+}
+
+// ------------------------------------------------------------------ alternate stages
+
+/**
+ * Passwords that open each level's alternate stages (typed on the password screen, as
+ * in the original game): same gimmicks, a fixed block placement and a different mix of
+ * items, sometimes with Wall Pass.
+ */
+export const ALT_CODES: Record<string, Level> = { '56565656': 'beginner', '16161616': 'normal', '49894989': 'advanced' };
+
+const ALT_ITEMS: Record<Level, Partial<Record<BattleItem, number>>> = {
+  beginner: { bomb: 5, fire: 5, speed: 2, kick: 3, bombpass: 1, fullfire: 1, skull: 1 },
+  normal: { bomb: 4, fire: 4, speed: 2, kick: 2, bombpass: 1, glove: 2, punch: 2, push: 1, line: 2, rubber: 1, pierce: 0, egg: 2, skull: 2 },
+  advanced: { bomb: 4, fire: 4, speed: 2, kick: 2, bombpass: 1, glove: 1, punch: 1, push: 2, line: 1, powerbomb: 2, rubber: 1, pierce: 2, mine: 2, fullfire: 1, egg: 2, skull: 2 },
+};
+
+/** Fixed block placements for the alternate stages (true = soft block). */
+const ALT_PATTERNS: ((x: number, y: number, w: number, h: number) => boolean)[] = [
+  (x, y) => (x + y) % 2 === 1, // checkerboard
+  (x, y, w, h) => Math.min(x, y, w - 1 - x, h - 1 - y) % 2 === 1, // rings
+  (x, y) => x % 4 === 3 || y % 4 === 3, // walls of blocks
+  () => true, // packed
+  (x, y) => (x + 2 * y) % 3 !== 0, // diagonals
+  (x, y) => (x * 7 + y * 13) % 4 === 0, // scattered
+];
+/** Patterns that leave room for Wall Pass to shine. */
+const WALLPASS_PATTERNS = new Set([1, 3]);
+const LEVEL_OFFSET: Record<Level, number> = { beginner: 0, normal: 2, advanced: 4 };
+
+const altCache = new Map<string, ArenaDef>();
+
+export function alternateArena(def: ArenaDef): ArenaDef {
+  const cached = altCache.get(def.id);
+  if (cached) return cached;
+  const index = arenasFor(def.level).indexOf(def);
+  const pattern = (index + LEVEL_OFFSET[def.level]) % ALT_PATTERNS.length;
+  const h = def.map.length;
+  const w = def.map[0].length;
+  const spawns: [number, number][] = def.spawns ? [...def.spawns] : [];
+  def.map.forEach((row, y) => [...row].forEach((ch, x) => ch >= '1' && ch <= '5' && spawns.push([x, y])));
+  const map = def.map.map((row, y) =>
+    [...row]
+      .map((ch, x) => {
+        if (ch !== '.') return ch;
+        // Keep every start position's pocket open.
+        if (spawns.some(([sx, sy]) => Math.abs(sx - x) + Math.abs(sy - y) <= 2)) return '_';
+        return ALT_PATTERNS[pattern](x, y, w, h) ? 'x' : '_';
+      })
+      .join(''),
+  );
+  const items = { ...ALT_ITEMS[def.level], ...(WALLPASS_PATTERNS.has(pattern) ? { wallpass: 1 } : {}) };
+  const alt: ArenaDef = { ...def, id: `${def.id}x`, map, density: 0, items, alternate: true };
+  altCache.set(def.id, alt);
+  return alt;
+}
+
+/** The stage to play: the regular layout or its alternate. */
+export function arenaFor(level: Level, stage: number, alternate = false): ArenaDef {
+  const list = arenasFor(level);
+  const def = list[Math.max(0, Math.min(list.length - 1, stage))];
+  return alternate ? alternateArena(def) : def;
 }

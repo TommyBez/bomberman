@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CampaignWorld, freshPowers, powersAfterDeath, STAGE_TICKS } from '../../src/game/campaign/campaignWorld';
-import { decodePassword, encodePassword, PASSWORD_LENGTH } from '../../src/game/campaign/password';
+import { CLASSIC_CODES, decodePassword, encodePassword, PASSWORD_ALPHABET, PASSWORD_LENGTH } from '../../src/game/campaign/password';
 import { CampaignSession, START_LIVES } from '../../src/game/campaign/session';
 import { bonusAfter, BONUS_STAGES, STAGES } from '../../src/game/campaign/stages';
 import { Cell, tileCenter } from '../../src/game/core/types';
@@ -174,6 +174,14 @@ describe('passwords', () => {
       const pw = encodePassword(d, stage * 7);
       expect(pw).toHaveLength(PASSWORD_LENGTH);
       expect(decodePassword(pw)).toEqual(d);
+    }
+  });
+
+  it('accepts the original game\'s stage and full-power codes', () => {
+    for (const [code, c] of Object.entries(CLASSIC_CODES)) {
+      expect(code).toHaveLength(PASSWORD_LENGTH);
+      for (const ch of code) expect(PASSWORD_ALPHABET).toContain(ch);
+      expect(c.stage >= 1 && c.stage <= 50).toBe(true);
     }
   });
 

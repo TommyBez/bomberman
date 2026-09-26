@@ -2,7 +2,8 @@ import type { App } from '../../app';
 import type { Gfx } from '../../engine/gfx';
 import type { DeviceId } from '../../engine/input';
 import type { Scene } from '../../engine/scene';
-import { arenasFor, type ArenaDef } from '../../game/battle/arenas';
+import { arenaFor, arenasFor, type ArenaDef } from '../../game/battle/arenas';
+import { altUnlocked } from '../../game/battle/unlocks';
 import { charactersFor, CHARACTERS } from '../../game/battle/characters';
 import { CUSTOM_ITEMS, defaultConfig, ITEM_NAMES, LEVEL_NAMES, MAX_HP, type BattleConfig, type Level } from '../../game/battle/config';
 import { customCounts, softBlockCount, stageItems } from '../../game/battle/battleWorld';
@@ -438,6 +439,15 @@ class StageSelectScene implements Scene {
   ) {
     this.stages = arenasFor(setup.cfg.level);
     if (setup.cfg.stage >= this.stages.length) setup.cfg.stage = 0;
+    this.altOpen = altUnlocked(setup.cfg.level);
+    if (!this.altOpen) setup.cfg.alternate = false;
+  }
+
+  private readonly altOpen: boolean;
+
+  private get arena(): ArenaDef {
+    const cfg = this.setup.cfg;
+    return arenaFor(cfg.level, cfg.stage, this.altOpen && !!cfg.alternate);
   }
 
   enter(): void {
@@ -456,6 +466,9 @@ class StageSelectScene implements Scene {
       this.setup.cfg.stage = (this.setup.cfg.stage + 1) % n;
       this.slide = 16;
       this.app.audio.sfx('menuMove');
+    } else if (this.altOpen && (pad.repeat('up') || pad.repeat('down'))) {
+      this.setup.cfg.alternate = !this.setup.cfg.alternate;
+      this.app.audio.sfx('select');
     } else if (pad.pressed('a') || pad.pressed('start')) {
       pad.swallow();
       this.app.audio.sfx('menuOk');
@@ -470,7 +483,7 @@ class StageSelectScene implements Scene {
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame, '#0c3a2a', '#11473a');
     drawTitleBar(g, 'SELECT STAGE', this.app.frame);
-    const a = this.stages[this.setup.cfg.stage];
+    const a = this.arena;
     const ox = 53 + this.slide;
     drawPanel(g, ox - 5, 33, 160, 138, '#28a068', '#0c4028');
     drawArenaPreview(g, a, ox, 38, 10);
@@ -478,9 +491,9 @@ class StageSelectScene implements Scene {
     g.text('▶', 224, 96, { scale: 2, color: '#ffe040', outline: '#000000' });
     // Name banner
     drawPanel(g, 24, 173, 208, 17, '#1c6848', '#082818');
-    g.text(`${this.setup.cfg.stage + 1}/8  ${a.name}`, g.width / 2, 178, { align: 'center', color: '#ffe040', outline: '#000000' });
+    g.text(`${this.setup.cfg.stage + 1}/8  ${a.name}${a.alternate ? ' ALT' : ''}`, g.width / 2, 178, { align: 'center', color: a.alternate ? '#ff9ad0' : '#ffe040', outline: '#000000' });
     g.text(a.blurb, g.width / 2, 196, { align: 'center', color: '#ffffff', outline: '#000000' });
-    g.text(LEVEL_NAMES[this.setup.cfg.level], g.width / 2, 210, { align: 'center', color: '#a8ffc8', outline: '#000000' });
+    g.text(LEVEL_NAMES[this.setup.cfg.level] + (this.altOpen ? '   ↑↓ ALTERNATE' : ''), g.width / 2, 210, { align: 'center', color: '#a8ffc8', outline: '#000000' });
   }
 }
 
@@ -495,9 +508,10 @@ class CustomScene implements Scene {
   ) {
     const cfg = setup.cfg;
     // Item kinds and amounts depend on the stage: start from its own mix.
-    const key = `${cfg.level}:${cfg.stage}`;
+    const alt = !!cfg.alternate && altUnlocked(cfg.level);
+    const key = `${cfg.level}:${cfg.stage}${alt ? 'x' : ''}`;
     if (!cfg.customItems || cfg.customFor !== key) {
-      cfg.customItems = customCounts(stageItems(cfg.level, arenasFor(cfg.level)[cfg.stage]));
+      cfg.customItems = customCounts(stageItems(cfg.level, arenaFor(cfg.level, cfg.stage, alt)));
       cfg.customFor = key;
     }
     this.menu = new Menu(
@@ -536,7 +550,7 @@ class ItemSetScene implements Scene {
     private readonly back: () => void,
   ) {
     const cfg = setup.cfg;
-    this.capacity = softBlockCount(cfg, arenasFor(cfg.level)[cfg.stage]);
+    this.capacity = softBlockCount(cfg, arenaFor(cfg.level, cfg.stage, !!cfg.alternate && altUnlocked(cfg.level)));
   }
 
   private total(): number {
@@ -646,5 +660,6 @@ function restoreConfig(saved: Partial<BattleConfig> | null): BattleConfig {
   }
   if (saved.customItems && typeof saved.customItems === 'object') cfg.customItems = customCounts(saved.customItems);
   if (typeof saved.customFor === 'string') cfg.customFor = saved.customFor;
+  if (typeof saved.alternate === 'boolean') cfg.alternate = saved.alternate;
   return cfg;
 }

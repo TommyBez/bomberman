@@ -1,8 +1,12 @@
 import type { App } from '../../app';
 import type { Gfx } from '../../engine/gfx';
 import type { Scene } from '../../engine/scene';
-import { decodePassword, PASSWORD_ALPHABET, PASSWORD_LENGTH } from '../../game/campaign/password';
+import { ALT_CODES } from '../../game/battle/arenas';
+import { LEVEL_NAMES } from '../../game/battle/config';
+import { unlockAlt } from '../../game/battle/unlocks';
+import { CLASSIC_CODES, decodePassword, PASSWORD_ALPHABET, PASSWORD_LENGTH } from '../../game/campaign/password';
 import { CampaignSession } from '../../game/campaign/session';
+import { STAGES } from '../../game/campaign/stages';
 import { drawMenuBackdrop, drawPanel, drawTitleBar } from '../../render/ui';
 import { startNormalGame } from './flow';
 
@@ -14,6 +18,8 @@ export class PasswordScene implements Scene {
   private chars: string[] = [];
   private cursor = 0;
   private error = 0;
+  private notice = '';
+  private noticeT = 0;
 
   constructor(
     private readonly app: App,
@@ -48,6 +54,7 @@ export class PasswordScene implements Scene {
   update(): void {
     const pad = this.app.input.menu;
     if (this.error > 0) this.error--;
+    if (this.noticeT > 0) this.noticeT--;
     const rows = Math.ceil(KEYS.length / COLS);
     const col = this.cursor % COLS;
     const row = Math.floor(this.cursor / COLS);
@@ -84,7 +91,29 @@ export class PasswordScene implements Scene {
   }
 
   private submit(): void {
-    const d = decodePassword(this.chars.join(''));
+    const code = this.chars.join('');
+    // Battle Game codes open a level's alternate stages.
+    const level = ALT_CODES[code];
+    if (level) {
+      unlockAlt(level);
+      this.notice = `${LEVEL_NAMES[level]} ALTERNATE STAGES!`;
+      this.noticeT = 150;
+      this.chars = [];
+      this.cursor = 0;
+      this.app.audio.sfx('bigItem');
+      return;
+    }
+    const classic = CLASSIC_CODES[code];
+    if (classic) {
+      this.app.audio.sfx('menuOk');
+      const s = new CampaignSession('modern');
+      s.stageIndex = classic.stage - 1;
+      if (classic.full) Object.assign(s.powers, { bombs: 10, fire: 5, speed: true, remote: true, bombpass: true, wallpass: true, fireman: true });
+      else Object.assign(s.powers, collectedBefore(classic.stage));
+      startNormalGame(this.app, s);
+      return;
+    }
+    const d = decodePassword(code);
     if (!d) {
       this.error = 90;
       this.app.audio.sfx('skull');
@@ -116,7 +145,17 @@ export class PasswordScene implements Scene {
       if (sel) g.rect(x - 7, y - 4, k.length > 1 ? 28 : 16, 15, '#ffe040');
       g.text(k, x + (k.length > 1 ? 6 : 1), y, { align: 'center', color: sel ? '#000000' : '#ffffff' });
     });
-    if (this.error > 0) g.text('INVALID PASSWORD', g.width / 2, 196, { align: 'center', color: '#ff6060', outline: '#000000' });
+    if (this.noticeT > 0) g.text(this.notice, g.width / 2, 196, { align: 'center', color: '#ffe040', outline: '#000000' });
+    else if (this.error > 0) g.text('INVALID PASSWORD', g.width / 2, 196, { align: 'center', color: '#ff6060', outline: '#000000' });
     else g.text('A: ENTER  B: DELETE  START: OK', g.width / 2, 196, { align: 'center', color: '#c8d0ff', outline: '#000000' });
   }
+}
+
+/** Bomb and fire power-ups a player would have picked up in every stage before this one. */
+function collectedBefore(stage: number): { bombs: number; fire: number } {
+  const earlier = STAGES.slice(0, stage - 1);
+  return {
+    bombs: Math.min(10, 1 + earlier.filter((s) => s.item === 'bomb').length),
+    fire: Math.min(5, 1 + earlier.filter((s) => s.item === 'fire').length),
+  };
 }
