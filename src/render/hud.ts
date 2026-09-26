@@ -1,0 +1,100 @@
+import type { Gfx, Sprite } from '../engine/gfx';
+import { mix } from '../engine/gfx';
+import { PixelCanvas } from '../gfx/pixel';
+import { BOMBER_COLORS, type BomberColors } from '../gfx/sprites';
+import type { Theme } from '../gfx/tiles';
+
+/** Small 9×9 icons used on the HUD strip. */
+export interface HudIcons {
+  heads: Sprite[];
+  crying: Sprite[];
+  gold: Sprite;
+  bomb: Sprite;
+  fire: Sprite;
+  clock: Sprite;
+  trophy: Sprite;
+}
+
+function head(c: BomberColors, crying = false): Sprite {
+  const p = new PixelCanvas(10, 10);
+  p.px(4, 0, '#000000');
+  p.px(5, 0, '#000000');
+  p.px(4, 1, c.accent[1]);
+  p.px(5, 1, c.accent[0]);
+  p.circle(5, 5.6, 4.6, '#000000');
+  p.circle(5, 5.6, 3.8, c.helmet[1]);
+  p.px(2, 4, c.helmet[0]);
+  p.rect(2, 5, 6, 3, '#000000');
+  p.rect(3, 5, 4, 2, '#ffcf9c');
+  if (crying) {
+    p.px(3, 5, '#000000');
+    p.px(6, 5, '#000000');
+    p.px(3, 7, '#40a0ff');
+    p.px(6, 7, '#40a0ff');
+  } else {
+    p.px(3, 5, '#1c1c3c');
+    p.px(6, 5, '#1c1c3c');
+    p.px(3, 6, '#1c1c3c');
+    p.px(6, 6, '#1c1c3c');
+  }
+  return p.canvas;
+}
+
+let icons: HudIcons | null = null;
+
+export function hudIcons(): HudIcons {
+  if (icons) return icons;
+  const bomb = new PixelCanvas(10, 10);
+  bomb.circle(4.5, 5.5, 4.2, '#000000');
+  bomb.circle(4.5, 5.5, 3.4, '#2c2c58');
+  bomb.px(3, 4, '#9aa0e0');
+  bomb.rect(6, 1, 2, 2, '#000000');
+  bomb.px(8, 0, '#ffd040');
+  const fire = new PixelCanvas(10, 10);
+  fire.ellipse(5, 6, 4.2, 3.8, '#000000');
+  fire.ellipse(5, 6, 3.4, 3.1, '#e02000');
+  fire.rect(4, 1, 2, 4, '#e02000');
+  fire.px(4, 0, '#000000');
+  fire.ellipse(5, 6.5, 2.2, 2.2, '#ff9000');
+  fire.ellipse(5, 7, 1.2, 1.2, '#ffe040');
+  const clock = new PixelCanvas(10, 10);
+  clock.circle(4.5, 5, 4.4, '#000000');
+  clock.circle(4.5, 5, 3.6, '#ffffff');
+  clock.vline(4, 2, 5, '#000000');
+  clock.hline(4, 6, 5, '#000000');
+  clock.px(4, 0, '#000000');
+  const trophy = new PixelCanvas(10, 10);
+  trophy.rect(1, 0, 8, 1, '#000000');
+  trophy.rect(2, 1, 6, 4, '#ffd040');
+  trophy.rect(2, 1, 2, 3, '#fff0a0');
+  trophy.px(1, 2, '#ffd040');
+  trophy.px(8, 2, '#ffd040');
+  trophy.rect(4, 5, 2, 2, '#c09000');
+  trophy.rect(2, 7, 6, 2, '#c09000');
+  trophy.rect(2, 9, 6, 1, '#000000');
+  const gold: BomberColors = { ...BOMBER_COLORS[0], helmet: ['#fff4b0', '#ffd040', '#c09000'] };
+  icons = {
+    heads: BOMBER_COLORS.map((c) => head(c)),
+    crying: BOMBER_COLORS.map((c) => head(c, true)),
+    gold: head(gold),
+    bomb: bomb.canvas,
+    fire: fire.canvas,
+    clock: clock.canvas,
+    trophy: trophy.canvas,
+  };
+  return icons;
+}
+
+/** The tall top wall that carries the HUD. */
+export function hudStrip(g: Gfx, theme: Theme, h = 32): void {
+  const [top, bottom] = theme.hud;
+  for (let y = 0; y < h; y++) g.rect(0, y, g.width, 1, mix(top, bottom, y / (h - 1)));
+  g.rect(0, 0, g.width, 1, mix(top, '#ffffff', 0.35));
+  g.rect(0, h - 3, g.width, 1, mix(bottom, '#000000', 0.3));
+  g.rect(0, h - 2, g.width, 2, '#000000');
+}
+
+export function clockText(ticks: number): string {
+  const secs = Math.max(0, Math.ceil(ticks / 60));
+  return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+}

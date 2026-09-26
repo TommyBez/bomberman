@@ -1,10 +1,15 @@
 import type { App } from '../app';
 import { flipX, pixelSprite, type Gfx } from '../engine/gfx';
 import type { Scene } from '../engine/scene';
+import { CampaignSession } from '../game/campaign/session';
+import { startNormalGame } from './normal/flow';
+import { goTitle } from './nav';
 import { BOMBER_FRAMES, BOMBER_PALETTE } from '../gfx/art/bomberArt';
 import { BOMB_FRAMES, drawBomb, drawFlame, drawPuff, FLAME_PHASES } from '../gfx/fx';
 import { FLAME_CENTER, FLAME_DOWN, FLAME_LEFT, FLAME_RIGHT, FLAME_UP } from '../game/core/types';
 import { buildTiles, THEMES } from '../gfx/tiles';
+import { drawEnemy, ENEMY_ANIM_FRAMES } from '../gfx/enemyArt';
+import { ENEMY_ORDER } from '../game/campaign/enemies';
 
 /** Temporary scene used while the rest of the game is assembled (sprite preview). */
 export class BootScene implements Scene {
@@ -27,12 +32,28 @@ export class BootScene implements Scene {
     for (let ph = 0; ph < FLAME_PHASES; ph++) this.flames.push(shapes.map((b) => drawFlame(b, ph)));
   }
 
-  update(): void {}
+  update(): void {
+    if (this.started) return;
+    this.started = true;
+    const h = location.hash;
+    if (h.startsWith('#play')) {
+      // Dev shortcut: #play, #play=12, #play=12r (retro)
+      const m = /^#play(?:=(\d+)(r?))?/.exec(h);
+      const s = new CampaignSession(m?.[2] ? 'retro' : 'modern');
+      if (m?.[1]) s.stageIndex = Math.max(0, Math.min(49, Number(m[1]) - 1));
+      startNormalGame(this.app, s);
+    } else if (!['#arena', '#enemies', '#sprites'].includes(h)) {
+      goTitle(this.app);
+    }
+  }
 
-  private tiles = buildTiles(THEMES.classic);
+  private started = false;
+
+  private tiles = buildTiles(THEMES.m1);
 
   render(g: Gfx): void {
     if (location.hash === '#arena') return this.renderArena(g);
+    if (location.hash === '#enemies') return this.renderEnemies(g);
     g.clear('#207830');
     const t = this.app.frame;
     g.text('SPRITE PREVIEW', 4, 4, { color: '#ffffff', shadow: '#000000' });
@@ -97,5 +118,24 @@ export class BootScene implements Scene {
     g.image(this.bomber.left1, ox + 16 * 11, oy + 16 * 9 - 8);
     g.rect(0, 0, g.width, 22, '#000000');
     g.text('TIME 3:00', 8, 8, { color: '#ffffff' });
+  }
+
+  private enemyArt = ENEMY_ORDER.map((k) => ({
+    k,
+    frames: Array.from({ length: ENEMY_ANIM_FRAMES }, (_, i) => drawEnemy(k, i, 'right')),
+    left: drawEnemy(k, 0, 'left'),
+    dead: drawEnemy(k, 0, 'right', true),
+  }));
+
+  private renderEnemies(g: Gfx): void {
+    g.clear('#2e8b3a');
+    this.enemyArt.forEach((e, row) => {
+      const y = 6 + row * 29;
+      g.text(e.k, 4, y + 5, { color: '#ffffff', shadow: '#000000' });
+      e.frames.forEach((c, i) => g.image(c, 70 + i * 20, y));
+      g.image(e.left, 160, y);
+      g.image(e.dead, 180, y);
+      g.image(e.frames[Math.floor(this.app.frame / 8) % ENEMY_ANIM_FRAMES], 210, y);
+    });
   }
 }

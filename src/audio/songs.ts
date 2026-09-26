@@ -344,6 +344,11 @@ const hurry: SongDef = {
   ],
 };
 
+/** Same compositions played with NES-style voices for the Retro version. */
+function retro(song: SongDef): SongDef {
+  return { ...song, retro: true, tracks: song.tracks.map((t) => ({ ...t, send: 0, pan: 0 })) };
+}
+
 export const SONGS: Record<string, SongDef> = {
   title,
   stage,
@@ -359,4 +364,11 @@ export const SONGS: Record<string, SongDef> = {
   champion,
   draw,
   hurry,
+  stageRetro: retro(stage),
+  stageStartRetro: retro(stageStart),
+  stageClearRetro: retro(stageClear),
+  deathRetro: retro(death),
+  gameOverRetro: retro(gameOver),
+  bonusRetro: retro(bonus),
+  endingRetro: retro(ending),
 };

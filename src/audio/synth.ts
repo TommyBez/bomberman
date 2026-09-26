@@ -103,7 +103,12 @@ export class Synth {
     dest: AudioNode,
     pan = 0,
     send = 0.3,
+    retro = false,
   ): void {
+    if (retro) {
+      this.retroNote(inst, midi, time, dur, vol, dest);
+      return;
+    }
     const ctx = this.ctx;
     const out = ctx.createGain();
     out.gain.value = 0;
@@ -369,5 +374,87 @@ export class Synth {
         break;
       }
     }
+  }
+
+  /** NES-style voices: two pulse channels, triangle bass and a noise drum kit, no effects. */
+  private retroNote(inst: InstrumentName, midi: number, time: number, dur: number, vol: number, dest: AudioNode): void {
+    const ctx = this.ctx;
+    const out = ctx.createGain();
+    out.gain.value = 0;
+    out.connect(dest);
+    const g = out.gain;
+    const freq = 440 * Math.pow(2, (midi - 69) / 12);
+    const stopAll = (nodes: AudioScheduledSourceNode[], at: number): void => {
+      for (const n of nodes) {
+        n.start(time);
+        n.stop(at);
+      }
+      nodes[0].onended = () => out.disconnect();
+    };
+    const noiseBurst = (filterType: BiquadFilterType, f: number, len: number, level: number): void => {
+      const n = this.noiseSource();
+      const flt = ctx.createBiquadFilter();
+      flt.type = filterType;
+      flt.frequency.value = f;
+      n.connect(flt).connect(out);
+      g.setValueAtTime(level, time);
+      g.exponentialRampToValueAtTime(0.001, time + len);
+      stopAll([n], time + len + 0.02);
+    };
+    if (DRUMS.has(inst)) {
+      switch (inst) {
+        case 'kick': {
+          const o = ctx.createOscillator();
+          o.type = 'triangle';
+          o.frequency.setValueAtTime(180, time);
+          o.frequency.exponentialRampToValueAtTime(50, time + 0.09);
+          o.connect(out);
+          g.setValueAtTime(vol * 1.3, time);
+          g.exponentialRampToValueAtTime(0.001, time + 0.14);
+          stopAll([o], time + 0.16);
+          return;
+        }
+        case 'snare':
+        case 'clap':
+          noiseBurst('bandpass', 2200, 0.13, vol * 0.9);
+          return;
+        case 'hat':
+        case 'shaker':
+          noiseBurst('highpass', 9000, 0.03, vol * 0.5);
+          return;
+        case 'ohat':
+          noiseBurst('highpass', 8000, 0.12, vol * 0.45);
+          return;
+        case 'crash':
+          noiseBurst('highpass', 5000, 0.5, vol * 0.5);
+          return;
+        default:
+          noiseBurst('lowpass', 900, 0.12, vol * 0.8);
+          return;
+      }
+    }
+    const o = ctx.createOscillator();
+    const end = time + dur;
+    if (inst === 'bass' || inst === 'slap') {
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(freq, time);
+      o.connect(out);
+      g.setValueAtTime(vol * 1.1, time);
+      g.setValueAtTime(vol * 1.1, Math.max(time, end - 0.01));
+      g.linearRampToValueAtTime(0, end);
+      stopAll([o], end + 0.02);
+      return;
+    }
+    const duty = inst === 'lead2' ? 0.125 : inst === 'lead' || inst === 'pluck' || inst === 'bell' ? 0.25 : 0.5;
+    o.setPeriodicWave(this.pulse(duty));
+    o.frequency.setValueAtTime(freq, time);
+    o.connect(out);
+    const level = vol * (inst === 'pad' || inst === 'brass' || inst === 'organ' ? 0.55 : 0.8);
+    g.setValueAtTime(level, time);
+    g.setTargetAtTime(level * 0.6, time + 0.02, 0.12);
+    const held = level * 0.6 + (level * 0.4) * Math.exp(-Math.max(0, end - time - 0.02) / 0.12);
+    g.setValueAtTime(held, Math.max(time + 0.021, end - 0.012));
+    g.linearRampToValueAtTime(0, end);
+    stopAll([o], end + 0.02);
   }
 }

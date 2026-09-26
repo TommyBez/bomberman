@@ -117,11 +117,15 @@ export class World {
   readonly flameTimer: Int16Array;
   readonly flameBits: Uint8Array;
   readonly flameOwner: (Bomber | null)[];
+  /** Id of the bomb whose blast lit each flame tile (chain bonuses, kill credit). */
+  readonly flameSource: Int32Array;
   readonly burnTimer: Int16Array;
   readonly items: (ItemCell | null)[];
   bombers: Bomber[] = [];
   events: GameEvent[] = [];
   tick = 0;
+  /** Bombs exploded so far (secret panel bookkeeping). */
+  bombsExploded = 0;
   private bombSerial = 0;
   private nextBombId = 1;
 
@@ -134,6 +138,7 @@ export class World {
     this.flameTimer = new Int16Array(n);
     this.flameBits = new Uint8Array(n);
     this.flameOwner = new Array<Bomber | null>(n).fill(null);
+    this.flameSource = new Int32Array(n);
     this.burnTimer = new Int16Array(n);
     this.items = new Array<ItemCell | null>(n).fill(null);
   }
@@ -566,6 +571,7 @@ export class World {
     }
     const { tx, ty } = bomb;
     const owner = bomb.owner;
+    this.bombsExploded++;
 
     // First work out how far each arm reaches.
     const reach: Record<Dir, number> = { up: 0, right: 0, down: 0, left: 0 };
@@ -601,12 +607,12 @@ export class World {
     // Light the flames.
     let centerBits = FLAME_CENTER;
     for (const dir of ALL_DIRS) if (reach[dir] > 0) centerBits |= FLAME_BIT[dir];
-    this.light(tx, ty, centerBits, owner);
+    this.light(tx, ty, centerBits, owner, bomb.id);
     for (const dir of ALL_DIRS) {
       for (let i = 1; i <= reach[dir]; i++) {
         let bits = FLAME_BIT[OPPOSITE[dir]];
         if (i < reach[dir]) bits |= FLAME_BIT[dir];
-        this.light(tx + DX[dir] * i, ty + DY[dir] * i, bits, owner);
+        this.light(tx + DX[dir] * i, ty + DY[dir] * i, bits, owner, bomb.id);
       }
     }
     let size = 1;
@@ -614,7 +620,10 @@ export class World {
     this.emit({ type: 'explode', tx, ty, size });
 
     for (const h of hits) {
-      if (h.kind === 'soft') this.burnBlock(h.tx, h.ty);
+      if (h.kind === 'soft') {
+        this.onSoftHit(h.tx, h.ty, bomb);
+        this.burnBlock(h.tx, h.ty);
+      }
       else if (h.kind === 'item') this.burnItem(h.tx, h.ty);
       else if (h.kind === 'bomb') {
         const other = this.bombAt[this.idx(h.tx, h.ty)];
@@ -634,17 +643,25 @@ export class World {
 
   protected onExplode(_bomb: Bomb, _reach: Record<Dir, number>): void {}
 
-  protected light(tx: number, ty: number, bits: number, owner: Bomber | null): void {
+  /** Hook: a blast reached a soft block (anything hiding inside it is caught too). */
+  protected onSoftHit(tx: number, ty: number, bomb: Bomb): void {
+    for (const b of this.bombers) {
+      if (b.alive && b.tx === tx && b.ty === ty && !this.flameProof(b)) this.kill(b, bomb.owner);
+    }
+  }
+
+  protected light(tx: number, ty: number, bits: number, owner: Bomber | null, source: number): void {
     const i = this.idx(tx, ty);
     // Expired flames have their bits cleared, so OR-ing merges overlapping blasts.
     this.flameBits[i] |= bits;
     this.flameTimer[i] = this.rules.flameTicks;
     this.flameOwner[i] = owner;
-    this.onLight(tx, ty, owner);
+    this.flameSource[i] = source;
+    this.onLight(tx, ty, owner, source);
   }
 
   /** Hook: a tile has just been set on fire. */
-  protected onLight(_tx: number, _ty: number, _owner: Bomber | null): void {}
+  protected onLight(_tx: number, _ty: number, _owner: Bomber | null, _source: number): void {}
 
   burnBlock(tx: number, ty: number): void {
     const i = this.idx(tx, ty);

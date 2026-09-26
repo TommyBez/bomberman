@@ -124,6 +124,9 @@ export class Input {
   readonly menu = new Controller([...ALL_DEVICES]);
   readonly players: Controller[] = [0, 1, 2, 3, 4].map(() => new Controller());
   private keys = new Set<string>();
+  /** Keys pressed since the last poll (so a tap shorter than a frame still registers). */
+  private tapped = new Set<string>();
+  private touchTapped = new Set<Button>();
   private padStates: Set<Button>[] = [new Set(), new Set(), new Set(), new Set()];
   private touchState = new Set<Button>();
   private systemPause = false;
@@ -136,6 +139,7 @@ export class Input {
     win.addEventListener('keydown', (e) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (isBound(e.code)) e.preventDefault();
+      if (!e.repeat) this.tapped.add(e.code);
       this.keys.add(e.code);
       this.gesture();
     });
@@ -222,6 +226,7 @@ export class Input {
         e.preventDefault();
         el.setPointerCapture(e.pointerId);
         pointers.add(e.pointerId);
+        this.touchTapped.add(button);
         sync();
         this.gesture();
       });
@@ -246,9 +251,12 @@ export class Input {
     for (const k of SYSTEM_PAUSE_KEYS) if (this.keys.has(k)) sys = true;
     for (const p of this.padStates) if (p.has('start')) sys = true;
     if (this.touchState.has('start')) sys = true;
+    for (const k of this.tapped) if (SYSTEM_PAUSE_KEYS.has(k)) sys = true;
     this.systemPause = sys;
     this.menu.update(this);
     for (const c of this.players) c.update(this);
+    this.tapped.clear();
+    this.touchTapped.clear();
   }
 
   /** START/ESC pressed on any device this tick (battle pause). */
@@ -258,12 +266,19 @@ export class Input {
 
   /** Raw button set for a device. */
   deviceState(dev: DeviceId): Set<Button> {
-    if (dev === 'touch') return this.touchState;
+    if (dev === 'touch') {
+      if (!this.touchTapped.size) return this.touchState;
+      return new Set([...this.touchState, ...this.touchTapped]);
+    }
     if (dev.startsWith('pad')) return this.padStates[Number(dev.slice(3))] ?? new Set();
     const map = KEYMAPS[dev];
     const out = new Set<Button>();
     if (!map) return out;
     for (const code of this.keys) {
+      const b = map[code];
+      if (b) out.add(b);
+    }
+    for (const code of this.tapped) {
       const b = map[code];
       if (b) out.add(b);
     }

@@ -26,6 +26,8 @@ export interface TrackDef {
 
 export interface SongDef {
   bpm: number;
+  /** Render with NES-style voices (pulse / triangle / noise, no reverb). */
+  retro?: boolean;
   /** Step to jump back to when looping (default 0). */
   loopStep?: number;
   loop: boolean;
@@ -212,11 +214,11 @@ export class MusicPlayer {
           const dur = ev.len * stepDur * 0.92;
           if (ev.drums.length) {
             for (let i = 0; i < ev.drums.length; i++) {
-              this.synth.note(ev.drums[i], ev.notes[i], this.nextTime, dur, track.vol, bus, track.pan ?? 0, track.send ?? 0.15);
+              this.synth.note(ev.drums[i], ev.notes[i], this.nextTime, dur, track.vol, bus, track.pan ?? 0, track.send ?? 0.15, song.def.retro);
             }
           } else {
             for (const n of ev.notes) {
-              this.synth.note(track.inst, n + (track.tr ?? 0), this.nextTime, dur, track.vol, bus, track.pan ?? 0, track.send ?? 0.3);
+              this.synth.note(track.inst, n + (track.tr ?? 0), this.nextTime, dur, track.vol, bus, track.pan ?? 0, track.send ?? 0.3, song.def.retro);
             }
           }
         }
