@@ -4,10 +4,11 @@ import type { DeviceId } from '../../engine/input';
 import type { Scene } from '../../engine/scene';
 import { arenaFor, arenasFor, type ArenaDef } from '../../game/battle/arenas';
 import { altUnlocked } from '../../game/battle/unlocks';
-import { charactersFor, CHARACTERS } from '../../game/battle/characters';
+import { type CharacterDef, charactersFor, CHARACTERS } from '../../game/battle/characters';
 import { CUSTOM_ITEMS, defaultConfig, ITEM_NAMES, LEVEL_NAMES, MAX_HP, type BattleConfig, type Level } from '../../game/battle/config';
 import { customCounts, softBlockCount, stageItems } from '../../game/battle/battleWorld';
 import { load, save } from '../../engine/storage';
+import { characterSprites } from '../../gfx/battleSprites';
 import { sprites } from '../../gfx/sprites';
 import { drawMenuBackdrop, drawPanel, drawTitleBar, Menu, type MenuItem } from '../../render/ui';
 import { goMainMenu } from '../nav';
@@ -285,92 +286,157 @@ class PlayersScene implements Scene {
 
 // ------------------------------------------------------------------ characters
 
+/**
+ * Character select: every human moves their own cursor with their own controller at the
+ * same time; the display case up top shows everybody's current pick (CPUs included).
+ * START on any controller settles everyone's current choice.
+ */
 class CharacterScene implements Scene {
-  private player = 0;
-  private cursor: number[];
+  private readonly roster: CharacterDef[];
+  private readonly cursor: number[];
+  private readonly done: boolean[];
+  private readonly humans: number[];
+  private t = 0;
+  private finishing = -1;
 
   constructor(
     private readonly app: App,
     private readonly setup: BattleSetup,
   ) {
-    const roster = charactersFor(setup.cfg.level);
-    this.cursor = setup.cfg.players.map((p) => Math.max(0, roster.findIndex((c) => c.id === p.character)));
-    this.player = this.nextPicker(-1);
-    if (this.player < 0) this.player = 0;
+    const cfg = setup.cfg;
+    this.roster = charactersFor(cfg.level);
+    this.humans = cfg.players.map((p, i) => (p.type === 'human' ? i : -1)).filter((i) => i >= 0);
+    this.cursor = cfg.players.map((p) => Math.max(0, this.roster.findIndex((c) => c.id === p.character)));
+    this.done = cfg.players.map((p) => p.type !== 'human');
+    // Computer players keep a valid pick from last time, or get one at random.
+    cfg.players.forEach((p, i) => {
+      if (p.type === 'com' && !this.roster.some((c) => c.id === p.character)) {
+        this.cursor[i] = Math.floor(Math.random() * this.roster.length);
+        p.character = this.roster[this.cursor[i]].id;
+      }
+    });
   }
 
-  /** Players that choose here: humans (CPUs keep their pick; press C on a CPU to change). */
-  private nextPicker(from: number): number {
-    const ps = this.setup.cfg.players;
-    for (let i = from + 1; i < ps.length; i++) if (ps[i].type !== 'off') return i;
-    return -1;
+  enter(): void {
+    // Each human answers their own controller here, as in the battle itself.
+    const input = this.app.input;
+    this.setup.cfg.players.forEach((p, i) => {
+      if (p.type === 'human') input.players[i].devices = [...p.devices];
+    });
+    for (const c of input.players) c.swallow();
   }
 
   update(): void {
-    const pad = this.app.input.menu;
-    const roster = charactersFor(this.setup.cfg.level);
-    if (roster.length === 1) {
-      for (const p of this.setup.cfg.players) p.character = roster[0].id;
+    this.t++;
+    const cfg = this.setup.cfg;
+    if (this.roster.length === 1) {
+      for (const p of cfg.players) p.character = this.roster[0].id;
       this.setup.afterCharacters();
       return;
     }
+    if (this.finishing >= 0) {
+      if (++this.finishing > 30) this.setup.afterCharacters();
+      return;
+    }
     const cols = 4;
-    let c = this.cursor[this.player];
-    if (pad.repeat('left')) c = (c + roster.length - 1) % roster.length;
-    if (pad.repeat('right')) c = (c + 1) % roster.length;
-    if (pad.repeat('up')) c = (c + roster.length - cols) % roster.length;
-    if (pad.repeat('down')) c = (c + cols) % roster.length;
-    if (c !== this.cursor[this.player]) {
-      this.cursor[this.player] = c;
-      this.app.audio.sfx('menuMove');
-    }
-    if (pad.pressed('a')) {
-      pad.swallow();
-      this.setup.cfg.players[this.player].character = roster[c].id;
-      this.app.audio.sfx('menuOk');
-      const n = this.nextPicker(this.player);
-      if (n < 0) this.setup.afterCharacters();
-      else this.player = n;
-    } else if (pad.pressed('start')) {
-      pad.swallow();
-      this.setup.cfg.players[this.player].character = roster[c].id;
-      this.setup.afterCharacters();
-    } else if (pad.pressed('b')) {
-      pad.swallow();
-      this.app.audio.sfx('menuBack');
-      let prev = -1;
-      for (let i = this.player - 1; i >= 0; i--) if (this.setup.cfg.players[i].type !== 'off') {
-        prev = i;
-        break;
+    const n = this.roster.length;
+    for (const i of this.humans) {
+      const c = this.app.input.players[i];
+      if (this.done[i]) {
+        if (c.pressed('b')) {
+          this.done[i] = false;
+          this.app.audio.sfx('menuBack');
+        }
+        continue;
       }
-      if (prev < 0) this.setup.backFromCharacters();
-      else this.player = prev;
+      let k = this.cursor[i];
+      if (c.repeat('left')) k = (k + n - 1) % n;
+      if (c.repeat('right')) k = (k + 1) % n;
+      if (c.repeat('up')) k = (k + n - cols) % n;
+      if (c.repeat('down')) k = (k + cols) % n;
+      if (k !== this.cursor[i]) {
+        this.cursor[i] = k;
+        cfg.players[i].character = this.roster[k].id;
+        this.app.audio.sfx('menuMove');
+      }
+      if (c.pressed('a')) {
+        cfg.players[i].character = this.roster[k].id;
+        this.done[i] = true;
+        this.app.audio.sfx('menuOk');
+      } else if (c.pressed('b')) {
+        this.app.audio.sfx('menuBack');
+        this.setup.backFromCharacters();
+        return;
+      }
     }
+    const menu = this.app.input.menu;
+    if (menu.pressed('start')) {
+      menu.swallow();
+      for (const i of this.humans) {
+        cfg.players[i].character = this.roster[this.cursor[i]].id;
+        this.done[i] = true;
+      }
+      this.app.audio.sfx('menuOk');
+    } else if (menu.pressed('select')) {
+      this.app.audio.sfx('menuBack');
+      this.setup.backFromCharacters();
+      return;
+    }
+    if (this.done.every(Boolean)) this.finishing = 0;
   }
 
   render(g: Gfx): void {
+    const cfg = this.setup.cfg;
     drawMenuBackdrop(g, this.app.frame);
+    drawPanel(g, 10, 24, 236, 172, '#503080', '#281040');
     drawTitleBar(g, 'SELECT CHARACTER', this.app.frame);
-    const roster = charactersFor(this.setup.cfg.level);
-    const sel = roster[this.cursor[this.player]];
-    // Display-case shelf with the characters.
-    drawPanel(g, 12, 32, 232, 110, '#704020', '#301008');
-    roster.forEach((ch, i) => {
-      const x = 22 + (i % 4) * 56;
-      const y = 40 + Math.floor(i / 4) * 50;
-      g.rect(x, y + 36, 44, 4, '#a06030');
-      const isSel = i === this.cursor[this.player];
-      if (isSel && Math.floor(this.app.frame / 8) % 2 === 0) g.frame(x - 2, y - 2, 48, 44, '#ffe040');
-      drawBomberIcon(g, this.player, this.player, x + 14, y + 6, isSel ? this.app.frame : 0, ch.id, true);
+    // The display case: everybody's current pick.
+    g.rect(16, 32, 224, 50, '#2a8a3c');
+    for (let y = 32; y < 60; y += 4) g.rect(16, y, 224, 1, '#33983f');
+    g.rect(16, 66, 224, 2, '#8a5a20');
+    for (let x = 18; x < 240; x += 6) g.rect(x, 60, 1, 6, '#a06a28');
+    g.rect(16, 68, 224, 14, '#cce8f8');
+    g.rect(16, 68, 224, 1, '#ffffff');
+    g.frame(15, 31, 226, 52, '#80c0e8');
+    g.rect(15, 31, 226, 3, '#e8f4ff');
+    const slots = cfg.players.map((p, i) => ({ p, i })).filter(({ p }) => p.type !== 'off');
+    slots.forEach(({ p, i }, k) => {
+      const x = 128 + (k - (slots.length - 1) / 2) * 44;
+      const sp = characterSprites(p.character, i);
+      const img = this.done[i] && p.type === 'human' ? sp.win[Math.floor(this.t / 12) % 2] : sp.walk.down[0];
+      g.image(img, x - 8, 44);
+      g.text(p.type === 'com' ? 'COM' : `${i + 1}P`, x, 72, { align: 'center', color: CURSOR_COLORS[i], outline: '#000000' });
     });
-    drawPanel(g, 12, 146, 232, 66, '#28a068', '#0c4028');
-    g.text(`PLAYER ${this.player + 1}${this.setup.cfg.players[this.player].type === 'com' ? ' (COM)' : ''}`, 22, 154, { color: '#ffe040', outline: '#000000' });
-    g.text(sel.name, 22, 168, { color: '#ffffff', outline: '#000000', scale: 1 });
-    if (sel.special) g.text(`SPECIAL: ${sel.specialName} (B + DIRECTION)`, 22, 182, { color: '#a8ffc8', outline: '#000000' });
-    else g.text('ALL-ROUNDER', 22, 182, { color: '#a8ffc8', outline: '#000000' });
-    g.text('A: CHOOSE  START: DONE  B: BACK', g.width / 2, 198, { align: 'center', color: '#c8ffe0', outline: '#000000' });
+    // The roster, with each human's cursor.
+    const cellW = 54;
+    const cellH = 42;
+    const x0 = 128 - (Math.min(4, this.roster.length) * cellW) / 2;
+    this.roster.forEach((ch, k) => {
+      const x = x0 + (k % 4) * cellW;
+      const y = 90 + Math.floor(k / 4) * cellH;
+      g.rect(x + 2, y + 2, cellW - 4, cellH - 4, (k + Math.floor(k / 4)) % 2 ? 'rgba(90,60,120,0.55)' : 'rgba(120,80,40,0.55)');
+      g.image(characterSprites(ch.id, 0).walk.down[0], x + cellW / 2 - 8, y + 10);
+    });
+    this.humans.forEach((i, h) => {
+      const k = this.cursor[i];
+      const x = x0 + (k % 4) * cellW;
+      const y = 90 + Math.floor(k / 4) * cellH;
+      const inset = h * 2;
+      const blink = this.done[i] || Math.floor((this.t + h * 5) / 8) % 2 === 0;
+      if (blink) g.frame(x + 1 + inset, y + 1 + inset, cellW - 2 - inset * 2, cellH - 2 - inset * 2, CURSOR_COLORS[i]);
+      g.text(`${i + 1}P`, x + 4 + h * 12, y + 3, { color: CURSOR_COLORS[i], outline: '#000000' });
+    });
+    // What the first human is pointing at.
+    const lead = this.humans[0] ?? 0;
+    const sel = this.roster[this.cursor[lead]];
+    g.text(sel.name, 128, 178, { align: 'center', color: '#ffe040', outline: '#000000' });
+    const info = sel.special ? `SPECIAL: ${sel.specialName} (B + DIRECTION)` : 'A: CHOOSE  B: BACK  START: ALL SET';
+    g.text(info, 128, 202, { align: 'center', color: '#ffffff', outline: '#401030' });
   }
 }
+
+/** Cursor and label colour for each player slot. */
+const CURSOR_COLORS = ['#ffffff', '#a0a0b0', '#ff5050', '#50a0ff', '#60e060'];
 
 // ------------------------------------------------------------------ teams
 
@@ -518,8 +584,8 @@ class CustomScene implements Scene {
     this.menu = new Menu(
       app,
       [
-        { label: 'SET ITEM', action: () => app.scenes.go(new ItemSetScene(app, setup, () => app.scenes.go(new CustomScene(app, setup)))) },
-        { label: 'SET HIT POINTS', action: () => app.scenes.go(new HitPointScene(app, setup, () => app.scenes.go(new CustomScene(app, setup)))) },
+        { label: 'ITEM SELECTION', action: () => app.scenes.go(new ItemSetScene(app, setup, () => app.scenes.go(new CustomScene(app, setup)))) },
+        { label: 'HANDICAP', action: () => app.scenes.go(new HitPointScene(app, setup, () => app.scenes.go(new CustomScene(app, setup)))) },
         { label: 'START BATTLE', action: () => setup.launch() },
       ],
       () => setup.selectStage(),
@@ -602,7 +668,7 @@ class ItemSetScene implements Scene {
 
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
-    drawTitleBar(g, 'SET ITEM', this.app.frame);
+    drawTitleBar(g, 'ITEM SELECTION', this.app.frame);
     drawPanel(g, 16, 30, 224, 156, '#28a068', '#0c4028');
     const items = this.setup.cfg.customItems!;
     const s = sprites();
@@ -634,11 +700,11 @@ class HitPointScene implements Scene {
   ) {
     const items: MenuItem[] = setup.cfg.players.map((p, i) => ({
       label: `PLAYER ${i + 1}`,
-      value: () => (p.type === 'off' ? '-' : '♥'.repeat(p.hp)),
+      value: () => (p.type === 'off' ? '-' : String(p.hp)),
       change: (d: -1 | 1) => (p.hp = Math.max(1, Math.min(MAX_HP, p.hp + d))),
       disabled: () => p.type === 'off',
     }));
-    items.push({ label: 'OK', action: () => this.back() });
+    items.push({ label: 'EXIT', action: () => this.back() });
     this.menu = new Menu(app, items, () => this.back());
   }
 
@@ -648,7 +714,7 @@ class HitPointScene implements Scene {
 
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
-    drawTitleBar(g, 'SET HIT POINTS', this.app.frame);
+    drawTitleBar(g, 'HANDICAP', this.app.frame);
     drawPanel(g, 28, 48, 200, 130, '#28a068', '#0c4028');
     this.menu.draw(g, 44, 62, { lineH: 18, valueX: 170 });
   }

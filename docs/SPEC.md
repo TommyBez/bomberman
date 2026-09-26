@@ -103,7 +103,7 @@ The stage table (enemies and item for all 50 stages) lives in `src/game/campaign
   only through Custom Battle. Steel Shoes come only from Hyper Bomber; Hearts from Hyper
   Bomber or Custom. Remote Control is Normal Game only. Kick and Bomb Pass replace each
   other (a Blue Louie's kick switches Bomb Pass off too).
-- Custom Battle "Set Item": 15 items in three columns of five (Bomb, Fire, Speed, Flak
+- Custom Battle "Item Selection": 15 items in three columns of five (Bomb, Fire, Speed, Flak
   Jacket, Bomb Pass / Kick, Power Glove, Punch, Push, Metabomb / Rubber, Power Bomb, Full
   Fire, Heart, Skull), limited by the stage's soft blocks.
 - Full Fire, the first Power Bomb, snow huts, jungle leaves and the Super Power stage give

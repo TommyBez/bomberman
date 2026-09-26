@@ -84,8 +84,8 @@ letters directly.
 
 ### Battle Game (1–5 players, humans and CPUs)
 
-- **Modes:** Battle Royal and Custom Battle (the 15-item Set Item screen and hit
-  points), in Single or Tag (team) play.
+- **Modes:** Battle Royal and Custom Battle (Item Selection with 15 items, and a
+  hit-point Handicap), in Single or Tag (team) play.
 - **Rules** follow the PS1 options:
   - COM level, games per match and time.
   - Sudden Death and Random Position (Off, On or Random), and Skull.
