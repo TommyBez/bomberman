@@ -116,7 +116,9 @@ letters directly.
   - Bomber Carts for knocked-out players.
   - Hyper Bomber prize game, results trophies, Battle Report and victory screen.
 - **CPU players** read a danger map and use a time-aware escape search. They check that
-  a bomb has an escape route before placing it. There are three difficulty levels.
+  a bomb has an escape route before placing it, and they watch the stage: the trolley's
+  route, the robot's stomp, and bombs carried by belts or turned by arrows. There are
+  three difficulty levels.
 
 ### Everything else
 
