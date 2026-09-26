@@ -92,7 +92,8 @@ letters directly.
   - Hyper Bomber.
   - Bomber Cart: off, on or Super.
 - **24 stages**, eight each for Beginner, Normal and Advanced, with their gimmicks. Each
-  has an alternate layout with fixed blocks and a different item mix. The original's
+  has an alternate with fixed blocks and a different item mix, and most have their own
+  layout of pillars and gimmicks. The original's
   battle passwords open them level by level: `56565656`, `16161616` and `49894989`,
   typed on the password screen.
   Gimmicks include see-saws, trolleys and switches, arrows, pipes, conveyor belts,
@@ -145,8 +146,9 @@ letters directly.
   monster speeds in px/frame. The stage tables (rosters, items, bonus stages and panel
   stages) follow the NES and PS1 data. `docs/SPEC.md` lists the sources and values.
 - All 24 battle stages were read tile by tile from the stage screenshots in the Japanese
-  manual, checked against the stages' background art. The alternate layouts use fixed
-  block patterns because the originals' placements aren't documented.
+  manual, checked against the stages' background art, and the alternates from their own
+  background art. The alternates' soft blocks follow fixed patterns because the
+  originals' placements aren't documented.
 - All music, Show Time skits, dialogue and artwork are new, written for this remake.
 
 ## Development

@@ -139,26 +139,31 @@ const SWITCHEROO_RAILS: string[][] = [
   ['=========', '=.......=', '===...===', '=.......=', '===...===', '=.......=', '========='],
 ];
 
-/**
- * Destination Unknown's layouts: the four warp holes ('W') round the centre, (5, 5), (9, 5),
- * (5, 7) and (9, 7), are always there, and so are the dead-end stations at (3, 9) and
- * (11, 3). The first is the layout seen at the start of a round in the original.
- */
-const MYSTERY_RAILS: string[][] = [
-  ['..=====.=', '..=...=.=', '==W...W.=', '=.......=', '=.W...W==', '=.=...=..', '=.=====..'],
-  ['=========', '=.=...=.=', '=.W...W.=', '=.......=', '=.W...W.=', '=.=...=.=', '========='],
-  ['..=======', '..=...=..', '==W...W..', '=.......=', '..W...W==', '..=...=..', '=======..'],
-  ['=.=...=.=', '=.=...=.=', '==W...W==', '=.......=', '==W...W==', '=.=...=.=', '=.=...=.='],
-  ['=========', '..=...=..', '..W...W..', '.........', '..W...W..', '..=...=..', '========='],
-  ['=========', '=.=...=.=', '=.W...W.=', '=.......=', '=.W...W.=', '=.=...=.=', '=.=====.='],
-];
-
 export const ARENAS: ArenaDef[] = [
   // ------------------------------------------------------------------ BEGINNER
   {
     id: 'b1', name: 'NORMAL', jpName: 'STANDARD', level: 'beginner', gimmick: null, theme: 'battle', density: 0.7,
     blurb: 'THE CLASSIC ARENA. NO TRAPS.',
     map: STD,
+    // The alternate, from its stage art: walls down both sides and bars across the middle
+    // rows.
+    alt: {
+      map: [
+        '###############',
+        '#1_........._3#',
+        '#_#.#.###.#.#_#',
+        '#.#.........#.#',
+        '#.#.###.###.#.#',
+        '#.#.........#.#',
+        '#.#.#.#5#.#.#.#',
+        '#.#.........#.#',
+        '#.#.###.###.#.#',
+        '#.#.........#.#',
+        '#_#.#.###.#.#_#',
+        '#4_........._2#',
+        '###############',
+      ],
+    },
   },
   {
     id: 'b2', name: 'SEESAW PARK', jpName: 'SEESAW PARK', level: 'beginner', gimmick: 'seesaw', theme: 'seesawpark', density: 0.5,
@@ -203,6 +208,24 @@ export const ARENAS: ArenaDef[] = [
       '#4_........._2#',
       '###############',
     ],
+    // The alternate, from its stage art: the cones rearranged.
+    alt: {
+      map: [
+        '###############',
+        '#1_........._3#',
+        '#_#####.#####_#',
+        '#.#.........#.#',
+        '#.#.#.#.#.#.#.#',
+        '#..c#.#O...c..#',
+        '#.#.#.#!#.#.#.#',
+        '#.#.#.#.#.#.#.#',
+        '#.#.#.#.#.#.#.#',
+        '#.#....5....#.#',
+        '#_#####.#####_#',
+        '#4_........._2#',
+        '###############',
+      ],
+    },
   },
   {
     id: 'b4', name: 'TAKE THE TRAIN', jpName: 'GO GO TROCCO', level: 'beginner', gimmick: 'train', theme: 'forest', density: 0.6,
@@ -227,6 +250,28 @@ export const ARENAS: ArenaDef[] = [
       '#4_........._2#',
       '###############',
     ],
+    // The alternate, from its stage art: a new line, two branches meeting at points at
+    // (7, 9), with a spur up the middle.
+    alt: {
+      stations: [[3, 3], [11, 3], [7, 5]],
+      trolley: { x: 3, y: 3, dir: 'right' },
+      spawns: [[1, 1], [13, 11], [13, 1], [1, 11], [7, 4]],
+      map: [
+        '###############',
+        '#1_........._3#',
+        '#_#.#.#.#.#.#_#',
+        '#..===...===..#',
+        '#.#.#=#5#=#.#.#',
+        '#....=.=.===..#',
+        '#.#.#=#=#.#=#.#',
+        '#..===.=.s.=..#',
+        '#.#=#.#=#.#=#.#',
+        '#..=========..#',
+        '#_#.#.#.#.#.#_#',
+        '#4_........._2#',
+        '###############',
+      ],
+    },
   },
   {
     id: 'b5', name: 'ONE-WAY STREET', jpName: 'MAGATTE BON', level: 'beginner', gimmick: 'arrows', theme: 'planks', density: 0.6,
@@ -250,6 +295,24 @@ export const ARENAS: ArenaDef[] = [
       '#R_........._U#',
       '###############',
     ],
+    // The alternate, from its stage art: new arrows, the corners running the other way.
+    alt: {
+      map: [
+        '###############',
+        '#R_........._D#',
+        '#_#.#.#.#.#.#_#',
+        '#..D.L........#',
+        '#.#.#.#.#.#.#.#',
+        '#....U...L....#',
+        '#.#.#.#5#.#.#.#',
+        '#..R.......D..#',
+        '#.#.#.#.#.#.#.#',
+        '#........U.L..#',
+        '#_#.#.#.#.#.#_#',
+        '#U_........._L#',
+        '###############',
+      ],
+    },
   },
   {
     id: 'b6', name: 'PIPE CITY', jpName: 'DOKAN DE BOKAN', level: 'beginner', gimmick: 'pipes', theme: 'pipecity', density: 0.55,
@@ -270,6 +333,25 @@ export const ARENAS: ArenaDef[] = [
       '#4_........._2#',
       '###############',
     ],
+    // The alternate, from its stage art: two pipe crossroads and four T-pieces, two of them
+    // along the side walls.
+    alt: {
+      map: [
+        '###############',
+        '#1_.....PPP._3#',
+        '#_#.#.#.#P#.#_#',
+        '#.............#',
+        '#P#.#P#.#.#.#.#',
+        '#PP.PPP.......#',
+        '#P#.#P#5#P#.#P#',
+        '#.......PPP.PP#',
+        '#.#.#.#.#P#.#P#',
+        '#.............#',
+        '#_#.#P#.#.#.#_#',
+        '#4_.PPP....._2#',
+        '###############',
+      ],
+    },
   },
   {
     id: 'b7', name: 'FACTORY', jpName: 'GURUGURU BELCON', level: 'beginner', gimmick: 'conveyor', theme: 'plant', density: 0.55,
@@ -289,6 +371,24 @@ export const ARENAS: ArenaDef[] = [
       '#4_........._2#',
       '###############',
     ],
+    // The alternate, from its stage art: the belt loop bends into a cross.
+    alt: {
+      map: [
+        '###############',
+        '#1_........._3#',
+        '#_#.#.#.#.#.#_#',
+        '#....>>>>v....#',
+        '#.#.#^#.#v#.#.#',
+        '#..>>^...>>v..#',
+        '#.#^#.#5#.#v#.#',
+        '#..^<<...v<<..#',
+        '#.#.#^#.#v#.#.#',
+        '#....^<<<<....#',
+        '#_#.#.#.#.#.#_#',
+        '#4_........._2#',
+        '###############',
+      ],
+    },
   },
   {
     id: 'b8', name: 'WARP DESERT', jpName: 'SARASARA WARP', level: 'beginner', gimmick: 'warp', theme: 'desert', density: 0.55,
@@ -309,6 +409,24 @@ export const ARENAS: ArenaDef[] = [
       '#4_........._2#',
       '###############',
     ],
+    // The alternate, from its stage art: a pyramid beside each palm.
+    alt: {
+      map: [
+        '###############',
+        '#1_........._3#',
+        '#_Y##.#.#.##Y_#',
+        '#..W.......W..#',
+        '#.#.#.#.#.#.#.#',
+        '#.............#',
+        '#.#.Y##5##Y.#.#',
+        '#.............#',
+        '#.#.#.#.#.#.#.#',
+        '#..W.......W..#',
+        '#_Y##.#.#.##Y_#',
+        '#4_........._2#',
+        '###############',
+      ],
+    },
   },
   // ------------------------------------------------------------------ NORMAL
   {
@@ -331,6 +449,24 @@ export const ARENAS: ArenaDef[] = [
       '#.............#',
       '###############',
     ],
+    // The alternate, from its stage art: ten more pillars, two capping the start box.
+    alt: {
+      map: [
+        '###############',
+        '#.............#',
+        '#.#.###.###.#.#',
+        '#.............#',
+        '#.#.#_###_#.#.#',
+        '#.#._1_5_3_.#.#',
+        '#.#.#_#_#_#.#.#',
+        '#.#._4___2_.#.#',
+        '#.#.#_###_#.#.#',
+        '#.............#',
+        '#.#.###.###.#.#',
+        '#.............#',
+        '###############',
+      ],
+    },
   },
   {
     id: 'n2', name: 'SEESAW LAND', jpName: 'SEESAW LAND', level: 'normal', gimmick: 'seesawLinked', theme: 'seesawland', density: 0.5,
@@ -351,6 +487,24 @@ export const ARENAS: ArenaDef[] = [
       '#4_........._2#',
       '###############',
     ],
+    // The alternate, from its stage art: five seesaws in a zigzag.
+    alt: {
+      map: [
+        '###############',
+        '#1_....S_S.._3#',
+        '#_#.#.#.#.#.#_#',
+        '#....S_S......#',
+        '#.#.#.#.#.#.#.#',
+        '#......S_S....#',
+        '#.#.#.#5#.#.#.#',
+        '#....S_S......#',
+        '#.#.#.#.#.#.#.#',
+        '#......S_S....#',
+        '#_#.#.#.#.#.#_#',
+        '#4_........._2#',
+        '###############',
+      ],
+    },
   },
   {
     id: 'n3', name: 'HEAD IN THE CLOUDS', jpName: 'FUWAFUWA BON', level: 'normal', gimmick: 'clouds', theme: 'sky', density: 0.5,
@@ -372,6 +526,25 @@ export const ARENAS: ArenaDef[] = [
       '#4_..T......_2#',
       '###############',
     ],
+    // The alternate, from its stage art: the cloud covers the upper-left half.
+    alt: {
+      cloud: [[1, 1, 12, 1], [1, 2, 11, 2], [1, 3, 10, 3], [1, 4, 9, 4], [1, 5, 8, 5], [1, 6, 7, 6], [1, 7, 6, 7], [1, 8, 5, 8], [1, 9, 4, 9], [1, 10, 3, 10], [1, 11, 2, 11]],
+      map: [
+        '###############',
+        '#1_......T.._3#',
+        '#_#.#.#.#.#.#_#',
+        '#......T......#',
+        '#.#.#.#.#.#.#.#',
+        '#....T.....T..#',
+        '#.#.#.#5#.#.#.#',
+        '#..T.....T....#',
+        '#.#.#.#.#.#.#.#',
+        '#......T......#',
+        '#_#.#.#.#.#.#_#',
+        '#4_..T......_2#',
+        '###############',
+      ],
+    },
   },
   {
     id: 'n4', name: 'SWITCHEROO', jpName: 'KARAKURI TROCCO', level: 'normal', gimmick: 'switcheroo', theme: 'yard', density: 0.55,
@@ -405,6 +578,26 @@ export const ARENAS: ArenaDef[] = [
       '#4_U.......L_2#',
       '###############',
     ],
+    // The alternate, from its stage art: ten fixed arrows, with the spinners moved to the
+    // middle column.
+    alt: {
+      spawns: [[1, 1], [13, 11], [13, 1], [1, 11], [7, 6]],
+      map: [
+        '###############',
+        '#D_....D...._L#',
+        '#_#.#.#.#.#.#_#',
+        '#..R...@...D..#',
+        '#.#.#.#.#.#.#.#',
+        '#.............#',
+        '#.#.#.#5#.#.#.#',
+        '#.............#',
+        '#.#.#.#.#.#.#.#',
+        '#..U...@...L..#',
+        '#_#.#.#.#.#.#_#',
+        '#R_....U...._U#',
+        '###############',
+      ],
+    },
   },
   {
     id: 'n6', name: 'EVERY WHICH WAY', jpName: 'KARAKURI DOKAN', level: 'normal', gimmick: 'portals', theme: 'frost', density: 0.55,
@@ -450,6 +643,24 @@ export const ARENAS: ArenaDef[] = [
       '#4_........._2#',
       '###############',
     ],
+    // The alternate, from its stage art: the two belt rings become one big loop.
+    alt: {
+      map: [
+        '###############',
+        '#1_........._3#',
+        '#_#.#.#.#.#.#_#',
+        '#..>>>>>>>>v..#',
+        '#.#^#.#s#.#v#.#',
+        '#..^.......v..#',
+        '#.#^#.#5#.#v#.#',
+        '#..^.......v..#',
+        '#.#^#.#.#.#v#.#',
+        '#..^<<<<<<<<..#',
+        '#_#.#.#.#.#.#_#',
+        '#4_........._2#',
+        '###############',
+      ],
+    },
   },
   {
     id: 'n8', name: 'WINTER WONDERLAND', jpName: 'TSURUTSURU BON', level: 'normal', gimmick: 'winter', theme: 'snow', density: 0.5,
@@ -470,6 +681,24 @@ export const ARENAS: ArenaDef[] = [
       '#4_........._2#',
       '###############',
     ],
+    // The alternate, from its stage art: a snow hut in each corner.
+    alt: {
+      map: [
+        '###############',
+        '#1_........._3#',
+        '#_HHH.#.#.HHH_#',
+        '#.HHH.....HHH.#',
+        '#.HHH.#.#.HHH.#',
+        '#....i...i....#',
+        '#.#.#.#5#.#.#.#',
+        '#....i...i....#',
+        '#.HHH.#.#.HHH.#',
+        '#.HHH.....HHH.#',
+        '#_HHH.#.#.HHH_#',
+        '#4_........._2#',
+        '###############',
+      ],
+    },
   },
   // ------------------------------------------------------------------ ADVANCED
   {
@@ -493,6 +722,8 @@ export const ARENAS: ArenaDef[] = [
       '#4_x_______x_2#',
       '###############',
     ],
+    // The alternate keeps the stage's art; only its blocks (a fixed pattern) and items differ.
+    alt: { map: STD },
   },
   {
     id: 'a2', name: 'ROBO BOMBER', jpName: 'BOMBER ROBO', level: 'advanced', gimmick: 'robot', theme: 'robocity', density: 0.55,
@@ -514,6 +745,8 @@ export const ARENAS: ArenaDef[] = [
       '#4__x_x_x_x__2#',
       '###############',
     ],
+    // The alternate keeps the stage's art; only its blocks (a fixed pattern) and items differ.
+    alt: { map: STD_NO5.map((row, y) => (y === 1 ? '#1_....5...._3#' : row)) },
   },
   {
     id: 'a3', name: 'ROUND AND ROUND', jpName: 'KURUKURU DOKAN', level: 'advanced', gimmick: 'flowers', theme: 'pond', density: 0.5,
@@ -539,31 +772,73 @@ export const ARENAS: ArenaDef[] = [
       '#4_........._2#',
       '###############',
     ],
+    // The alternate, from its stage art: two of the bushes move.
+    alt: {
+      portalPairs: [[[3, 4], [5, 4]], [[8, 3], [8, 5]], [[6, 7], [6, 9]], [[9, 8], [11, 8]]],
+      faces: {
+        '3,4': 'up', '5,4': 'down', '8,3': 'right', '8,5': 'left',
+        '6,7': 'right', '6,9': 'left', '9,8': 'up', '11,8': 'down',
+      },
+      map: [
+        '###############',
+        '#1_........._3#',
+        '#_#.#.#.#.#.#_#',
+        '#.......p.....#',
+        '#.#pYp#.Y.#.#.#',
+        '#.......p.....#',
+        '#.#.#.#5#.#.#.#',
+        '#.....p.......#',
+        '#.#.#.Y.#pYp#.#',
+        '#.....p.......#',
+        '#_#.#.#.#.#.#_#',
+        '#4_........._2#',
+        '###############',
+      ],
+    },
   },
   {
     id: 'a4', name: 'DESTINATION UNKNOWN', jpName: 'FUSHIGI NA TROCCO', level: 'advanced', gimmick: 'mystery', theme: 'space', density: 0.55,
     blurb: 'THE TROLLEY WARPS BETWEEN HOLES. BOMBERS ON FOOT CAN\'T.',
     spawns: [[1, 1], [13, 11], [13, 1], [1, 11], [7, 7]],
-    stations: [[3, 9], [11, 3]],
+    // Unlike Switcheroo's, these rails are painted on the stage: four pieces, each from a
+    // dead end (where the trolley stops) into a warp hole. Stars lie on the rails too.
+    stations: [[5, 3], [3, 9], [11, 3], [9, 9]],
     trolley: { x: 5, y: 3, dir: 'right', warps: true },
-    railLayouts: MYSTERY_RAILS.slice(0, 3),
-    altRailLayouts: MYSTERY_RAILS.slice(3),
-    // Stars lie on the rails as well: the trolley smashes them.
     map: [
       '###############',
       '#1_........._3#',
       '#_#.#.#.#.#.#_#',
-      '#.............#',
-      '#.#.#.#.#.#.#.#',
-      '#.............#',
-      '#.#.#.#.#.#.#.#',
-      '#......5......#',
-      '#.#.#.#.#.#.#.#',
-      '#.............#',
+      '#....=====.=..#',
+      '#.#.#.#.#=#=#.#',
+      '#..==W...W.=..#',
+      '#.#=#.#.#.#=#.#',
+      '#..=.W.5.W==..#',
+      '#.#=#=#.#.#.#.#',
+      '#..=.=====....#',
       '#_#.#.#.#.#.#_#',
       '#4_........._2#',
       '###############',
     ],
+    // The alternate, from its stage art: four straight rails, each ending in a warp hole.
+    alt: {
+      stations: [[4, 3], [11, 4], [10, 9], [3, 8]],
+      trolley: { x: 4, y: 3, dir: 'right', warps: true },
+      map: [
+        '###############',
+        '#1_........._3#',
+        '#_#.#.#.#.#.#_#',
+        '#...======W...#',
+        '#.#W#.#.#.#=#.#',
+        '#..=.......=..#',
+        '#.#=#.#.#.#=#.#',
+        '#..=...5...=..#',
+        '#.#=#.#.#.#W#.#',
+        '#...W======...#',
+        '#_#.#.#.#.#.#_#',
+        '#4_........._2#',
+        '###############',
+      ],
+    },
   },
   {
     id: 'a5', name: 'KING OF THE JUNGLE', jpName: 'JUNGLE TUNNEL', level: 'advanced', gimmick: 'jungle', theme: 'jungle', density: 0.5,
@@ -585,6 +860,24 @@ export const ARENAS: ArenaDef[] = [
       '#4_........._2#',
       '#####w###w#####',
     ],
+    // The alternate, from its stage art: a tree in each corner.
+    alt: {
+      map: [
+        '#####w###w#####',
+        '#1_........._3#',
+        '#_#F#.#.#.#F#_#',
+        'w.FFF..D..FFF.w',
+        '#.YFY.#.#.YFY.#',
+        '#..........@..#',
+        '#.#.#.#5#.#.#.#',
+        '#..@..........#',
+        '#.#F#.#.#.#F#.#',
+        'w.FFF..U..FFF.w',
+        '#_YFY.#.#.YFY_#',
+        '#4_........._2#',
+        '#####w###w#####',
+      ],
+    },
   },
   {
     id: 'a6', name: 'INCOMING!', jpName: 'MAGARE FIRE', level: 'advanced', gimmick: 'incoming', theme: 'incoming', density: 0.5,
@@ -620,6 +913,38 @@ export const ARENAS: ArenaDef[] = [
       '#4_........._2#',
       '###############',
     ],
+    // The alternate, from its stage art: two of the pipes move to the middle.
+    alt: {
+      bends: {
+        '3,3': { left: 'down', up: 'right' },
+        '4,3': { left: 'left', right: 'right' },
+        '3,4': { up: 'up', down: 'down' },
+        '9,5': { left: 'down', up: 'right' },
+        '10,5': { left: 'left', right: 'right' },
+        '9,6': { up: 'up', down: 'down' },
+        '5,7': { down: 'left', right: 'up' },
+        '5,6': { up: 'up', down: 'down' },
+        '4,7': { left: 'left', right: 'right' },
+        '11,9': { right: 'up', down: 'left' },
+        '11,8': { up: 'up', down: 'down' },
+        '10,9': { left: 'left', right: 'right' },
+      },
+      map: [
+        '###############',
+        '#1_........._3#',
+        '#_Y#Y.#.#.#.#_#',
+        '#.#JJ.........#',
+        '#.#J#.#.Y#Y.#.#',
+        '#.......#JJ...#',
+        '#.#.#J#5#J#.#.#',
+        '#...JJ#.......#',
+        '#.#.Y#Y.#.#J#.#',
+        '#.........JJ#.#',
+        '#_#.#.#.#.Y#Y_#',
+        '#4_........._2#',
+        '###############',
+      ],
+    },
   },
   {
     id: 'a7', name: 'THE FAST LANE', jpName: 'KARAKURI BELCON', level: 'advanced', gimmick: 'fastlane', theme: 'fastlane', density: 0.45,
@@ -641,6 +966,24 @@ export const ARENAS: ArenaDef[] = [
       '#4_..^...v.._2#',
       '#####^###v#####',
     ],
+    // The alternate, from its stage art: two separate loops, one up and down, one across.
+    alt: {
+      map: [
+        '#####^###v#####',
+        '#1_..^...v.._3#',
+        '#_#.#^#.#v#.#_#',
+        '#....^<<<<....#',
+        '#.#.#.#k#.#.#.#',
+        '>>>v.......>>>>',
+        '#.#v#.#5#.#^#.#',
+        '<<<<.......^<<<',
+        '#.#.#.#s#.#.#.#',
+        '#....>>>>v....#',
+        '#_#.#^#.#v#.#_#',
+        '#4_..^...v.._2#',
+        '#####^###v#####',
+      ],
+    },
   },
   {
     id: 'a8', name: 'THE SEVEN SEAS', jpName: 'KAIZOKU DOKAN', level: 'advanced', gimmick: 'seas', theme: 'sea', density: 0.4,

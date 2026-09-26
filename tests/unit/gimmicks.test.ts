@@ -21,8 +21,8 @@ function railTiles(layout: string[]): [number, number][] {
   return out;
 }
 
-describe('changing rails (Switcheroo, Destination Unknown)', () => {
-  for (const id of ['n4', 'a4']) {
+describe('changing rails (Switcheroo)', () => {
+  for (const id of ['n4']) {
     const def = ARENAS.find((a) => a.id === id) as ArenaDef;
     it(`${id}: three layouts, six on the alternate, all connected, clear of pillars and starts`, () => {
       expect(def.railLayouts).toHaveLength(3);
@@ -37,10 +37,8 @@ describe('changing rails (Switcheroo, Destination Unknown)', () => {
           for (const [sx, sy] of starts) expect(Math.abs(sx - x) + Math.abs(sy - y), `rail at ${x},${y}`).toBeGreaterThan(1);
         }
         for (const [x, y] of def.stations!) expect(key.has(`${x},${y}`), `station ${x},${y}`).toBe(true);
-        // Destination Unknown: the same four warp holes round the centre in every layout.
         const holes = railTiles(layout).filter(([x, y]) => layout[y - RAIL_ORIGIN][x - RAIL_ORIGIN] === 'W');
-        if (id === 'a4') expect(holes.map(([x, y]) => `${x},${y}`).sort()).toEqual(['5,5', '5,7', '9,5', '9,7']);
-        // One network: every rail reachable from the first (the warp holes join the pieces).
+        // One network: every rail reachable from the first (warp holes would join pieces).
         const seen = new Set([`${tiles[0][0]},${tiles[0][1]}`]);
         const queue = [tiles[0]];
         while (queue.length) {
@@ -96,7 +94,7 @@ describe('trolley forecast (what the CPU players watch)', () => {
   it('a warp hole may lead to any of the others', () => {
     const w = world('a4');
     const tr = w.gim.trolleys[0];
-    // Along the top arch and down into the hole at (9, 5).
+    // Along the top rail and down into the hole at (9, 5).
     tr.x = tileCenter(7);
     tr.y = tileCenter(3);
     tr.dir = 'right';
@@ -104,8 +102,8 @@ describe('trolley forecast (what the CPU players watch)', () => {
     const f = w.gim.trolleyForecast(400);
     const at = (x: number, y: number): number | undefined => f.get(y * w.grid.w + x);
     expect(at(9, 4)).toBeLessThan(at(9, 5)!);
-    // Out of (5, 7) or (9, 7) heading on down, or out of (5, 5) and along its spur.
-    for (const [x, y] of [[5, 8], [9, 8], [4, 5]]) {
+    // Out of any other hole, onto the rail piece that leads away from it.
+    for (const [x, y] of [[5, 8], [10, 7], [4, 5]]) {
       expect(at(x, y), `${x},${y}`).toBeDefined();
       expect(at(x, y)!).toBeGreaterThan(at(9, 4)!);
     }
@@ -114,8 +112,35 @@ describe('trolley forecast (what the CPU players watch)', () => {
     tr.y = tileCenter(4);
     tr.dir = 'down';
     for (let t = 0; t < 20; t++) w.gim.update();
-    expect(['5,5', '5,7', '9,7', '4,5', '5,8', '9,8', '10,7']).toContain(`${toTile(tr.x)},${toTile(tr.y)}`);
+    expect(['5,5', '5,7', '9,7', '4,5', '5,8', '10,7']).toContain(`${toTile(tr.x)},${toTile(tr.y)}`);
   });
+
+  for (const alternate of [false, true]) {
+    it(`Destination Unknown${alternate ? ' (alternate)' : ''}: painted rails, each piece from a dead end into a warp hole`, () => {
+      const w = world('a4', alternate);
+      const rails = new Set<string>();
+      const holes: string[] = [];
+      w.gim.features.forEach((f, i) => {
+        if (f?.kind !== 'rail') return;
+        const k = `${i % w.grid.w},${Math.floor(i / w.grid.w)}`;
+        rails.add(k);
+        if (f.trolleyWarp) holes.push(k);
+      });
+      expect(holes).toHaveLength(4);
+      const ends = [...rails].filter((k) => {
+        const [x, y] = k.split(',').map(Number);
+        return ALL_DIRS.filter((d) => rails.has(`${x + DX[d]},${y + DY[d]}`)).length === 1;
+      });
+      // Four dead ends (the stations) plus the holes at the other ends.
+      const dead = ends.filter((k) => !holes.includes(k));
+      expect(dead.sort()).toEqual(w.arena.stations!.map(([x, y]) => `${x},${y}`).sort());
+      // The rails never change.
+      for (let t = 0; t < 60 * 30; t++) w.update();
+      const after = new Set<string>();
+      w.gim.features.forEach((f, i) => f?.kind === 'rail' && after.add(`${i % w.grid.w},${Math.floor(i / w.grid.w)}`));
+      expect(after).toEqual(rails);
+    });
+  }
 
   it('counts the wait at a station before the trolley moves on', () => {
     const w = world('b4');

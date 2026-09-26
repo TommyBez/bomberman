@@ -123,7 +123,11 @@ The stage table (enemies and item for all 50 stages) lives in `src/game/campaign
   behind, can be burnt, and revives the same partner.
 - Alternate ("ura") stages: every stage has a second layout with different blocks and
   items, opened per level with the passwords 56565656 (Beginner), 16161616 (Normal) and
-  49894989 (Advanced) on the password screen.
+  49894989 (Advanced) on the password screen. Nineteen stages also have their own
+  background art on the alternate. The pillars and painted gimmicks (rails, belt
+  channels, pipes, arrows, huts, trees, the cloud floor) were read from those stage
+  images; sprites such as warp pits and switches can't be seen there and were placed to
+  fit. The soft blocks follow fixed patterns.
 - Skull diseases: Superspeed, Superslow, Diarrhea, Impotent, Feeble, Streaking, Confusion,
   Short-tempered, Slow Motion, Warp. Cured by another item or passed on by touch.
 - Bomber Cart: knocked-out players ride carts around the edge and lob bombs (Super: a hit
@@ -185,8 +189,10 @@ Gimmick details that follow the Japanese sources (Wikipedia, the manual and its 
 - **Winter Wonderland:** three big snow huts stand where pillars would. Bombs inside get
   maximum fire, and a blast inside lifts the whole roof for a while. Cracked ice gives way
   after two crossings (Japanese Wikipedia) or in a blast (the manual).
-- **Destination Unknown:** grew out of Switcheroo. Four warp holes round the centre send
-  the trolley (never a bomber on foot) out of any other hole.
+- **Destination Unknown:** grew out of Switcheroo, but its rails are painted on the stage,
+  so they never change: four pieces, each from a dead end (where the trolley stops) into
+  one of four warp holes round the centre. A hole sends the trolley (never a bomber on
+  foot) out of any other hole.
 - **Round and Round:** four bushes stand in for pillars, each with a pair of flowers either
   side of it. Pushing a flower turns it 90°. A blast that enters a flower's mouth bursts
   out of its partner's.

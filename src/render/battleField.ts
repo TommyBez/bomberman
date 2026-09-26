@@ -357,8 +357,9 @@ export class BattleRenderer {
         const pipes = pipeSprites(THEMES[w.arena.theme]?.pipe);
         const links = ALL.filter((d) => same(tx + DX[d], ty + DY[d], 'pipe'));
         let img = pipes.v;
-        if (links.length >= 3) img = pipes.cross;
+        if (links.length === 4) img = pipes.cross;
         else if (links.length === 1) img = pipes.end[OPP[links[0]]];
+        else if (links.length === 3 || (links.length === 2 && links[0] !== OPP[links[1]])) img = pipes.joint(links);
         else if (links.includes('left') || links.includes('right')) img = pipes.h;
         g.image(img, x, y);
       } else if (canopied.has(i)) {

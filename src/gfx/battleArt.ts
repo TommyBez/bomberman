@@ -311,6 +311,8 @@ export interface PipeSprites {
   mouth: Sprite;
   /** Pipe mouths turned to a side. */
   faced: Record<Dir, Sprite>;
+  /** Any other joint: a T or a bend, by the sides it joins (in up/right/down/left order). */
+  joint(sides: Dir[]): Sprite;
 }
 
 /**
@@ -362,7 +364,17 @@ export function pipeSprites(color = '#30a040'): PipeSprites {
       },
       mouth: portalTile(color),
       faced: { up: mouthTile(color, 'up'), down: mouthTile(color, 'down'), left: mouthTile(color, 'left'), right: mouthTile(color, 'right') },
+      joint: (sides) => {
+        const key = sides.join();
+        let img = joints.get(key);
+        if (!img) {
+          img = pipeTile(sides, null, color);
+          joints.set(key, img);
+        }
+        return img;
+      },
     };
+    const joints = new Map<string, Sprite>();
     pipeCache.set(color, set);
   }
   return set;
