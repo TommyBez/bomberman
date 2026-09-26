@@ -172,16 +172,17 @@ class ControllerScene implements Scene {
       ['ONE PLAYER / MENUS', ''],
       ['MOVE', 'ARROWS / WASD'],
       ['BOMB (A)', 'SPACE / X / J'],
-      ['SPECIAL (B)', 'Z / SHIFT / K'],
+      ['DETONATE (B)', 'Z / SHIFT / K'],
+      ['ACTION (C)', 'C / E / Q / L'],
       ['PAUSE', 'ENTER / P'],
       ['BACK', 'ESC / BACKSPACE'],
-      ['BATTLE KEYBOARD 1', 'WASD + SPACE, L-SHIFT'],
-      ['BATTLE KEYBOARD 2', 'ARROWS + ENTER, R-SHIFT'],
-      ['GAMEPADS', 'D-PAD, A=BOMB, B=SPECIAL'],
+      ['BATTLE P1', 'WASD SPACE L-SHIFT E'],
+      ['BATTLE P2', 'ARROWS ENTER R-SHIFT R-CTRL'],
+      ['GAMEPADS', 'A BOMB, B DETONATE, X ACTION'],
       ['TOUCH', 'ON-SCREEN PAD'],
     ];
     lines.forEach(([a, b], i) => {
-      const y = 42 + i * 14;
+      const y = 42 + i * 13;
       g.text(a, 16, y, { color: b ? '#ffe040' : '#ffffff', outline: '#000000' });
       if (b) g.text(b, 240, y, { color: '#ffffff', outline: '#000000', align: 'right' });
     });

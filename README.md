@@ -1,0 +1,157 @@
+# Bomberman — PlayStation fan remake for the web
+
+A browser remake of **Bomberman** for the original PlayStation (Japan 1998, Europe 1999,
+released in North America as *Bomberman Party Edition*). It covers the 50-stage
+**Normal Game** and the five-player **Battle Game**. It is written in TypeScript and runs
+on an HTML5 canvas at the original 256×224 resolution.
+
+> **Unofficial fan project.** It is not affiliated with or endorsed by Konami or Hudson
+> Soft. "Bomberman" is their trademark and is used here only to name the game being
+> remade. Every sprite, tile, tune and sound effect in this repository is original,
+> drawn or synthesised in code. No ROM data or ripped assets are used. Only the rules
+> and structure of the game are reproduced.
+
+## Play
+
+```sh
+npm install
+npm run dev          # http://localhost:5173
+```
+
+`npm run build` produces a static site in `dist/` that runs from any path or web server.
+The game needs no backend.
+
+## Controls
+
+| | Keyboard (one player and menus) | Gamepad | Touch |
+|---|---|---|---|
+| Move | Arrows / WASD | D-pad / left stick | on-screen pad |
+| **A**: bomb, confirm, Power Glove (hold) | Space / X / J / F | A (Cross) | A |
+| **B**: detonate remote bombs, special, back | Z / K / G / Shift | B (Circle), LB, RB | B |
+| **C**: stop a kicked bomb, punch, push, line bomb | C / E / Q / L | X, Y (Square, Triangle) | C |
+| Start / pause | Enter / P | Start | START |
+| Select / back | Esc / Backspace / Tab | Back | SELECT |
+
+In the Battle Game two people can share one keyboard.
+
+| | Move | A | B | C |
+|---|---|---|---|---|
+| Keyboard P1 | WASD | Space / F | Left Shift / G | E / Q / R |
+| Keyboard P2 | Arrows | Enter / Numpad 0 / `/` | Right Shift / `.` | Right Ctrl / `,` / Numpad 1 |
+
+Gamepads 1–4 can be assigned to any player on the setup screen, which allows up to five
+humans with a keyboard pair and gamepads. When typing a password, the keyboard types
+letters directly.
+
+## What's in it
+
+### Normal Game (1 player)
+
+- **50 stages** on a 31×13 scrolling field. Each stage has the original fixed monster
+  roster and power-up; the layout is random on every attempt (50 + 2 × stage soft
+  blocks, with the exit and the item hidden under two of them).
+- **8 monsters** with the original speeds, points and behaviours. Pass dodges bombs.
+  Kondoria, Ovapi and Pontan go through walls. Pontan charges.
+- **Rules:**
+  - 3:00 timer; Pontans swarm in when it runs out.
+  - Bombing the exit or the item spawns a penalty pack of monsters.
+  - Chain-kill points double.
+  - Lives: ×02 at the start and +1 per cleared stage.
+- **Power-ups:** Fire, Bomb, Speed Up, Remote Control, Bomb Pass, Wall Pass, Fireman and
+  Flak Jacket. Some are lost when you lose a life.
+- **Bonus stages** after every fifth stage: 30 s, invincible, endless monsters.
+- **Six hidden score panels**, from B (10,000 points) to Tekuteku Angel (20,000,000),
+  each with its original trigger condition.
+- **Versions:**
+  - **Modern:** five world themes and "Bomberman Show Time" skits every ten stages.
+  - **Retro:** NES-style tiles, sprites, flames and chiptune arrangements.
+- **Progress:**
+  - Game Over offers Continue, Save or Quit.
+  - 8-character passwords.
+  - Three memory-card save files, stored in the browser.
+  - An ending with a staff roll.
+
+### Battle Game (1–5 players, humans and CPUs)
+
+- **Modes:** Battle Royal and Custom Battle (item counts and hit points), in Single or
+  Tag (team) play.
+- **Rules** follow the PS1 options:
+  - COM level, games per match and time.
+  - Sudden Death, Random Position and Skull.
+  - Hyper Bomber.
+  - Bomber Cart: off, on or Super.
+- **24 stages**, eight each for Beginner, Normal and Advanced, with their gimmicks.
+  Gimmicks include see-saws, trolleys and switches, arrows, pipes, conveyor belts and
+  warps. The Advanced stages add a stomping robot, jungle tunnels, the Super Power
+  arena and the Seven Seas.
+- **Items:**
+  - Bomb, Fire, Full Fire, Speed, Steel Shoes (−speed), Kick, Power Glove, Punch, Push.
+  - Line Bomb, Power, Rubber and Metabomb (pierce) bombs, Land Mine, Remote Control.
+  - Heart, Egg (a riding partner with its own ability), Skull (ten diseases, which
+    spread by touch).
+- **Other features:**
+  - Characters with specials.
+  - Colliding kicked bombs merge into Super and Ultra Bombs.
+  - "Hurry!" pressure-block spiral, TIME'S UP draws.
+  - Bomber Carts for knocked-out players.
+  - Hyper Bomber prize game, results trophies, Battle Report and victory screen.
+- **CPU players** read a danger map and use a time-aware escape search. They check that
+  a bomb has an escape route before placing it. There are three difficulty levels.
+
+### Everything else
+
+- **Title and menus:** title screen with a **Demo Play** attract mode after 20 s idle,
+  and the main menu.
+- **Options:** stereo/mono, music and SE volume, music and SE test, screen position,
+  controller help and vibration.
+- **Audio:** a small WebAudio synthesiser plays every tune and effect from note data.
+  It includes pulse, saw and triangle voices, noise drums, reverb and NES-style voices
+  for the Retro version.
+- **Display:** pixel-perfect integer scaling, keyboard, gamepads (with rumble) and a
+  touch layout for phones.
+
+## Fidelity notes
+
+- Timings follow the originals: 60 Hz fixed step, a 159-frame fuse, and player and
+  monster speeds in px/frame. The stage tables (rosters, items, bonus stages and panel
+  stages) follow the NES and PS1 data. `docs/SPEC.md` lists the sources and values.
+- Battle stage layouts and gimmicks were rebuilt from manuals, descriptions and footage.
+  They play like the originals but are not tile-exact copies.
+- All music, Show Time skits, dialogue and artwork are new, written for this remake.
+
+## Development
+
+```sh
+npm run typecheck    # tsc --noEmit
+npm test             # Vitest unit tests (simulation, stages, battle rules, AI, audio)
+npm run build        # typecheck + production build
+npm run test:e2e     # Playwright smoke tests against the production build
+```
+
+The simulation (`src/game`) is deterministic and never touches the DOM or audio. Scenes
+read its event queue to play sounds and effects. That lets unit tests fuzz whole arenas
+headlessly.
+
+```
+src/
+  engine/     loop, input, canvas, bitmap font, scenes, storage
+  audio/      synthesiser, sequencer, songs, sound effects
+  game/core/  grid, movement, bombs, flames, the shared World
+  game/campaign/  Normal Game: stages, monsters, passwords, saves
+  game/battle/    Battle Game: rules, arenas, gimmicks, CPU AI, characters
+  gfx/        procedural pixel art (bombers, monsters, tiles, items, effects)
+  render/     field, HUD and UI drawing
+  scenes/     title, menus, Normal and Battle Game screens
+```
+
+Debug URLs:
+
+| URL | What it opens |
+|---|---|
+| `#play=N` | Normal Game stage N |
+| `#play=Nr` | Stage N in the Retro version |
+| `#battle=<id>` | You plus four CPUs on a battle stage |
+| `#demo=<id>` | Five CPUs on a battle stage |
+
+Battle stage ids run `b1`–`b8`, `n1`–`n8` and `a1`–`a8`. In the browser, `window.__bomberman`
+exposes the running app for tests.
