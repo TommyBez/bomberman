@@ -54,10 +54,10 @@ export class GameOverScene implements Scene {
     const sp = sprites().bombers[0];
     const f = Math.min(sp.death.length - 1, 4 + (Math.floor(this.t / 20) % 2));
     g.image(sp.death[f], g.width / 2 - 8, 60);
-    drawPanel(g, 48, 92, 160, 48, '#402020', '#180808');
+    drawPanel(g, 48, 92, 160, 52, '#402020', '#180808');
     g.text('PASSWORD', g.width / 2, 100, { align: 'center', color: '#ffb0b0', outline: '#000000' });
     g.text(this.password, g.width / 2, 116, { align: 'center', scale: 2, color: '#ffffff', outline: '#000000' });
-    g.text(`STAGE ${this.session.stageNumber}`, g.width / 2, 134, { align: 'center', color: '#c0a0a0' });
+    g.text(`STAGE ${this.session.stageNumber}`, g.width / 2, 133, { align: 'center', color: '#c0a0a0' });
     if (this.t > 40) this.menu.draw(g, g.width / 2, 156, { center: true, lineH: 14, width: 90 });
   }
 }

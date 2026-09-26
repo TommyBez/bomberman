@@ -30,11 +30,16 @@ function keystream(salt: number): number {
   return x & 0x3fff; // 14 bits, covers the payload
 }
 
-export function encodePassword(d: PasswordData, salt = Math.floor(Math.random() * 1024)): string {
+function packPayload(d: PasswordData): number {
   const stage = Math.max(1, Math.min(50, d.stage)) - 1;
   const bombs = Math.max(1, Math.min(10, d.bombs)) - 1;
   const fire = Math.max(1, Math.min(5, d.fire)) - 1;
-  const payload = (stage | (bombs << 6) | (fire << 10) | ((d.modern ? 1 : 0) << 13)) & 0x3fff;
+  return (stage | (bombs << 6) | (fire << 10) | ((d.modern ? 1 : 0) << 13)) & 0x3fff;
+}
+
+/** The same progress always gives the same password (the salt is derived from it by default). */
+export function encodePassword(d: PasswordData, salt = checksum(packPayload(d), 0x2a5) & 0x3ff): string {
+  const payload = packPayload(d);
   const s = salt & 0x3ff;
   const scrambled = payload ^ keystream(s);
   const sum = checksum(payload, s);

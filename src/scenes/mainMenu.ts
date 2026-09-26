@@ -136,7 +136,7 @@ class VersionSelectScene implements Scene {
           g.image(img, x + 12 + xx * 16, 76 + yy * 16);
         }
       }
-      g.image(sp.bombers[0].walk.down[Math.floor(this.app.frame / 8) % 4], x + 28, 92);
+      g.image((retro ? sp.retroBomber : sp.bombers[0]).walk.down[Math.floor(this.app.frame / 8) % 4], x + 28, 92);
       g.text(sub, x + 52, 150, { align: 'center', color: '#c8d0ff', outline: '#000000' });
       if (sel && Math.floor(this.app.frame / 10) % 2 === 0) g.text('▶', x + 6, 56, { color: '#ffe040', outline: '#000000' });
     });

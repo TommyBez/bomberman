@@ -261,9 +261,7 @@ export class StageScene implements Scene {
 
   private renderHud(g: Gfx): void {
     const w = this.world;
-    const theme = THEMES[this.themeName];
     const icons = hudIcons();
-    void theme;
     const y = 12;
     const txt = { color: '#ffffff', outline: '#000000' };
     const score = this.session.score + w.score;
@@ -272,13 +270,15 @@ export class StageScene implements Scene {
     const hurry = !this.bonus && w.timeLeft <= 30 * 60 && Math.floor(this.app.frame / 15) % 2 === 0;
     g.image(icons.clock, 72, y - 1);
     g.text(clockText(w.timeLeft), 84, y, { ...txt, color: hurry ? '#ff4040' : '#ffffff' });
-    g.image(icons.heads[0], 118, y - 2);
-    g.text(`×${String(Math.max(0, this.session.lives)).padStart(2, '0')}`, 130, y, txt);
+    if (this.bonus) g.text('BONUS', 118, y, { ...txt, color: Math.floor(this.app.frame / 20) % 2 ? '#ffe040' : '#ff9020' });
+    else {
+      g.image(icons.heads[0], 118, y - 2);
+      g.text(`×${String(Math.max(0, this.session.lives)).padStart(2, '0')}`, 130, y, txt);
+    }
     g.image(icons.bomb, 162, y - 2);
     g.text(`×${String(w.player.stats.bombs).padStart(2, '0')}`, 174, y, txt);
     g.image(icons.fire, 206, y - 2);
     g.text(`×${w.player.stats.fire}`, 218, y, txt);
-    if (this.bonus) g.text('BONUS', 240, 2, { ...txt, color: '#ffe040', align: 'center' });
   }
 
   private renderCard(g: Gfx): void {

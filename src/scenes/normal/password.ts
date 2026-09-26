@@ -22,18 +22,26 @@ export class PasswordScene implements Scene {
 
   enter(): void {
     window.addEventListener('keydown', this.onKey);
+    this.app.input.textEntry = true;
   }
 
   exit(): void {
     window.removeEventListener('keydown', this.onKey);
+    this.app.input.textEntry = false;
   }
 
-  /** Typing directly on a keyboard also works. */
+  /** Typing directly on a keyboard also works (letter keys stop acting as buttons here). */
   private onKey = (e: KeyboardEvent): void => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === 'Backspace') {
+      if (this.chars.pop()) this.app.audio.sfx('menuBack');
+      return;
+    }
     const k = e.key.toUpperCase();
     if (k.length === 1 && PASSWORD_ALPHABET.includes(k) && this.chars.length < PASSWORD_LENGTH) {
       this.chars.push(k);
       this.app.audio.sfx('select');
+      if (this.chars.length === PASSWORD_LENGTH) this.cursor = KEYS.length - 1;
     }
   };
 

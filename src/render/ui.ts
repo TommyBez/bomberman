@@ -13,6 +13,20 @@ export function drawBanner(g: Gfx, text: string, y: number, color = '#ffe040', s
 }
 
 /** A PlayStation-style menu window: bevelled frame with a vertical gradient. */
+/** Greedy word wrap for the fixed-width font. */
+export function wrapText(text: string, maxChars: number): string[] {
+  const lines: string[] = [];
+  let line = '';
+  for (const word of text.split(' ')) {
+    if (line && line.length + 1 + word.length > maxChars) {
+      lines.push(line);
+      line = word;
+    } else line = line ? `${line} ${word}` : word;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
 export function drawPanel(g: Gfx, x: number, y: number, w: number, h: number, top = '#3050c8', bottom = '#101868'): void {
   g.rect(x + 2, y + 2, w, h, 'rgba(0,0,0,0.45)');
   g.rect(x, y, w, h, '#000000');

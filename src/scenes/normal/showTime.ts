@@ -3,7 +3,7 @@ import { mix, type Gfx, type Sprite } from '../../engine/gfx';
 import type { Scene } from '../../engine/scene';
 import { FLAME_CENTER, FLAME_DOWN, FLAME_LEFT, FLAME_RIGHT, FLAME_UP } from '../../game/core/types';
 import { sprites } from '../../gfx/sprites';
-import { drawPanel } from '../../render/ui';
+import { drawPanel, wrapText } from '../../render/ui';
 
 /**
  * "Bomberman Show Time": a short comedy skit between White and Black Bomberman shown
@@ -222,8 +222,11 @@ export class ShowTimeScene implements Scene {
       const [who, line] = b.say;
       drawPanel(g, 12, 176, 232, 40, who === 0 ? '#4060d0' : '#404058', who === 0 ? '#101868' : '#14141c');
       g.text(who === 0 ? 'WHITE' : 'BLACK', 20, 182, { color: '#ffe040', outline: '#000000' });
-      const shown = line.slice(0, Math.floor(this.t / 2));
-      g.text(shown, 20, 196, { color: '#ffffff', outline: '#000000' });
+      let budget = Math.floor(this.t / 2);
+      wrapText(line, 36).forEach((l, i) => {
+        g.text(l.slice(0, Math.max(0, budget)), 20, 195 + i * 10, { color: '#ffffff', outline: '#000000' });
+        budget -= l.length + 1;
+      });
     }
     g.text('START: SKIP', g.width - 4, 2, { align: 'right', color: '#ffe0e0' });
   }

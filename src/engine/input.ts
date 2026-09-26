@@ -137,6 +137,8 @@ export class Input {
   private gestureListeners: (() => void)[] = [];
   /** True once a real touch has been seen; used to show the on-screen pad. */
   touchActive = false;
+  /** While typing text (passwords), letter/digit keys and Backspace are not buttons. */
+  textEntry = false;
 
   attach(win: Window): void {
     win.addEventListener('keydown', (e) => {
@@ -280,13 +282,17 @@ export class Input {
     if (!map) return out;
     for (const code of this.keys) {
       const b = map[code];
-      if (b) out.add(b);
+      if (b && !this.typing(code)) out.add(b);
     }
     for (const code of this.tapped) {
       const b = map[code];
-      if (b) out.add(b);
+      if (b && !this.typing(code)) out.add(b);
     }
     return out;
+  }
+
+  private typing(code: string): boolean {
+    return this.textEntry && (code.startsWith('Key') || code.startsWith('Digit') || code === 'Backspace');
   }
 
   /** Names of connected gamepads (index → id). */

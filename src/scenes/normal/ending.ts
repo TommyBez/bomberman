@@ -83,7 +83,7 @@ export class EndingScene implements Scene {
     }
     g.ctx.fillStyle = mix('#ffe080', '#fff8e0', k);
     g.ctx.beginPath();
-    g.ctx.arc(200, 150 - k * 60, 18, 0, Math.PI * 2);
+    g.ctx.arc(226, 160 - k * 50, 14, 0, Math.PI * 2);
     g.ctx.fill();
     for (const s of this.sparks) g.rect(s.x, s.y, 1, 1, s.c);
     g.ctx.fillStyle = '#1e5a2a';
@@ -94,15 +94,19 @@ export class EndingScene implements Scene {
     g.ctx.lineTo(0, g.height);
     g.ctx.fill();
     const sp = sprites().bombers[0];
-    const walkX = Math.min(90, -16 + this.t * 0.5);
-    const img = walkX < 90 ? sp.walk.right[Math.floor(this.t / 7) % 4] : sp.win[Math.floor(this.t / 20) % 2];
+    const walkX = Math.min(40, -16 + this.t * 0.5);
+    const img = walkX < 40 ? sp.walk.right[Math.floor(this.t / 7) % 4] : sp.win[Math.floor(this.t / 20) % 2];
     g.image(img, walkX, 150);
-    // Staff roll.
-    const top = g.height - (this.t - 120) * 0.35;
+    // Staff roll: scrolls through the sky band, fading at its edges, and stops on the last line.
+    const lineH = 12;
+    const top = Math.max(84 - (CREDITS.length - 1) * lineH, 150 - (this.t - 120) * 0.35);
     CREDITS.forEach((line, i) => {
-      const y = top + i * 12;
-      if (y > -10 && y < g.height) g.text(line, 150, y, { align: 'center', color: i === 0 ? '#ffe040' : '#ffffff', outline: '#000000' });
+      const y = top + i * lineH;
+      if (!line || y < 14 || y > 150) return;
+      g.ctx.globalAlpha = Math.min(1, (y - 14) / 16, (150 - y) / 16);
+      g.text(line, g.width / 2, y, { align: 'center', color: i === 0 || i === CREDITS.length - 1 ? '#ffe040' : '#ffffff', outline: '#000000' });
     });
-    g.text(`SCORE ${this.session.score}`, 6, 6, { color: '#ffffff', outline: '#000000' });
+    g.ctx.globalAlpha = 1;
+    g.text(`SCORE ${this.session.score}`, g.width / 2, 204, { align: 'center', color: '#ffffff', outline: '#000000' });
   }
 }
