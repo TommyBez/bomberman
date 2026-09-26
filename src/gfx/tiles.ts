@@ -553,11 +553,16 @@ function softTile(t: Theme): HTMLCanvasElement {
       p.circle(7, 8.5, 1.6, light);
       break;
     case 'ice':
-      p.rect(0, 0, 16, 16, dark);
-      p.rect(1, 1, 14, 14, base);
-      p.rect(2, 2, 5, 2, light);
-      p.rect(2, 2, 2, 5, light);
-      p.rect(10, 11, 3, 2, mix(base, '#ffffff', 0.7));
+      // A lump of ice: a pale, rounded chunk, frosted white on top, bluer underneath.
+      p.ellipse(8, 14, 7, 2, 'rgba(0,0,0,0.3)');
+      p.roundRect(1, 2, 14, 13, mix(base, '#000000', 0.6), 4);
+      p.roundRect(2, 3, 12, 11, mix(base, '#3060c0', 0.35), 3);
+      p.roundRect(2, 3, 12, 7, base, 3);
+      p.rect(3, 3, 7, 2, '#ffffff');
+      p.rect(3, 4, 2, 3, '#ffffff');
+      p.rect(9, 9, 4, 1, light);
+      p.rect(5, 11, 6, 1, mix(base, '#3060c0', 0.6));
+      p.px(11, 5, '#ffffff');
       break;
     case 'rock':
       p.circle(8, 9, 7.6, mix(base, '#000000', 0.6));
