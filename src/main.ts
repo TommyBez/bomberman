@@ -22,6 +22,7 @@ function boot(): void {
   const settings = loadSettings();
   audio.setStereo(settings.stereo);
   input.vibration = settings.vibration;
+  input.padLayouts = [...settings.padLayouts];
   applyScreenOffset(settings.offsetY);
 
   const app: App = {

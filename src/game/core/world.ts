@@ -343,15 +343,21 @@ export class World {
     }
     // Special (B)
     if (intent.special) this.onSpecial(b);
-    // Action (C)
-    if (intent.action) this.onAction(b);
+    // Stop kicked bombs (△) takes priority over the action button (□).
+    const stopped = intent.stop ? this.onStop(b) : false;
+    if (intent.action && !stopped) this.onAction(b);
   }
 
   /** Hook: after a movement step (wrap-around arenas normalise coordinates here). */
   protected afterMove(_b: Bomber): void {}
 
-  /** C button (battle): punch / push / multi bomb / stop kicked bombs. */
+  /** □ button (battle): push / punch / multi bomb. */
   protected onAction(_b: Bomber): void {}
+
+  /** △ button (battle): stop this bomber's kicked bombs. Returns true if any stopped. */
+  protected onStop(_b: Bomber): boolean {
+    return false;
+  }
 
   /** Send a bomber flying to a tile (trampolines, seesaws, glove throws). */
   jump(b: Bomber, tx: number, ty: number, dur: number, height: number): void {

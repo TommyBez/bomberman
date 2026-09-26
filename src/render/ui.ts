@@ -106,7 +106,7 @@ export class Menu {
       this.app.audio.sfx('menuOk');
       pad.swallow();
       item.action();
-    } else if ((pad.pressed('b') || pad.pressed('select')) && this.onBack) {
+    } else if ((pad.pressed('b') || pad.pressed('d') || pad.pressed('select')) && this.onBack) {
       this.app.audio.sfx('menuBack');
       pad.swallow();
       this.onBack();

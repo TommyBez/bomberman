@@ -16,9 +16,11 @@ export interface Intent {
   bombHeld: boolean;
   /** C (punch / push / multi bomb / stop kicked bomb) pressed this tick. */
   action?: boolean;
+  /** △: stop a kicked bomb. */
+  stop?: boolean;
 }
 
-export const NO_INTENT: Intent = { dirs: [], bomb: false, special: false, specialHeld: false, bombHeld: false, action: false };
+export const NO_INTENT: Intent = { dirs: [], bomb: false, special: false, specialHeld: false, bombHeld: false, action: false, stop: false };
 
 /** Skull diseases (PlayStation manual names). */
 export type Curse =

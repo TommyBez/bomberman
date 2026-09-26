@@ -104,7 +104,7 @@ export class BattleRoundScene implements Scene {
         b.intent = cpu.think();
       } else {
         const c = input.players[b.id];
-        b.intent = { dirs: c.dirs, bomb: c.pressed('a'), special: c.pressed('b'), specialHeld: c.held('b'), bombHeld: c.held('a'), action: c.pressed('c') };
+        b.intent = { dirs: c.dirs, bomb: c.pressed('a'), special: c.pressed('b'), specialHeld: c.held('b'), bombHeld: c.held('a'), action: c.pressed('c'), stop: c.pressed('d') };
       }
     }
     w.update();

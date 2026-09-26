@@ -3,7 +3,8 @@ import type { Gfx } from '../engine/gfx';
 import type { Scene } from '../engine/scene';
 import { SONGS } from '../audio/songs';
 import { SFX } from '../audio/sfx';
-import { drawMenuBackdrop, drawPanel, drawTitleBar, Menu } from '../render/ui';
+import { PAD_LAYOUTS } from '../engine/input';
+import { drawMenuBackdrop, drawPanel, drawTitleBar, Menu, type MenuItem } from '../render/ui';
 import { applyScreenOffset, loadSettings, saveSettings } from '../settings';
 import { goMainMenu } from './nav';
 import { PasswordScene } from './normal/password';
@@ -144,48 +145,112 @@ class ScreenScene implements Scene {
   }
 }
 
+/** Colours of the bottom, right, left and top face buttons in the diagram. */
+const FACE_COLORS = ['#6080ff', '#ff6060', '#e080ff', '#40c080'];
+
+/** CONTROLLER: a button layout for each gamepad, vibration, and the keyboard keys. */
 class ControllerScene implements Scene {
   private settings = loadSettings();
+  private readonly menu: Menu;
+  private keys = false;
 
-  constructor(private readonly app: App) {}
+  constructor(private readonly app: App) {
+    const input = app.input;
+    const layoutItem = (i: number): MenuItem => ({
+      label: `PAD ${i + 1}`,
+      value: () => PAD_LAYOUTS[this.settings.padLayouts[i]].name,
+      change: (d) => {
+        this.settings.padLayouts[i] = (this.settings.padLayouts[i] + d + PAD_LAYOUTS.length) % PAD_LAYOUTS.length;
+        input.padLayouts = [...this.settings.padLayouts];
+        saveSettings(this.settings);
+      },
+      help: () => (input.connectedPads()[i] ? 'CONNECTED' : 'NOT CONNECTED'),
+    });
+    this.menu = new Menu(
+      app,
+      [
+        layoutItem(0),
+        layoutItem(1),
+        layoutItem(2),
+        layoutItem(3),
+        {
+          label: 'VIBRATION',
+          value: () => (this.settings.vibration ? 'ON' : 'OFF'),
+          change: () => {
+            this.settings.vibration = !this.settings.vibration;
+            saveSettings(this.settings);
+            input.vibration = this.settings.vibration;
+            if (this.settings.vibration) input.rumble(input.menu.devices, 0.8, 250);
+          },
+          help: 'RUMBLES ON EXPLOSIONS AND KNOCK-OUTS',
+        },
+        { label: 'KEYBOARD', action: () => (this.keys = true), help: 'SHOW THE KEYBOARD CONTROLS' },
+        { label: 'EXIT', action: () => this.leave() },
+      ],
+      () => this.leave(),
+    );
+  }
+
+  private leave(): void {
+    this.app.scenes.go(new OptionScene(this.app));
+  }
 
   update(): void {
-    const pad = this.app.input.menu;
-    if (pad.pressed('left') || pad.pressed('right')) {
-      this.settings.vibration = !this.settings.vibration;
-      saveSettings(this.settings);
-      this.app.input.vibration = this.settings.vibration;
-      if (this.settings.vibration) this.app.input.rumble(this.app.input.menu.devices, 0.8, 250);
-      this.app.audio.sfx('select');
+    if (this.keys) {
+      const pad = this.app.input.menu;
+      if (pad.pressed('a') || pad.pressed('b') || pad.pressed('d') || pad.pressed('start') || pad.pressed('select')) {
+        pad.swallow();
+        this.keys = false;
+        this.app.audio.sfx('menuBack');
+      }
+      return;
     }
-    if (pad.pressed('a') || pad.pressed('b') || pad.pressed('start') || pad.pressed('select')) {
-      this.app.audio.sfx('menuOk');
-      this.app.scenes.go(new OptionScene(this.app));
-    }
+    this.menu.update();
   }
 
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
     drawTitleBar(g, 'CONTROLLER', this.app.frame);
+    if (this.keys) return this.renderKeys(g);
+    drawPanel(g, 12, 34, 232, 126);
+    this.menu.draw(g, 26, 44, { lineH: 16, valueX: 128 });
+    // The selected gamepad's face buttons (bottom, right, left, top).
+    const sel = this.menu.index;
+    if (sel <= 3) {
+      const layout = PAD_LAYOUTS[this.settings.padLayouts[sel]];
+      const cx = 205;
+      const cy = 78;
+      const pos: [number, number][] = [[0, 15], [15, 0], [-15, 0], [0, -15]];
+      layout.face.forEach((fn, k) => {
+        const [dx, dy] = pos[k];
+        g.rect(cx + dx - 6, cy + dy - 6, 13, 13, '#101830');
+        g.rect(cx + dx - 5, cy + dy - 5, 11, 11, FACE_COLORS[k]);
+        g.text(fn.toUpperCase(), cx + dx + 1, cy + dy - 3, { align: 'center', color: '#ffffff', outline: '#000000' });
+      });
+      g.text('A BOMB  B SPECIAL  C PUNCH  D STOP', g.width / 2, 168, { align: 'center', color: '#c8d0ff', outline: '#000000' });
+    }
+  }
+
+  private renderKeys(g: Gfx): void {
     drawPanel(g, 8, 34, 240, 176);
     const lines: [string, string][] = [
       ['ONE PLAYER / MENUS', ''],
       ['MOVE', 'ARROWS / WASD'],
       ['BOMB (A)', 'SPACE / X / J'],
-      ['DETONATE (B)', 'Z / SHIFT / K'],
-      ['ACTION (C)', 'C / E / Q / L'],
+      ['SPECIAL (B)', 'Z / SHIFT / K'],
+      ['PUNCH, PUSH (C)', 'C / E / L'],
+      ['STOP KICK (D)', 'Q / V / I'],
       ['PAUSE', 'ENTER / P'],
       ['BACK', 'ESC / BACKSPACE'],
-      ['BATTLE P1', 'WASD SPACE L-SHIFT E'],
-      ['BATTLE P2', 'ARROWS ENTER R-SHIFT R-CTRL'],
-      ['GAMEPADS', 'A BOMB, B DETONATE, X ACTION'],
+      ['BATTLE P1', 'WASD SPC LSHIFT E Q'],
+      ['BATTLE P2', 'ARROWS ENTER RSHIFT RCTRL \''],
       ['TOUCH', 'ON-SCREEN PAD'],
     ];
     lines.forEach(([a, b], i) => {
-      const y = 42 + i * 13;
+      const y = 42 + i * 14;
       g.text(a, 16, y, { color: b ? '#ffe040' : '#ffffff', outline: '#000000' });
       if (b) g.text(b, 240, y, { color: '#ffffff', outline: '#000000', align: 'right' });
     });
-    g.text(`VIBRATION ← ${this.settings.vibration ? 'ON' : 'OFF'} →`, g.width / 2, 186, { align: 'center', color: '#a8c0ff', outline: '#000000' });
+    g.text('A: BACK', g.width / 2, 198, { align: 'center', color: '#a8c0ff', outline: '#000000' });
   }
 }

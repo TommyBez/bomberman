@@ -347,6 +347,25 @@ describe('battle world', () => {
     expect(a.partner).toBe('coney');
   });
 
+  it('triangle stops a kicked bomb; square punches without stopping anything', () => {
+    const { w, a } = advanced();
+    a.stats.kick = true;
+    a.stats.punch = true;
+    a.stats.bombs = 2;
+    const bomb = w.placeBomb(a, 5, 5)!;
+    w.startSlide(bomb, 'right', 2);
+    bomb.kicker = a;
+    press(w, a, { action: true }, 2);
+    expect(bomb.slide).toBe('right');
+    press(w, a, { stop: true }, 1);
+    expect(bomb.slide).toBe(null);
+    // Punch the bomb right in front.
+    a.facing = 'right';
+    const next = w.placeBomb(a, 4, 5)!;
+    press(w, a, { action: true }, 1);
+    expect(next.flight).not.toBe(null);
+  });
+
   it('knocked-out bombers ride carts around the edge', () => {
     const w = new BattleWorld({ cfg: config('beginner', 3), arena: ARENAS[0], seed: 9 });
     w.kill(w.bombers[2], null);

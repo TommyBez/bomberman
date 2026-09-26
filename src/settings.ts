@@ -1,3 +1,4 @@
+import { PAD_LAYOUTS } from './engine/input';
 import { load, save } from './engine/storage';
 
 /** Options that are not sound volumes (those live with the AudioManager). */
@@ -6,6 +7,8 @@ export interface Settings {
   offsetY: number;
   vibration: boolean;
   stereo: boolean;
+  /** Face-button layout per gamepad (index into PAD_LAYOUTS). */
+  padLayouts: number[];
 }
 
 export function loadSettings(): Settings {
@@ -14,6 +17,10 @@ export function loadSettings(): Settings {
     offsetY: typeof s.offsetY === 'number' && Math.abs(s.offsetY) <= 16 ? Math.round(s.offsetY) : 0,
     vibration: typeof s.vibration === 'boolean' ? s.vibration : true,
     stereo: typeof s.stereo === 'boolean' ? s.stereo : true,
+    padLayouts: [0, 1, 2, 3].map((i) => {
+      const v = Array.isArray(s.padLayouts) ? s.padLayouts[i] : 0;
+      return Number.isInteger(v) && v >= 0 && v < PAD_LAYOUTS.length ? v : 0;
+    }),
   };
 }
 

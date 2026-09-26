@@ -916,8 +916,7 @@ export class BattleWorld extends World {
 
   // ---------------------------------------------------------------- actions (C)
 
-  protected override onAction(b: Bomber): void {
-    // Stop our kicked bombs.
+  protected override onStop(b: Bomber): boolean {
     let stopped = false;
     for (const bomb of this.bombs) {
       if (bomb.slide && !bomb.conveyed && bomb.kicker === b) {
@@ -928,7 +927,11 @@ export class BattleWorld extends World {
         stopped = true;
       }
     }
-    if (stopped) return;
+    return stopped;
+  }
+
+  /** □: Push, then Punch, then Multi Bomb (the manual's priority order). */
+  protected override onAction(b: Bomber): void {
     const d = b.facing;
     const fx = b.tx + DX[d];
     const fy = b.ty + DY[d];

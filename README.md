@@ -28,21 +28,27 @@ The game needs no backend.
 
 ## Controls
 
-| | Keyboard (one player and menus) | Gamepad | Touch |
+| | Keyboard (one player and menus) | Gamepad (layout Type A) | Touch |
 |---|---|---|---|
 | Move | Arrows / WASD | D-pad / left stick | on-screen pad |
-| **A**: bomb, confirm, Power Glove (hold) | Space / X / J / F | A (Cross) | A |
-| **B**: detonate remote bombs, special, back | Z / K / G / Shift | B (Circle), LB, RB | B |
-| **C**: stop a kicked bomb, punch, push, line bomb | C / E / Q / L | X, Y (Square, Triangle) | C |
+| **A**: bomb, confirm, Power Glove (hold) | Space / X / J / F | bottom face button | A |
+| **B**: special, partner ability, back | Z / K / G / Shift | right face button, LB, RB | B |
+| **C**: Push, Punch, Multi Bomb | C / E / L | left face button, LT, RT | C |
+| **D**: stop a kicked bomb, back | Q / V / I | top face button | C |
 | Start / pause | Enter / P | Start | START |
 | Select / back | Esc / Backspace / Tab | Back | SELECT |
 
+In the Battle Game, B with a direction fires an Advanced character's special; B on its
+own uses the partner's ability. Option → Controller sets a face-button layout for each
+gamepad. Type B is the original PlayStation layout (○ bombs, × specials, □ punches,
+△ stops kicked bombs).
+
 In the Battle Game two people can share one keyboard.
 
-| | Move | A | B | C |
-|---|---|---|---|---|
-| Keyboard P1 | WASD | Space / F | Left Shift / G | E / Q / R |
-| Keyboard P2 | Arrows | Enter / Numpad 0 / `/` | Right Shift / `.` | Right Ctrl / `,` / Numpad 1 |
+| | Move | A | B | C | D |
+|---|---|---|---|---|---|
+| Keyboard P1 | WASD | Space / F | Left Shift / G | E / R | Q / T |
+| Keyboard P2 | Arrows | Enter / Numpad 0 / `/` | Right Shift / `.` | Right Ctrl / `,` / Numpad 1 | `'` / `;` / Numpad 2 |
 
 Gamepads 1–4 can be assigned to any player on the setup screen, which allows up to five
 humans with a keyboard pair and gamepads. When typing a password, the keyboard types

@@ -1,6 +1,7 @@
 /**
  * Input: keyboard, gamepads and an on-screen touch pad, all mapped onto virtual
- * PlayStation-style controllers (D-pad + A/B + START/SELECT).
+ * PlayStation-style controllers: D-pad, A (○ bomb), B (× special), C (□ punch / push /
+ * multi bomb), D (△ stop a kicked bomb / back), START and SELECT.
  *
  *  - `menu` merges every device, so anyone can drive the menus.
  *  - `players[i]` read only the devices assigned to player slot i (battle mode).
@@ -9,9 +10,21 @@
  */
 
 export type Dir = 'up' | 'down' | 'left' | 'right';
-export type Button = Dir | 'a' | 'b' | 'c' | 'start' | 'select';
+export type Button = Dir | 'a' | 'b' | 'c' | 'd' | 'start' | 'select';
 export const DIRS: readonly Dir[] = ['up', 'down', 'left', 'right'];
-const BUTTONS: readonly Button[] = ['up', 'down', 'left', 'right', 'a', 'b', 'c', 'start', 'select'];
+const BUTTONS: readonly Button[] = ['up', 'down', 'left', 'right', 'a', 'b', 'c', 'd', 'start', 'select'];
+
+/**
+ * Gamepad face-button layouts (Option → Controller), listed as the buttons for the
+ * bottom, right, left and top face buttons. Type B is the original PlayStation layout
+ * (○ bombs, × specials).
+ */
+export const PAD_LAYOUTS: { name: string; face: [Button, Button, Button, Button] }[] = [
+  { name: 'TYPE A', face: ['a', 'b', 'c', 'd'] },
+  { name: 'TYPE B', face: ['b', 'a', 'c', 'd'] },
+  { name: 'TYPE C', face: ['a', 'c', 'b', 'd'] },
+  { name: 'TYPE D', face: ['c', 'b', 'a', 'd'] },
+];
 
 export type DeviceId = 'kb' | 'kb1' | 'kb2' | 'pad0' | 'pad1' | 'pad2' | 'pad3' | 'touch';
 export const ALL_DEVICES: readonly DeviceId[] = ['kb', 'pad0', 'pad1', 'pad2', 'pad3', 'touch'];
@@ -24,7 +37,8 @@ const KB_SOLO: KeyMap = {
   KeyW: 'up', KeyS: 'down', KeyA: 'left', KeyD: 'right',
   Space: 'a', KeyX: 'a', KeyJ: 'a', KeyF: 'a',
   KeyZ: 'b', KeyK: 'b', KeyG: 'b', ShiftLeft: 'b', ShiftRight: 'b',
-  KeyC: 'c', KeyL: 'c', KeyE: 'c', KeyQ: 'c',
+  KeyC: 'c', KeyL: 'c', KeyE: 'c',
+  KeyV: 'd', KeyQ: 'd', KeyI: 'd',
   Enter: 'start', NumpadEnter: 'start', KeyP: 'start',
   Escape: 'select', Backspace: 'select', Tab: 'select',
 };
@@ -34,7 +48,8 @@ const KB1: KeyMap = {
   KeyW: 'up', KeyS: 'down', KeyA: 'left', KeyD: 'right',
   Space: 'a', KeyF: 'a',
   ShiftLeft: 'b', KeyG: 'b',
-  KeyE: 'c', KeyQ: 'c', KeyR: 'c',
+  KeyE: 'c', KeyR: 'c',
+  KeyQ: 'd', KeyT: 'd',
 };
 
 /** Battle, keyboard player 2 (right hand). */
@@ -42,7 +57,8 @@ const KB2: KeyMap = {
   ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
   Enter: 'a', NumpadEnter: 'a', Numpad0: 'a', Slash: 'a',
   ShiftRight: 'b', Period: 'b', NumpadDecimal: 'b',
-  ControlRight: 'c', Comma: 'c', Numpad1: 'c', Quote: 'c', Backslash: 'c',
+  ControlRight: 'c', Comma: 'c', Numpad1: 'c', Backslash: 'c',
+  Quote: 'd', Semicolon: 'd', Numpad2: 'd',
 };
 
 const KEYMAPS: Partial<Record<DeviceId, KeyMap>> = { kb: KB_SOLO, kb1: KB1, kb2: KB2 };
@@ -141,6 +157,8 @@ export class Input {
   textEntry = false;
   /** Gamepad vibration (Option → Controller). */
   vibration = true;
+  /** Face-button layout (index into PAD_LAYOUTS) for each of the four gamepads. */
+  padLayouts: number[] = [0, 0, 0, 0];
   private focusLost = false;
 
   attach(win: Window): void {
@@ -224,20 +242,22 @@ export class Input {
       pad.addEventListener('pointercancel', end);
     }
 
-    const bindButton = (id: string, button: Button): void => {
+    const bindButton = (id: string, ...buttons: Button[]): void => {
       const el = doc.getElementById(id);
       if (!el) return;
       const pointers = new Set<number>();
       const sync = (): void => {
-        if (pointers.size) this.touchState.add(button);
-        else this.touchState.delete(button);
+        for (const button of buttons) {
+          if (pointers.size) this.touchState.add(button);
+          else this.touchState.delete(button);
+        }
         el.classList.toggle('on', pointers.size > 0);
       };
       el.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         el.setPointerCapture(e.pointerId);
         pointers.add(e.pointerId);
-        this.touchTapped.add(button);
+        for (const button of buttons) this.touchTapped.add(button);
         sync();
         this.gesture();
       });
@@ -250,7 +270,8 @@ export class Input {
     };
     bindButton('tb-a', 'a');
     bindButton('tb-b', 'b');
-    bindButton('tb-c', 'c');
+    // The on-screen C button covers both □ (punch/push) and △ (stop a kicked bomb).
+    bindButton('tb-c', 'c', 'd');
     bindButton('tb-start', 'start');
     bindButton('tb-select', 'select');
   }
@@ -342,9 +363,10 @@ export class Input {
       if (btn(13) || ay > 0.5) s.add('down');
       if (btn(14) || ax < -0.5) s.add('left');
       if (btn(15) || ax > 0.5) s.add('right');
-      if (btn(0)) s.add('a');
-      if (btn(1) || btn(4) || btn(5)) s.add('b');
-      if (btn(2) || btn(3)) s.add('c');
+      const face = (PAD_LAYOUTS[this.padLayouts[i]] ?? PAD_LAYOUTS[0]).face;
+      for (let k = 0; k < 4; k++) if (btn(k)) s.add(face[k]);
+      if (btn(4) || btn(5)) s.add('b');
+      if (btn(6) || btn(7)) s.add('c');
       if (btn(9)) s.add('start');
       if (btn(8)) s.add('select');
       if (!hadInput && s.size > 0) this.gesture();
@@ -355,10 +377,3 @@ export class Input {
 function isBound(code: string): boolean {
   return code in KB_SOLO || code in KB1 || code in KB2 || SYSTEM_PAUSE_KEYS.has(code);
 }
-
-/** Human-readable control hints for menus / README. */
-export const CONTROL_HELP = {
-  solo: 'MOVE: ARROWS/WASD  BOMB: SPACE/X  DETONATE: Z/SHIFT  PAUSE: ENTER/P/ESC',
-  kb1: 'WASD + SPACE (BOMB) + L-SHIFT (B) + E (C)',
-  kb2: 'ARROWS + ENTER (BOMB) + R-SHIFT (B) + R-CTRL (C)',
-};
