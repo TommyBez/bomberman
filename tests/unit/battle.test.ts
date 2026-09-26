@@ -324,6 +324,25 @@ describe('battle world', () => {
     expect(w.grid.get(8, 5)).toBe(Cell.Soft);
   });
 
+  it('Monkey lifts a soft block (revealing what it hid) and puts it down again', () => {
+    const { w, a } = advanced();
+    a.partner = 'simeon';
+    a.facing = 'right';
+    w.grid.set(4, 5, Cell.Soft);
+    w.setItem(4, 5, 'fire', true);
+    press(w, a, { special: true }, 1);
+    expect(a.liftedBlock).toBe(true);
+    expect(w.grid.get(4, 5)).toBe(Cell.Floor);
+    expect(w.items[w.idx(4, 5)]?.hidden).toBe(false);
+    // Can't put it down on the revealed item; turn and drop it elsewhere.
+    press(w, a, { special: true }, 1);
+    expect(a.liftedBlock).toBe(true);
+    a.facing = 'left';
+    press(w, a, { special: true }, 1);
+    expect(a.liftedBlock).toBe(false);
+    expect(w.grid.get(2, 5)).toBe(Cell.Soft);
+  });
+
   it('a stocked egg brings back the same partner', () => {
     const { w, a } = advanced();
     a.partner = 'drakko';
