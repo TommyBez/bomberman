@@ -145,6 +145,24 @@
       .tsmall.on {
         background: rgba(255, 255, 255, 0.35);
       }
+      /* Phones held upright: the picture sits at the top, SELECT/START above the pad. */
+      @media (orientation: portrait) {
+        body.touch #stage {
+          padding-top: env(safe-area-inset-top);
+        }
+        body.touch .tsmall {
+          top: auto;
+          bottom: max(196px, calc(env(safe-area-inset-bottom) + 174px));
+        }
+        body.touch #tb-select {
+          right: auto;
+          left: calc(50% - 96px);
+        }
+        body.touch #tb-start {
+          right: auto;
+          left: calc(50% + 14px);
+        }
+      }
       #boot {
         position: fixed;
         inset: 0;
