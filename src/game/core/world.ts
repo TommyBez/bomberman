@@ -415,6 +415,8 @@ export class World {
   }
 
   canPlaceBomb(b: Bomber, tx = b.tx, ty = b.ty): boolean {
+    // Impotent: no bombs at all, however they would be laid (A, Multi Bomb, a partner).
+    if (b.curse === 'impotent') return false;
     const cap = b.curse === 'feeble' ? 1 : b.stats.bombs;
     if (!b.alive || b.activeBombs >= cap) return false;
     if (!this.grid.inside(tx, ty) || this.grid.get(tx, ty) !== Cell.Floor) return false;

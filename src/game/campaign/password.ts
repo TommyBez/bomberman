@@ -1,10 +1,11 @@
 /**
- * 8-character passwords (like the PlayStation version's "93EB0G93").
- * 40 bits = stage(6) bombs(4) fire(3) version(1) salt(10) checksum(16), scrambled
- * with a salt-seeded keystream so consecutive passwords look unrelated.
+ * 8-character passwords in the original's characters, 0–9 and A–G (like "93EB0G93").
+ * 32 bits = stage(6) bombs(4) fire(3) version(1), scrambled with a 4-bit salt, plus a
+ * 14-bit checksum, so consecutive passwords look unrelated and typos are caught.
  */
-export const PASSWORD_ALPHABET = '0123456789ABCDEFGHJKLMNPRSTUVWXY';
+export const PASSWORD_ALPHABET = '0123456789ABCDEFG';
 export const PASSWORD_LENGTH = 8;
+const BASE = PASSWORD_ALPHABET.length;
 
 export interface PasswordData {
   stage: number; // 1..50
@@ -14,16 +15,16 @@ export interface PasswordData {
 }
 
 function checksum(payload: number, salt: number): number {
-  let h = 0x9e37 ^ salt;
+  let h = 0x9e37 ^ (salt * 0x111);
   for (let i = 0; i < 4; i++) {
     h = Math.imul(h ^ ((payload >>> (i * 4)) & 0xf), 0x2f1b) & 0xffff;
     h = ((h << 5) | (h >>> 11)) & 0xffff;
   }
-  return h;
+  return h & 0x3fff; // 14 bits
 }
 
 function keystream(salt: number): number {
-  let x = (salt * 2654435761) >>> 0;
+  let x = ((salt + 1) * 2654435761) >>> 0;
   x ^= x >>> 13;
   x = Math.imul(x, 0x5bd1e995) >>> 0;
   x ^= x >>> 15;
@@ -38,19 +39,16 @@ function packPayload(d: PasswordData): number {
 }
 
 /** The same progress always gives the same password (the salt is derived from it by default). */
-export function encodePassword(d: PasswordData, salt = checksum(packPayload(d), 0x2a5) & 0x3ff): string {
+export function encodePassword(d: PasswordData, salt = checksum(packPayload(d), 5) & 0xf): string {
   const payload = packPayload(d);
-  const s = salt & 0x3ff;
+  const s = salt & 0xf;
   const scrambled = payload ^ keystream(s);
-  const sum = checksum(payload, s);
-  // 40-bit value: [scrambled:14][salt:10][checksum:16]
-  const hi = (scrambled << 10) | s; // 24 bits
-  const bits = hi * 65536 + sum; // < 2^40, exact in a double
+  // 32-bit value: [scrambled:14][salt:4][checksum:14]
+  let v = (scrambled * 16 + s) * 16384 + checksum(payload, s);
   let out = '';
-  let v = bits;
   for (let i = 0; i < PASSWORD_LENGTH; i++) {
-    out = PASSWORD_ALPHABET[v % 32] + out;
-    v = Math.floor(v / 32);
+    out = PASSWORD_ALPHABET[v % BASE] + out;
+    v = Math.floor(v / BASE);
   }
   return out;
 }
@@ -62,12 +60,13 @@ export function decodePassword(text: string): PasswordData | null {
   for (const ch of t) {
     const n = PASSWORD_ALPHABET.indexOf(ch);
     if (n < 0) return null;
-    v = v * 32 + n;
+    v = v * BASE + n;
   }
-  const sum = v % 65536;
-  const hi = Math.floor(v / 65536);
-  const salt = hi & 0x3ff;
-  const scrambled = hi >>> 10;
+  if (v >= 2 ** 32) return null;
+  const sum = v % 16384;
+  const hi = Math.floor(v / 16384);
+  const salt = hi % 16;
+  const scrambled = Math.floor(hi / 16);
   const payload = (scrambled ^ keystream(salt)) & 0x3fff;
   if (checksum(payload, salt) !== sum) return null;
   const stage = (payload & 0x3f) + 1;
@@ -78,10 +77,10 @@ export function decodePassword(text: string): PasswordData | null {
 }
 
 /**
- * Codes from guides to the original PlayStation game (Arrange version): four that start
- * at stages 10–40, and five "full power" codes for stages 1, 11, 21, 31 and 41.
+ * Codes from guides to the original PlayStation game: four that start at stages 10–40,
+ * and "full power" codes for stages 1, 11, 21, 31 and 41, and stage 50 in either version.
  */
-export const CLASSIC_CODES: Record<string, { stage: number; full: boolean }> = {
+export const CLASSIC_CODES: Record<string, { stage: number; full: boolean; retro?: boolean }> = {
   '3G59E326': { stage: 10, full: false },
   '3D5D49C4': { stage: 20, full: false },
   '8D5E4B26': { stage: 30, full: false },
@@ -91,4 +90,6 @@ export const CLASSIC_CODES: Record<string, { stage: number; full: boolean }> = {
   '12221222': { stage: 21, full: true },
   '26572657': { stage: 31, full: true },
   '38793879': { stage: 41, full: true },
+  '93EB0G97': { stage: 50, full: true },
+  '93EB0G93': { stage: 50, full: true, retro: true },
 };

@@ -62,10 +62,13 @@ export class BattleMatch {
       goTitle(this.app);
       return;
     }
-    this.games++;
-    for (let k = 0; k < 5; k++) for (let v = 0; v < 5; v++) this.report[k][v] += w.report[k][v];
     const r = w.result!;
     let winnerSlot: number | null = null;
+    // A draw is void: it counts as no game at all.
+    if (!r.draw) {
+      this.games++;
+      for (let k = 0; k < 5; k++) for (let v = 0; v < 5; v++) this.report[k][v] += w.report[k][v];
+    }
     if (r.draw) this.draws++;
     else if (this.cfg.tag && r.team !== null) this.teamWins[r.team]++;
     else if (r.winner !== null) {

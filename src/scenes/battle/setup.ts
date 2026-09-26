@@ -126,7 +126,7 @@ export class BattleSetup {
       this.app,
       [
         { label: 'SINGLE MATCH', action: () => ((this.cfg.tag = false), this.rules()), help: 'EVERYONE FOR THEMSELVES' },
-        { label: 'TAG MATCH', action: () => ((this.cfg.tag = true), (this.cfg.rules.hyperBomber = false), this.rules()), help: 'TWO TEAMS' },
+        { label: 'TAG MATCH', action: () => ((this.cfg.tag = true), this.rules()), help: 'TWO TEAMS' },
       ],
       () => this.selectLevel(),
     );
@@ -154,7 +154,8 @@ export class BattleSetup {
       { label: 'SUDDEN DEATH', value: () => r.suddenDeath.toUpperCase(), change: (d) => (r.suddenDeath = cycle(tri, r.suddenDeath, d)), disabled: () => beginner, help: suddenHelp },
       { label: 'RANDOM POSITION', value: () => r.randomPosition.toUpperCase(), change: (d) => (r.randomPosition = cycle(tri, r.randomPosition, d)), disabled: () => beginner, help: shuffleHelp },
       { label: 'SKULL BOMB', value: () => onOff(r.skullBomb), change: () => (r.skullBomb = !r.skullBomb), disabled: () => beginner, help: 'SKULLS CAN BE BURNT BY BLASTS' },
-      { label: 'HYPER BOMBER', value: () => onOff(r.hyperBomber), change: () => (r.hyperBomber = !r.hyperBomber), disabled: () => this.cfg.tag, help: 'WINNER PLAYS FOR A BONUS ITEM' },
+      // Tag matches never have Hyper Bomber; the Single setting is kept for later.
+      { label: 'HYPER BOMBER', value: () => onOff(r.hyperBomber && !this.cfg.tag), change: () => (r.hyperBomber = !r.hyperBomber), disabled: () => this.cfg.tag, help: 'WINNER PLAYS FOR A BONUS ITEM' },
       { label: 'BOMBER CART', value: () => r.cart.toUpperCase(), change: (d) => (r.cart = cycle(carts, r.cart, d)), help: 'KNOCKED-OUT PLAYERS FIGHT ON' },
       { label: 'OK', action: () => (this.persist(), this.players()) },
     ];

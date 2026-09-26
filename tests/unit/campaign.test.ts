@@ -221,6 +221,22 @@ describe('passwords', () => {
     }
   });
 
+  it('uses only the original\'s characters and never collides with a guide or battle code', async () => {
+    const { ALT_CODES } = await import('../../src/game/battle/arenas');
+    const special = new Set([...Object.keys(CLASSIC_CODES), ...Object.keys(ALT_CODES)]);
+    expect(PASSWORD_ALPHABET).toBe('0123456789ABCDEFG');
+    for (let stage = 1; stage <= 50; stage++) {
+      for (let bombs = 1; bombs <= 10; bombs++) {
+        for (let fire = 1; fire <= 5; fire++) {
+          for (const modern of [true, false]) {
+            const pw = encodePassword({ stage, bombs, fire, modern });
+            expect(special.has(pw), pw).toBe(false);
+          }
+        }
+      }
+    }
+  });
+
   it('rejects typos', () => {
     const pw = encodePassword({ stage: 12, bombs: 4, fire: 3, modern: true }, 99);
     const typo = (pw[0] === 'A' ? 'B' : 'A') + pw.slice(1);

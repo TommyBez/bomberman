@@ -409,7 +409,8 @@ export class BattleWorld extends World {
         break;
     }
     if (this.gim.boosts(tx, ty)) s.range = BATTLE_MAX_FIRE;
-    if (b.weak > 0) s.range = 1;
+    // The weak state and Feeble mean firepower 1, whatever the bomb or the tile.
+    if (b.weak > 0 || b.curse === 'feeble') s.range = 1;
   }
 
   protected override extraCanPlace(b: Bomber, _tx: number, _ty: number): boolean {

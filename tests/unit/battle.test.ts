@@ -77,6 +77,21 @@ describe('battle world', () => {
     expect(b.mineNext).toBe(true); // asking has no side effects
   });
 
+  it('Impotent lays no bombs at all (not even Multi Bomb); Feeble means firepower 1 on any bomb', () => {
+    const w = new BattleWorld({ cfg: config('advanced', 2), arena: ARENAS[0], seed: 2 });
+    const b = w.bombers[0];
+    b.stats.bombs = 4;
+    b.stats.lineBomb = true;
+    b.curse = 'impotent';
+    expect(w.canPlaceBomb(b)).toBe(false);
+    b.intent = { ...NO_INTENT, action: true };
+    w.update();
+    expect(w.bombs).toHaveLength(0);
+    b.curse = 'feeble';
+    b.stats.bombType = 'power';
+    expect(w.bombShape(b).range).toBe(1);
+  });
+
   it('Bomb Kick and Bomb Pass replace each other', () => {
     const w = new BattleWorld({ cfg: config('beginner', 2), arena: ARENAS[0], seed: 2 });
     const b = w.bombers[0];

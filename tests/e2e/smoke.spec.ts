@@ -106,7 +106,7 @@ test('Normal Game: a password restores stage and power-ups', async ({ page }) =>
   await page.waitForTimeout(600);
   await press(page, 'Enter'); // PASSWORD
   await page.waitForTimeout(600);
-  await page.keyboard.type('0KA53KU1', { delay: 60 });
+  await page.keyboard.type('93F7GG92', { delay: 60 });
   await press(page, 'Enter');
   await waitFor(page, 's && s.world', 10_000);
   const info = await scene(page);

@@ -107,7 +107,7 @@ export class PasswordScene implements Scene {
     const classic = CLASSIC_CODES[code];
     if (classic) {
       this.app.audio.sfx('menuOk');
-      const s = new CampaignSession('modern');
+      const s = new CampaignSession(classic.retro ? 'retro' : 'modern');
       s.stageIndex = classic.stage - 1;
       if (classic.full) Object.assign(s.powers, { bombs: 10, fire: 5, speed: true, remote: true, bombpass: true, wallpass: true, fireman: true });
       else Object.assign(s.powers, collectedBefore(classic.stage));

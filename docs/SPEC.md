@@ -24,11 +24,11 @@ sound in this project are original; only the game rules are reproduced.
 | Field | 31×13 tiles incl. border (29×11 playable), pillars on even/even tiles, horizontal scrolling |
 | Objective | Kill every monster, then walk into the exit (a pair of doors hidden under a soft block) |
 | Timer | 3:00 per stage; at 0:00 a swarm of extra monsters (Pontans) appears |
-| Penalty | Bombing the revealed exit or item releases a pack of tougher monsters |
+| Penalty | Bombing the revealed exit or item releases a pack of tougher monsters (the NES rule: 8, one grade above the stage's toughest; the PS1 count isn't documented) |
 | Lives | ×02 at the start (3 tries), **+1 for every stage cleared** |
 | Caps | Bombs 10, Fire 5 |
 | Bonus stage | After stages 5, 10, …, 45: invincible, endless monsters of one kind, 30 s of score attack |
-| Game over | Continue (same stage) / Save (3 files) / Quit + 8-character password |
+| Game over | Continue (same stage) / Save (3 files) / Quit + 8-character password (0–9, A–G) |
 | Versions | **Modern** (5 themes, changing every 10 stages, "Bomberman Show Time" intermission every 10 stages) or **Retro** (NES look and sound) |
 
 Soft blocks per attempt: 50 + 2 × stage number (the exit and the item hide under two of
