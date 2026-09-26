@@ -9,16 +9,18 @@ export interface Theme {
   backdrop: string;
   floor: string;
   floorAlt: string;
-  floorStyle: 'grass' | 'checker' | 'plain' | 'tiles' | 'carpet' | 'sand' | 'ice' | 'metal' | 'nes' | 'wood' | 'water' | 'stars';
+  floorStyle: 'grass' | 'checker' | 'plain' | 'tiles' | 'carpet' | 'sand' | 'ice' | 'metal' | 'nes' | 'wood' | 'water' | 'stars' | 'dots' | 'harlequin';
   hard: string;
   hardAlt?: string;
-  hardStyle: 'bevel' | 'metal' | 'gem' | 'checker' | 'goldArrow' | 'candy' | 'nes' | 'stone' | 'crystal' | 'pillar' | 'boulder' | 'orb' | 'capsule' | 'drum';
+  hardStyle: 'bevel' | 'metal' | 'gem' | 'checker' | 'goldArrow' | 'candy' | 'nes' | 'stone' | 'crystal' | 'pillar' | 'boulder' | 'orb' | 'capsule' | 'drum' | 'pyramid' | 'roof' | 'hedgeBlock';
   wall: string;
   wallAlt?: string;
   wallStyle: 'bevel' | 'metal' | 'balloon' | 'candy' | 'stone' | 'brick' | 'nes' | 'hedge';
   soft: string;
   softAlt?: string;
-  softStyle: 'brick' | 'crate' | 'toy' | 'rock' | 'bush' | 'ice' | 'nes' | 'barrel' | 'snow' | 'gear' | 'mushroom' | 'leaf' | 'star' | 'buoy';
+  softStyle: 'brick' | 'crate' | 'toy' | 'rock' | 'bush' | 'ice' | 'nes' | 'barrel' | 'snow' | 'gear' | 'mushroom' | 'leaf' | 'star' | 'buoy' | 'ball' | 'skull' | 'hazard';
+  /** Colour of pipe covers (Pipe City, Every Which Way). */
+  pipe?: string;
   /** HUD strip colours (the tall top wall). */
   hud: [string, string];
   /** Floor shadow strength (0 = none, as on the NES). */
@@ -212,6 +214,23 @@ function floorTile(t: Theme, shadow: boolean): HTMLCanvasElement {
         p.px(sx, sy + 1, t.floorAlt);
       }
       break;
+    case 'dots':
+      p.circle(3.5, 3.5, 2.2, t.floorAlt);
+      p.circle(11.5, 11.5, 2.2, t.floorAlt);
+      p.px(3, 2, mix(t.floorAlt, '#ffffff', 0.3));
+      p.px(11, 10, mix(t.floorAlt, '#ffffff', 0.3));
+      break;
+    case 'harlequin': {
+      // Four triangles of bright colour per tile, like a toy mat.
+      const cols = [t.floor, t.floorAlt, '#3c9a44', '#d84040'];
+      for (let y = 0; y < 16; y++) {
+        for (let x = 0; x < 16; x++) {
+          const top = y < x ? (y < 15 - x ? 0 : 1) : y < 15 - x ? 3 : 2;
+          p.px(x, y, cols[top]);
+        }
+      }
+      break;
+    }
     case 'nes':
       break;
   }
@@ -355,6 +374,32 @@ function hardTile(t: Theme): HTMLCanvasElement {
       p.ellipse(7.5, 4, 7, 3, darker);
       p.ellipse(7.5, 4, 6, 2.2, light);
       p.ellipse(7.5, 4, 3, 1, dark);
+      break;
+    case 'pyramid':
+      // A little stepped pyramid: lit left face, shaded right face.
+      p.rect(0, 13, 16, 3, 'rgba(0,0,0,0.25)');
+      for (let y = 1; y < 15; y++) {
+        const half = Math.round((y / 14) * 7.5);
+        p.rect(8 - half, y, half, 1, y % 3 === 0 ? dark : light);
+        p.rect(8, y, half, 1, y % 3 === 0 ? darker : dark);
+      }
+      p.px(7, 0, lighter);
+      break;
+    case 'roof':
+      // A house seen from above: two slopes of tiles meeting at the ridge.
+      p.rect(0, 0, 16, 16, darker);
+      p.rect(1, 1, 14, 7, light);
+      p.rect(1, 8, 14, 7, base);
+      for (let y = 2; y < 15; y += 3) p.rect(1, y, 14, 1, y < 8 ? base : dark);
+      p.rect(1, 7, 14, 2, lighter);
+      p.rect(11, 2, 3, 4, '#503020');
+      break;
+    case 'hedgeBlock':
+      p.rect(0, 0, 16, 16, darker);
+      p.rect(1, 1, 14, 14, base);
+      for (let i = 0; i < 14; i++) p.px(1 + Math.floor(hash(i, 31) * 14), 1 + Math.floor(hash(i, 32) * 14), light);
+      for (let i = 0; i < 10; i++) p.px(1 + Math.floor(hash(i, 33) * 14), 1 + Math.floor(hash(i, 34) * 14), dark);
+      p.rect(1, 1, 14, 1, lighter);
       break;
     case 'pillar':
       p.rect(0, 0, 16, 16, darker);
@@ -611,6 +656,36 @@ function softTile(t: Theme): HTMLCanvasElement {
       p.circle(7.5, 8, 2.2, dark);
       p.circle(7.5, 8, 1.4, alt);
       p.ellipse(5, 5, 1.8, 1, 'rgba(255,255,255,0.7)');
+      break;
+    }
+    case 'ball':
+      // A football.
+      p.circle(7.5, 8, 7.4, '#202020');
+      p.circle(7.5, 8, 6.5, base);
+      p.circle(5.5, 5.5, 2.2, mix(base, '#ffffff', 0.6));
+      for (const [x, y, r] of [[7.5, 8, 2.2], [3, 7, 1.4], [12, 7, 1.4], [5, 12.5, 1.4], [10.5, 12.5, 1.4], [7.5, 2.6, 1.3]] as const) p.circle(x, y, r, '#202020');
+      break;
+    case 'skull':
+      p.ellipse(7.5, 14, 5, 1.5, 'rgba(0,0,0,0.25)');
+      p.roundRect(2, 1, 12, 10, dark, 5);
+      p.roundRect(3, 2, 10, 9, base, 4);
+      p.rect(5, 10, 6, 4, dark);
+      p.rect(6, 10, 4, 3, base);
+      p.circle(5.5, 6.5, 1.8, '#301810');
+      p.circle(10, 6.5, 1.8, '#301810');
+      p.px(7, 9, '#301810');
+      p.px(8, 9, '#301810');
+      p.rect(4, 3, 3, 1, light);
+      break;
+    case 'hazard': {
+      // A block with yellow and black warning stripes.
+      const alt = t.softAlt ?? '#303030';
+      p.rect(0, 0, 16, 16, dark);
+      for (let y = 1; y < 15; y++) for (let x = 1; x < 15; x++) p.px(x, y, (x + y) % 8 < 4 ? base : alt);
+      p.rect(1, 1, 14, 1, light);
+      p.rect(1, 14, 14, 1, dark);
+      p.rect(3, 5, 10, 6, mix(base, '#000000', 0.15));
+      p.rect(4, 6, 8, 4, light);
       break;
     }
     case 'brick':

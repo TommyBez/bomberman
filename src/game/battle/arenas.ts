@@ -161,7 +161,7 @@ export const ARENAS: ArenaDef[] = [
     map: STD,
   },
   {
-    id: 'b2', name: 'SEESAW PARK', jpName: 'SEESAW PARK', level: 'beginner', gimmick: 'seesaw', theme: 'park', density: 0.5,
+    id: 'b2', name: 'SEESAW PARK', jpName: 'SEESAW PARK', level: 'beginner', gimmick: 'seesaw', theme: 'seesawpark', density: 0.5,
     blurb: 'STEP ON A SEESAW TO LAUNCH WHAT IS ON THE OTHER END.',
     items: { bomb: 5, fire: 5, speed: 3, skull: 2, kick: 0 },
     map: [
@@ -202,7 +202,7 @@ export const ARENAS: ArenaDef[] = [
     ],
   },
   {
-    id: 'b4', name: 'TAKE THE TRAIN', jpName: 'GO GO TROCCO', level: 'beginner', gimmick: 'train', theme: 'mine', density: 0.6,
+    id: 'b4', name: 'TAKE THE TRAIN', jpName: 'GO GO TROCCO', level: 'beginner', gimmick: 'train', theme: 'forest', density: 0.6,
     blurb: 'RIDE THE TROLLEY. DON\'T GET HIT BY IT! SWITCH CHANGES ROUTE.',
     spawns: [[1, 1], [13, 11], [13, 1], [1, 11], [9, 5]],
     stations: [[3, 6], [11, 6]],
@@ -224,7 +224,7 @@ export const ARENAS: ArenaDef[] = [
     ],
   },
   {
-    id: 'b5', name: 'ONE-WAY STREET', jpName: 'MAGATTE BON', level: 'beginner', gimmick: 'arrows', theme: 'street', density: 0.6,
+    id: 'b5', name: 'ONE-WAY STREET', jpName: 'MAGATTE BON', level: 'beginner', gimmick: 'arrows', theme: 'planks', density: 0.6,
     blurb: 'FLOOR ARROWS TURN KICKED BOMBS.',
     items: { kick: 4 },
     map: [
@@ -244,7 +244,7 @@ export const ARENAS: ArenaDef[] = [
     ],
   },
   {
-    id: 'b6', name: 'PIPE CITY', jpName: 'DOKAN DE BOKAN', level: 'beginner', gimmick: 'pipes', theme: 'city', density: 0.55,
+    id: 'b6', name: 'PIPE CITY', jpName: 'DOKAN DE BOKAN', level: 'beginner', gimmick: 'pipes', theme: 'pipecity', density: 0.55,
     blurb: 'PIPES HIDE BOMBERS AND BOMBS.',
     map: [
       '###############',
@@ -263,7 +263,7 @@ export const ARENAS: ArenaDef[] = [
     ],
   },
   {
-    id: 'b7', name: 'FACTORY', jpName: 'GURUGURU BELCON', level: 'beginner', gimmick: 'conveyor', theme: 'factory', density: 0.55,
+    id: 'b7', name: 'FACTORY', jpName: 'GURUGURU BELCON', level: 'beginner', gimmick: 'conveyor', theme: 'plant', density: 0.55,
     blurb: 'CONVEYOR BELTS CARRY BOMBERS AND BOMBS.',
     map: [
       '###############',
@@ -322,7 +322,7 @@ export const ARENAS: ArenaDef[] = [
     ],
   },
   {
-    id: 'n2', name: 'SEESAW LAND', jpName: 'SEESAW LAND', level: 'normal', gimmick: 'seesawLinked', theme: 'park', density: 0.5,
+    id: 'n2', name: 'SEESAW LAND', jpName: 'SEESAW LAND', level: 'normal', gimmick: 'seesawLinked', theme: 'seesawland', density: 0.5,
     blurb: 'ALL THE SEESAWS ARE LINKED AND MOVE TOGETHER.',
     map: [
       '###############',
@@ -366,7 +366,7 @@ export const ARENAS: ArenaDef[] = [
     ],
   },
   {
-    id: 'n4', name: 'SWITCHEROO', jpName: 'KARAKURI TROCCO', level: 'normal', gimmick: 'switcheroo', theme: 'mine', density: 0.55,
+    id: 'n4', name: 'SWITCHEROO', jpName: 'KARAKURI TROCCO', level: 'normal', gimmick: 'switcheroo', theme: 'yard', density: 0.55,
     blurb: 'THE RAILS ARE RELAID AT RANDOM. WATCH WHERE THE TROLLEY GOES!',
     spawns: [[1, 1], [13, 11], [13, 1], [1, 11], [9, 5]],
     stations: [[3, 6], [11, 6]],
@@ -414,7 +414,7 @@ export const ARENAS: ArenaDef[] = [
     ],
   },
   {
-    id: 'n6', name: 'EVERY WHICH WAY', jpName: 'KARAKURI DOKAN', level: 'normal', gimmick: 'portals', theme: 'city', density: 0.55,
+    id: 'n6', name: 'EVERY WHICH WAY', jpName: 'KARAKURI DOKAN', level: 'normal', gimmick: 'portals', theme: 'frost', density: 0.55,
     blurb: 'A BLAST ENTERING ONE PIPE COMES OUT OF ITS PARTNER.',
     portalPairs: [[[7, 2], [7, 10]], [[1, 6], [13, 6]]],
     map: [
@@ -434,7 +434,7 @@ export const ARENAS: ArenaDef[] = [
     ],
   },
   {
-    id: 'n7', name: 'COMING AND GOING', jpName: 'SWITCH BELCON', level: 'normal', gimmick: 'switchbelt', theme: 'factory', density: 0.5,
+    id: 'n7', name: 'COMING AND GOING', jpName: 'SWITCH BELCON', level: 'normal', gimmick: 'switchbelt', theme: 'pinkplant', density: 0.5,
     blurb: 'HIT THE BLUE SWITCH TO REVERSE THE BELTS.',
     map: [
       '###############',

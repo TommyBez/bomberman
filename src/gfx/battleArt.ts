@@ -5,17 +5,31 @@ import type { Theme } from './tiles';
 
 /** Arena colour themes for the battle stages. */
 export const BATTLE_THEMES: Record<string, Theme> = {
-  park: { name: 'park', backdrop: '#102010', floor: '#58b048', floorAlt: '#68c058', floorStyle: 'grass', hard: '#b89060', hardStyle: 'stone', wall: '#806040', wallStyle: 'hedge', soft: '#e8a060', softStyle: 'crate', hud: ['#3a7a30', '#1a4010'], shadow: 0.35 },
-  road: { name: 'road', backdrop: '#101010', floor: '#707078', floorAlt: '#808088', floorStyle: 'plain', hard: '#e0c040', hardStyle: 'bevel', wall: '#50505a', wallStyle: 'metal', soft: '#303038', softStyle: 'rock', hud: ['#50505a', '#202028'], shadow: 0.3 },
-  mine: { name: 'mine', backdrop: '#140c08', floor: '#8a6a48', floorAlt: '#9a7a58', floorStyle: 'sand', hard: '#6a5a50', hardStyle: 'stone', wall: '#4a3a30', wallStyle: 'stone', soft: '#b08050', softStyle: 'barrel', hud: ['#5a4030', '#281810'], shadow: 0.35 },
-  street: { name: 'street', backdrop: '#101018', floor: '#5a5a66', floorAlt: '#666672', floorStyle: 'tiles', hard: '#d05040', hardStyle: 'bevel', wall: '#3a3a48', wallStyle: 'brick', soft: '#c0a080', softStyle: 'crate', hud: ['#3a3a48', '#18181e'], shadow: 0.3 },
-  city: { name: 'city', backdrop: '#080c18', floor: '#4a6078', floorAlt: '#56708a', floorStyle: 'tiles', hard: '#8890a8', hardStyle: 'metal', wall: '#3a4a60', wallStyle: 'metal', soft: '#c07840', softStyle: 'brick', hud: ['#3a4a60', '#141c28'], shadow: 0.32 },
-  factory: { name: 'factory', backdrop: '#101010', floor: '#6a6a70', floorAlt: '#76767c', floorStyle: 'metal', hard: '#a0a4b0', hardStyle: 'metal', wall: '#505058', wallStyle: 'metal', soft: '#c09040', softStyle: 'crate', hud: ['#50505a', '#202028'], shadow: 0.3 },
-  desert: { name: 'desert', backdrop: '#201408', floor: '#e0c080', floorAlt: '#d0b070', floorStyle: 'sand', hard: '#c08050', hardStyle: 'stone', wall: '#a06a40', wallStyle: 'stone', soft: '#b89060', softStyle: 'rock', hud: ['#a06a40', '#502c10'], shadow: 0.3 },
+  // SeeSaw Park: an orange checkered floor, hedge blocks, footballs.
+  seesawpark: { name: 'seesawpark', backdrop: '#102010', floor: '#f0a040', floorAlt: '#f8c860', floorStyle: 'checker', hard: '#3a9a3c', hardStyle: 'hedgeBlock', wall: '#806040', wallStyle: 'hedge', soft: '#f8f8f8', softStyle: 'ball', hud: ['#3a7a30', '#1a4010'], shadow: 0.3 },
+  // SeeSaw Land: a teal polka-dot floor, red roofs, grey rocks.
+  seesawland: { name: 'seesawland', backdrop: '#081818', floor: '#2a8a8a', floorAlt: '#1e6a5a', floorStyle: 'dots', hard: '#e04838', hardStyle: 'roof', wall: '#2c6a3a', wallStyle: 'hedge', soft: '#a8a8b0', softStyle: 'rock', hud: ['#2c6a3a', '#103018'], shadow: 0.3 },
+  // Take the Train: a green forest clearing with stone cones and bushes.
+  forest: { name: 'forest', backdrop: '#081408', floor: '#4aa040', floorAlt: '#58b04c', floorStyle: 'grass', hard: '#b8bcc4', hardStyle: 'boulder', wall: '#2c7a24', wallStyle: 'hedge', soft: '#3c8a30', softStyle: 'bush', hud: ['#3a8a2c', '#185010'], shadow: 0.3 },
+  // One-Way Street: a plank floor, pale blue posts, green blocks.
+  planks: { name: 'planks', backdrop: '#140c04', floor: '#d08a40', floorAlt: '#e09a50', floorStyle: 'wood', hard: '#98c8e8', hardStyle: 'drum', wall: '#8a5020', wallStyle: 'stone', soft: '#50a848', softStyle: 'crate', hud: ['#8a5020', '#402008'], shadow: 0.3 },
+  // Pipe City: a yellow floor, grey blocks, cream boulders, blue pipes.
+  pipecity: { name: 'pipecity', backdrop: '#141004', floor: '#f0c838', floorAlt: '#e8b828', floorStyle: 'plain', hard: '#a0a6b8', hardStyle: 'bevel', wall: '#8a7040', wallStyle: 'stone', soft: '#f0ecd8', softStyle: 'rock', pipe: '#78b8e8', hud: ['#8a7040', '#403010'], shadow: 0.3 },
+  // Factory: a purple floor, grey blocks, hazard-striped soft blocks.
+  plant: { name: 'plant', backdrop: '#100c18', floor: '#8878c0', floorAlt: '#9888cc', floorStyle: 'metal', hard: '#a0a4b0', hardStyle: 'metal', wall: '#505058', wallStyle: 'metal', soft: '#e8c040', softAlt: '#6a6a78', softStyle: 'hazard', hud: ['#50505a', '#202028'], shadow: 0.3 },
+  // Coming and Going: a pink floor with blue-grey blocks.
+  pinkplant: { name: 'pinkplant', backdrop: '#180c18', floor: '#d898c8', floorAlt: '#e0a8d0', floorStyle: 'metal', hard: '#8898b8', hardStyle: 'metal', wall: '#6a5070', wallStyle: 'metal', soft: '#90a8d0', softAlt: '#5a6a90', softStyle: 'hazard', hud: ['#6a5070', '#301830'], shadow: 0.3 },
+  // Switcheroo: a green railway yard, blue orbs, orange barrels.
+  yard: { name: 'yard', backdrop: '#0c1408', floor: '#8cc850', floorAlt: '#a0d460', floorStyle: 'tiles', hard: '#5a88d8', hardStyle: 'orb', wall: '#8a6a30', wallStyle: 'stone', soft: '#f09030', softStyle: 'barrel', hud: ['#8a6a30', '#403010'], shadow: 0.3 },
+  // Every Which Way: an icy white floor, bushes, orange pipes.
+  frost: { name: 'frost', backdrop: '#0c1418', floor: '#dcecf4', floorAlt: '#c4dcec', floorStyle: 'ice', hard: '#d86040', hardStyle: 'bevel', wall: '#5a8aa0', wallStyle: 'stone', soft: '#58a848', softStyle: 'bush', pipe: '#e08830', hud: ['#5a8aa0', '#203848'], shadow: 0.2 },
+  road: { name: 'road', backdrop: '#101010', floor: '#707078', floorAlt: '#808088', floorStyle: 'plain', hard: '#d83838', hardStyle: 'bevel', wall: '#50505a', wallStyle: 'metal', soft: '#303038', softStyle: 'rock', hud: ['#50505a', '#202028'], shadow: 0.3 },
+  // Warp Desert: sand, pyramids, skulls.
+  desert: { name: 'desert', backdrop: '#201408', floor: '#f0d060', floorAlt: '#e0c050', floorStyle: 'sand', hard: '#b87838', hardStyle: 'pyramid', wall: '#a06a40', wallStyle: 'stone', soft: '#f4f0e0', softStyle: 'skull', hud: ['#a06a40', '#502c10'], shadow: 0.3 },
   sky: { name: 'sky', backdrop: '#3060c0', floor: '#e8f0ff', floorAlt: '#d0e0ff', floorStyle: 'plain', hard: '#80b0ff', hardStyle: 'crystal', wall: '#5080e0', wallStyle: 'bevel', soft: '#ffffff', softStyle: 'crate', hud: ['#4070d0', '#183070'], shadow: 0.18 },
-  toy: { name: 'toy', backdrop: '#200820', floor: '#f0d0a0', floorAlt: '#e8c090', floorStyle: 'wood', hard: '#e05050', hardAlt: '#4060e0', hardStyle: 'checker', wall: '#8040a0', wallStyle: 'bevel', soft: '#50b0f0', softAlt: '#f0e040', softStyle: 'toy', hud: ['#8040a0', '#401850'], shadow: 0.3 },
+  // Block World: a harlequin floor with toy blocks.
+  toy: { name: 'toy', backdrop: '#200820', floor: '#f0c030', floorAlt: '#8040c0', floorStyle: 'harlequin', hard: '#e05050', hardAlt: '#40a050', hardStyle: 'checker', wall: '#8040a0', wallStyle: 'bevel', soft: '#e04040', softAlt: '#40b050', softStyle: 'toy', hud: ['#8040a0', '#401850'], shadow: 0.3 },
   snow: { name: 'snow', backdrop: '#101828', floor: '#e8f0f8', floorAlt: '#d0e0f0', floorStyle: 'plain', hard: '#7aa8d8', hardStyle: 'crystal', wall: '#6890b8', wallStyle: 'stone', soft: '#ffffff', softStyle: 'snow', hud: ['#5078a8', '#203858'], shadow: 0.2 },
-  garden: { name: 'garden', backdrop: '#102010', floor: '#70c060', floorAlt: '#80d070', floorStyle: 'grass', hard: '#e0a0c0', hardStyle: 'candy', wall: '#408040', wallStyle: 'hedge', soft: '#f0e080', softStyle: 'bush', hud: ['#408040', '#183818'], shadow: 0.3 },
   // King of the Jungle: orange dirt, tree stumps, red mushrooms.
   jungle: { name: 'jungle', backdrop: '#081408', floor: '#d8a448', floorAlt: '#c89034', floorStyle: 'sand', hard: '#9a6430', hardStyle: 'drum', wall: '#2c7a24', wallStyle: 'hedge', soft: '#e03a30', softStyle: 'mushroom', hud: ['#3a8a2c', '#185010'], shadow: 0.3 },
   // The Seven Seas: wooden decks, golden barrels, red-and-white floats.
@@ -276,14 +290,26 @@ export function bridgeTile(horizontal: boolean): Sprite {
 }
 
 /** A pipe mouth (Every Which Way): blasts go in here and out of its partner. */
-export function portalTile(): Sprite {
+export function portalTile(pipe = '#30a040'): Sprite {
   const p = new PixelCanvas(16, 16);
   p.circle(7.5, 7.5, 7.5, '#000000');
-  p.circle(7.5, 7.5, 6.6, '#30a040');
-  p.circle(7.5, 7.5, 5.2, '#70e070');
-  p.circle(7.5, 7.5, 4, '#0c200c');
-  p.circle(6, 6, 1.2, '#c0ffc0');
+  p.circle(7.5, 7.5, 6.6, pipe);
+  p.circle(7.5, 7.5, 5.2, mix(pipe, '#ffffff', 0.35));
+  p.circle(7.5, 7.5, 4, mix(pipe, '#000000', 0.8));
+  p.circle(6, 6, 1.2, mix(pipe, '#ffffff', 0.7));
   return p.canvas;
+}
+
+const pipeCache = new Map<string, { h: Sprite; v: Sprite; mouth: Sprite }>();
+
+/** Pipe covers and mouths in a stage's pipe colour. */
+export function pipeSprites(color = '#30a040'): { h: Sprite; v: Sprite; mouth: Sprite } {
+  let set = pipeCache.get(color);
+  if (!set) {
+    set = { h: coverSprite('pipe', 0, color), v: coverSprite('pipe', 1, color), mouth: portalTile(color) };
+    pipeCache.set(color, set);
+  }
+  return set;
 }
 
 export function bendTile(turn: Partial<Record<Dir, Dir>>): Sprite {
@@ -338,19 +364,20 @@ export function flowerTile(face: Dir, turning: boolean): Sprite {
 const DXY: Record<Dir, [number, number]> = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
 /** Overlays that hide whoever stands under them. */
-export function coverSprite(style: 'pipe' | 'hut' | 'foliage', variant: number): Sprite {
+export function coverSprite(style: 'pipe' | 'hut' | 'foliage', variant: number, pipe = '#30a040'): Sprite {
   const p = new PixelCanvas(16, 16);
   if (style === 'pipe') {
     const horiz = variant === 0;
+    const [dark, light] = [mix(pipe, '#000000', 0.5), mix(pipe, '#ffffff', 0.45)];
     if (horiz) {
-      p.rect(0, 2, 16, 12, '#185820');
-      p.rect(0, 3, 16, 10, '#30a040');
-      p.rect(0, 4, 16, 3, '#80e080');
-      p.rect(0, 11, 16, 1, '#185820');
+      p.rect(0, 2, 16, 12, dark);
+      p.rect(0, 3, 16, 10, pipe);
+      p.rect(0, 4, 16, 3, light);
+      p.rect(0, 11, 16, 1, dark);
     } else {
-      p.rect(2, 0, 12, 16, '#185820');
-      p.rect(3, 0, 10, 16, '#30a040');
-      p.rect(4, 0, 3, 16, '#80e080');
+      p.rect(2, 0, 12, 16, dark);
+      p.rect(3, 0, 10, 16, pipe);
+      p.rect(4, 0, 3, 16, light);
     }
   } else if (style === 'hut') {
     p.ellipse(7.5, 10.5, 8.2, 7.6, '#203858');

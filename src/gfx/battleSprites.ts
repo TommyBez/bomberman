@@ -15,7 +15,6 @@ import {
   iceTile,
   cloudTile,
   partnerSprite,
-  portalTile,
   pressureBlock,
   railTile,
   robotSprite,
@@ -74,10 +73,7 @@ export interface GimmickSprites {
   water: Sprite[];
   bridgeH: Sprite;
   bridgeV: Sprite;
-  pipeMouth: Sprite;
   flower: Record<Dir, Sprite[]>; // [still, turning]
-  pipeH: Sprite;
-  pipeV: Sprite;
   hut: Sprite;
   foliage: Sprite[];
   trolley: Record<Dir, Sprite[]>;
@@ -123,10 +119,7 @@ export function gimmickSprites(): GimmickSprites {
     water: [0, 1, 2, 3, 4, 5, 6, 7].map(waterTile),
     bridgeH: bridgeTile(true),
     bridgeV: bridgeTile(false),
-    pipeMouth: portalTile(),
     flower: rec((d) => [flowerTile(d, false), flowerTile(d, true)]),
-    pipeH: coverSprite('pipe', 0),
-    pipeV: coverSprite('pipe', 1),
     hut: coverSprite('hut', 0),
     foliage: [0, 1, 2].map((v) => coverSprite('foliage', v)),
     trolley: rec((d) => [0, 1].map((f) => trolleySprite(d, f))),

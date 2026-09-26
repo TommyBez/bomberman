@@ -3,7 +3,8 @@ import type { BattleWorld } from '../game/battle/battleWorld';
 import type { Bomber } from '../game/core/bomber';
 import { Cell, DX, DY, TILE, toTile, type Dir } from '../game/core/types';
 import { characterSprites, gimmickSprites } from '../gfx/battleSprites';
-import { bendTile } from '../gfx/battleArt';
+import { bendTile, pipeSprites } from '../gfx/battleArt';
+import { THEMES } from '../gfx/tiles';
 import { sprites, tileSet } from '../gfx/sprites';
 import { FieldRenderer, type Actor, type View } from './field';
 
@@ -236,7 +237,7 @@ export class BattleRenderer {
           break;
         }
         case 'portal':
-          g.image(gs.pipeMouth, x, y);
+          g.image(pipeSprites(THEMES[w.arena.theme]?.pipe).mouth, x, y);
           break;
         case 'flower':
           g.image(gs.flower[f.face][f.turn > 0 ? 1 : 0], x, y);
@@ -271,7 +272,8 @@ export class BattleRenderer {
       const y = v.oy + ty * TILE;
       if (f.style === 'pipe') {
         const horiz = gim.at(tx - 1, ty)?.kind === 'cover' || gim.at(tx + 1, ty)?.kind === 'cover';
-        g.image(horiz ? gs.pipeH : gs.pipeV, x, y);
+        const pipes = pipeSprites(THEMES[w.arena.theme]?.pipe);
+        g.image(horiz ? pipes.h : pipes.v, x, y);
       } else if (f.style === 'hut') {
         // Roof blown off: the inside shows until it is rebuilt (blinking just before).
         if (!f.open || (f.open < 40 && Math.floor(f.open / 4) % 2 === 0)) g.image(gs.hut, x, y);
