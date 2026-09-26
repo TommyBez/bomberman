@@ -5,10 +5,10 @@ released in North America as *Bomberman Party Edition*). It covers the 50-stage
 **Normal Game** and the five-player **Battle Game**. It is written in TypeScript and runs
 on an HTML5 canvas at the original 256×224 resolution.
 
-| | |
-|---|---|
-| ![Title screen](docs/screenshots/title.png) | ![Normal Game, Modern version](docs/screenshots/normal.png) |
-| ![Normal Game, Retro version](docs/screenshots/retro.png) | ![Battle Game: The Seven Seas](docs/screenshots/battle.png) |
+| | | |
+|---|---|---|
+| ![Title screen with the mode menu](docs/screenshots/title.png) | ![Battle Game character select](docs/screenshots/menu.png) | ![Normal Game, Modern version](docs/screenshots/normal.png) |
+| ![Normal Game, Retro version](docs/screenshots/retro.png) | ![Battle Game: The Seven Seas](docs/screenshots/battle.png) | ![Battle Game: Switcheroo's trolley](docs/screenshots/trolley.png) |
 
 > **Unofficial fan project.** It is not affiliated with or endorsed by Konami or Hudson
 > Soft. "Bomberman" is their trademark and is used here only to name the game being
@@ -114,7 +114,9 @@ letters directly.
     Dangerous Bomb (7×7).
   - "Hurry!" pressure-block spiral, TIME'S UP draws.
   - Bomber Carts for knocked-out players.
-  - Hyper Bomber prize game, results trophies, Battle Report and victory screen.
+  - Hyper Bomber prize game, the results screen (a trophy per win), the Battle Report
+    (who knocked out whom), a draw screen (a drawn game doesn't count) and the victory
+    screen.
 - **CPU players** read a danger map and use a time-aware escape search. They check that
   a bomb has an escape route before placing it, and they watch the stage: the trolley's
   route, the robot's stomp, and bombs carried by belts or turned by arrows. There are
@@ -122,8 +124,10 @@ letters directly.
 
 ### Everything else
 
-- **Title and menus:** title screen with a **Demo Play** attract mode after 20 s idle,
-  and the main menu.
+- **Title and menus:** the title screen opens the mode menu under the logo, with a
+  **Demo Play** attract mode after 20 s idle. The menus use the original's pastel
+  wallpaper, framed windows and pointing-glove cursor (all redrawn), and the password
+  screen is a character roller.
 - **Options:** stereo/mono, music and SE volume, music and SE test, screen position,
   gamepad button layouts, vibration and a keyboard reference.
 - **Audio:** a small WebAudio synthesiser plays every tune and effect from note data.
