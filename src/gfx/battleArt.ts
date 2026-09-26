@@ -178,6 +178,24 @@ export function switchTile(on: boolean): Sprite {
   return p.canvas;
 }
 
+/** The lower floor of Head in the Clouds: soft, puffy cloud tops (four variants). */
+export function cloudTile(variant: number): Sprite {
+  const p = new PixelCanvas(16, 16);
+  p.rect(0, 0, 16, 16, '#c8dcf0');
+  const puffs: [number, number, number][][] = [
+    [[4, 5, 4], [11, 4, 3], [9, 11, 4], [2, 12, 3]],
+    [[5, 10, 4], [12, 11, 3], [9, 3, 4], [2, 4, 3]],
+    [[3, 3, 3], [10, 7, 5], [3, 12, 3], [14, 14, 2]],
+    [[8, 4, 4], [3, 9, 3], [12, 12, 4], [14, 3, 2]],
+  ];
+  for (const [x, y, r] of puffs[variant % puffs.length]) {
+    p.circle(x, y + 1, r, '#a8c4e4');
+    p.circle(x, y, r, '#f4f8ff');
+    p.circle(x - 1, y - 1, Math.max(1, r - 2), '#ffffff');
+  }
+  return p.canvas;
+}
+
 export function iceTile(cracks: number): Sprite {
   const p = new PixelCanvas(16, 16);
   p.rect(0, 0, 16, 16, '#8ec8f0');

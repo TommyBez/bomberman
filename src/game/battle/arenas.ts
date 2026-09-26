@@ -58,6 +58,10 @@ export interface ArenaDef {
   bends?: Record<string, Partial<Record<Dir, Dir>>>;
   /** Linked pipe mouths ('p'). */
   portalPairs?: [[number, number], [number, number]][];
+  /** Trampolines ('T') that bounce you onto each other (two-floor stages). */
+  trampolinePairs?: [[number, number], [number, number]][];
+  /** Rows (inclusive) drawn as the lower, cloud floor. */
+  lowerFloor?: [number, number];
   /** Rails: stop stations (tiles where the trolley pauses). */
   stations?: [number, number][];
   /** Area spared by the sudden-death blocks (inclusive tile rectangle). */
@@ -277,22 +281,27 @@ export const ARENAS: ArenaDef[] = [
   },
   {
     id: 'n3', name: 'HEAD IN THE CLOUDS', jpName: 'FUWAFUWA BON', level: 'normal', gimmick: 'clouds', theme: 'sky', density: 0.5,
-    blurb: 'TRAMPOLINES BOUNCE YOU ACROSS. THE EDGES WRAP AROUND.',
-    refuge: [5, 5, 9, 7],
+    blurb: 'TWO FLOORS: THE SKY ABOVE, THE CLOUDS BELOW. TRAMPOLINES TAKE YOU BETWEEN THEM.',
+    lowerFloor: [7, 11],
+    trampolinePairs: [
+      [[7, 1], [7, 9]],
+      [[4, 5], [4, 7]],
+      [[10, 5], [10, 7]],
+    ],
     map: [
-      '#######w#######',
-      '#1_........._3#',
+      '###############',
+      '#1_....T...._3#',
       '#_#.#.#.#.#.#_#',
-      '#.............#',
-      '#.#T#.#.#.#T#.#',
-      '#.............#',
-      'w.#.#.#5#.#.#.w',
-      '#.............#',
-      '#.#T#.#.#.#T#.#',
-      '#.............#',
+      '#......5......#',
+      '#.#.#.#.#.#.#.#',
+      '#...T.....T...#',
+      '###############',
+      '#...T.....T...#',
+      '#.#.#.#.#.#.#.#',
+      '#......T......#',
       '#_#.#.#.#.#.#_#',
       '#4_........._2#',
-      '#######w#######',
+      '###############',
     ],
   },
   {

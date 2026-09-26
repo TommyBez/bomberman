@@ -6,6 +6,8 @@ import { CHARACTERS, type Personality } from './characters';
 import type { ComLevel } from './config';
 
 const INF = Number.POSITIVE_INFINITY;
+/** Time in the air on a trampoline bounce. */
+const TRAMPOLINE_TICKS = 70;
 
 interface Node {
   x: number;
@@ -199,7 +201,7 @@ export class CpuPlayer {
   private avoid(x: number, y: number): boolean {
     const f = this.w.gim.at(x, y);
     if (!f) return false;
-    return f.kind === 'warp' || f.kind === 'trampoline' || f.kind === 'seesaw' || (f.kind === 'sign' && f.speed === 0);
+    return f.kind === 'warp' || (f.kind === 'trampoline' && !f.to) || f.kind === 'seesaw' || (f.kind === 'sign' && f.speed === 0);
   }
 
   /** Ticks to walk one tile in direction d, counting conveyor belts under both tiles. */
@@ -258,6 +260,18 @@ export class CpuPlayer {
           if (dt < INF && dt <= t + tt && dt + w.rules.flameTicks + tt / 2 + 3 >= t) continue;
           const node: Node = { x: nx, y: ny, t, first: n.first ?? d, prev: this.idx(n.x, n.y) };
           nodes.set(i, node);
+          // A paired trampoline carries us to the other floor.
+          const f = w.gim.at(nx, ny);
+          if (f && f.kind === 'trampoline' && f.to) {
+            const j = this.idx(f.to[0], f.to[1]);
+            const tj = t + TRAMPOLINE_TICKS;
+            if (!nodes.has(j) && this.walkable(f.to[0], f.to[1]) && !(danger[j] < INF && danger[j] <= tj + tt && danger[j] + w.rules.flameTicks + tt >= tj)) {
+              const dest: Node = { x: f.to[0], y: f.to[1], t: tj, first: node.first, prev: i };
+              nodes.set(j, dest);
+              next.push(dest);
+            }
+            continue;
+          }
           next.push(node);
         }
       }

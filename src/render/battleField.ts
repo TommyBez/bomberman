@@ -21,6 +21,7 @@ export class BattleRenderer {
     const w = this.w;
     const gs = gimmickSprites();
     this.field.drawTiles(g, w, v, hudStripDrawn);
+    this.drawLowerFloor(g, v);
     this.drawFloorGimmicks(g, v, frame);
     this.field.drawItems(g, w, v, frame);
     this.field.drawFlames(g, w, v);
@@ -142,6 +143,20 @@ export class BattleRenderer {
         if (b.heart) g.rect(x + 5, y - 17 - riderUp, 2, 2, '#ff4060');
       },
     };
+  }
+
+  /** Two-floor stages: the lower rows are cloud tops. */
+  private drawLowerFloor(g: Gfx, v: View): void {
+    const w = this.w;
+    const rows = w.arena.lowerFloor;
+    if (!rows) return;
+    const clouds = gimmickSprites().cloud;
+    for (let ty = rows[0]; ty <= rows[1]; ty++) {
+      for (let tx = 1; tx < w.grid.w - 1; tx++) {
+        if (w.grid.get(tx, ty) !== Cell.Floor) continue;
+        g.image(clouds[(tx * 3 + ty * 5) % clouds.length], v.ox + tx * TILE, v.oy + ty * TILE);
+      }
+    }
   }
 
   private drawFloorGimmicks(g: Gfx, v: View, frame: number): void {

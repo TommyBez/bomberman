@@ -9,7 +9,7 @@ export type Feature =
   | { kind: 'conveyor'; dir: Dir }
   | { kind: 'arrow'; dir: Dir; rotating: boolean }
   | { kind: 'warp'; index: number }
-  | { kind: 'trampoline' }
+  | { kind: 'trampoline'; to?: [number, number] }
   | { kind: 'seesaw'; id: number; end: 0 | 1 }
   | { kind: 'sign'; speed: number }
   | { kind: 'tyre' }
@@ -218,12 +218,26 @@ export class Gimmicks {
       this.set(a[0], a[1], { kind: 'portal', to: b });
       this.set(b[0], b[1], { kind: 'portal', to: a });
     }
+    for (const [a, b] of this.arena.trampolinePairs ?? []) {
+      this.set(a[0], a[1], { kind: 'trampoline', to: b });
+      this.set(b[0], b[1], { kind: 'trampoline', to: a });
+    }
     for (const [x, y] of this.arena.stations ?? []) this.stations.add(this.idx(x, y));
     const t = this.arena.trolley;
     if (t) this.trolleys.push({ x: tileCenter(t.x), y: tileCenter(t.y), dir: t.dir, speed: 1.2, stop: 0, riders: [], flash: 0 });
     if (this.arena.gimmick === 'robot') this.robot = { x: tileCenter(7), y: tileCenter(5), dir: 'left', stomp: 0, cooldown: 200, leaving: 0, gone: false };
     // Unpaired seesaw ends become plain floor.
     this.seesaws = this.seesaws.filter((s) => s.b[0] >= 0);
+  }
+
+  /** The tile itself if it is clear, else the closest clear floor tile around it. */
+  landingNear(x: number, y: number): [number, number] | null {
+    const w = this.w;
+    const clear = (tx: number, ty: number): boolean =>
+      w.grid.get(tx, ty) === Cell.Floor && !w.bombAt[this.idx(tx, ty)] && !w.bombers.some((o) => o.alive && o.airborne <= 0 && o.tx === tx && o.ty === ty);
+    if (clear(x, y)) return [x, y];
+    for (const d of ALL_DIRS) if (clear(x + DX[d], y + DY[d])) return [x + DX[d], y + DY[d]];
+    return null;
   }
 
   /** Tiles that must never receive a random soft block. */
@@ -481,9 +495,10 @@ export class Gimmicks {
         }
       }
     } else if (f.kind === 'trampoline') {
-      this.lock.set(b.id, i);
-      const target = this.randomLanding(b.tx, b.ty, 4);
+      // Paired trampolines lead to the other floor; lone ones throw you somewhere.
+      const target = f.to ? this.landingNear(f.to[0], f.to[1]) : this.randomLanding(b.tx, b.ty, 4);
       if (target) {
+        this.lock.set(b.id, f.to ? this.idx(target[0], target[1]) : i);
         w.jump(b, target[0], target[1], 70, 64);
         w.emit({ type: 'jump', tx: b.tx, ty: b.ty });
       }

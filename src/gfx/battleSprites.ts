@@ -13,6 +13,7 @@ import {
   fishSprite,
   holeTile,
   iceTile,
+  cloudTile,
   partnerSprite,
   portalTile,
   pressureBlock,
@@ -66,6 +67,7 @@ export interface GimmickSprites {
   switchOn: Sprite;
   switchOff: Sprite;
   ice: Sprite[];
+  cloud: Sprite[];
   hole: Sprite[];
   water: Sprite[];
   bridgeH: Sprite;
@@ -113,6 +115,7 @@ export function gimmickSprites(): GimmickSprites {
     switchOn: switchTile(true),
     switchOff: switchTile(false),
     ice: [iceTile(0), iceTile(1)],
+    cloud: [0, 1, 2, 3].map((v) => cloudTile(v)),
     hole: [0, 1, 2, 3].map(holeTile),
     water: [0, 1, 2, 3, 4, 5, 6, 7].map(waterTile),
     bridgeH: bridgeTile(true),
