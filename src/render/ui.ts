@@ -66,6 +66,21 @@ export function drawTitleBar(g: Gfx, text: string, _frame: number): void {
   g.text(text, g.width / 2, y + 4, { align: 'center', scale: 2, gradient: ['#ffffff', '#a8d8ff'], outline: '#182060' });
 }
 
+let hand: HTMLCanvasElement | null = null;
+
+/** The menu cursor: a white glove pointing right, bobbing a little. */
+export function drawHand(g: Gfx, x: number, y: number, frame: number): void {
+  if (!hand) {
+    const p = new PixelCanvas(12, 8);
+    p.rows(
+      ['...kkkk.....', '..kwwwwkkkkk', '.kwwwwwwwwwk', 'kwwwwwkkkkkk', 'kwwwwwwwk...', 'kwwwwwwwk...', 'kwwwwwwk....', '.kkkkkk.....'],
+      { k: '#200818', w: '#ffffff' },
+    );
+    hand = p.canvas;
+  }
+  g.image(hand, x + (Math.floor(frame / 10) % 2), y);
+}
+
 let wallpaper: HTMLCanvasElement | null = null;
 
 /** The menu wallpaper: pink and yellow tiles with a bomb or a Bomberman helmet on each. */
@@ -184,15 +199,8 @@ export class Menu {
       const disabled = it.disabled?.() ?? false;
       const color = disabled ? '#707090' : sel ? '#ffe040' : '#ffffff';
       const yy = y + i * lh;
-      if (sel) {
-        const blink = Math.floor(this.app.frame / 8) % 2 === 0;
-        const w = opts.width ?? (opts.valueX ? opts.valueX - x + 70 : textWidth(it.label) + 20);
-        const bx = opts.center ? x - w / 2 : x - 12;
-        g.ctx.globalAlpha = 0.25;
-        g.rect(bx, yy - 3, w + 12, 13, '#ffffff');
-        g.ctx.globalAlpha = 1;
-        if (blink) g.text('▶', opts.center ? x - textWidth(it.label) / 2 - 10 : x - 10, yy, { color: '#ffe040', outline: '#000000' });
-      }
+      // The white glove points at the selected item.
+      if (sel) drawHand(g, (opts.center ? x - textWidth(it.label) / 2 : x) - 16, yy - 1, this.app.frame);
       g.text(it.label, x, yy, { color, outline: '#000000', align: opts.center ? 'center' : 'left' });
       if (it.value) {
         const v = it.value();

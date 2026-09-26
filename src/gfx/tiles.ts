@@ -26,14 +26,14 @@ export interface Theme {
 }
 
 export const THEMES: Record<string, Theme> = {
-  // Modern, stages 1–10: grass floor, grey metal walls.
+  // Modern, stages 1–10: grass floor, grey stone blocks, pale stone bricks.
   m1: {
     name: 'm1', backdrop: '#101820',
     floor: '#3c9a3a', floorAlt: '#48aa44', floorStyle: 'grass',
-    hard: '#9aa2b4', hardStyle: 'metal',
-    wall: '#6c7488', wallStyle: 'metal',
-    soft: '#d08848', softStyle: 'brick',
-    hud: ['#56607a', '#2c3244'], shadow: 0.38,
+    hard: '#a4aabc', hardStyle: 'bevel',
+    wall: '#b0b6c4', wallStyle: 'bevel',
+    soft: '#dde1ec', softAlt: '#8894b4', softStyle: 'brick',
+    hud: ['#c8ccd8', '#9ca2b4'], shadow: 0.38,
   },
   // Modern, stages 11–20: blue carpet, pink gem blocks, balloon border.
   m2: {
@@ -407,7 +407,7 @@ function softTile(t: Theme): HTMLCanvasElement {
   const base = t.soft;
   const light = mix(base, '#ffffff', 0.42);
   const dark = mix(base, '#000000', 0.35);
-  const mortar = mix(base, '#000000', 0.58);
+  const mortar = t.softStyle === 'brick' && t.softAlt ? t.softAlt : mix(base, '#000000', 0.58);
   switch (t.softStyle) {
     case 'toy': {
       const alt = t.softAlt ?? '#e05050';

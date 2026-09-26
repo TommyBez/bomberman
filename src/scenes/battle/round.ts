@@ -229,10 +229,10 @@ export class BattleRoundScene implements Scene {
     if (this.phase === 'ready') drawBanner(g, this.t < 60 ? 'READY' : 'START!', g.height / 2 + 6, this.t < 60 ? '#ffe040' : '#ff6040');
     if (this.banner && this.banner.t < 90) drawBanner(g, this.banner.text, g.height / 2 + 6, this.banner.color);
     if (this.phase === 'end' && w.result && this.t > 20) {
+      // A draw gets its own screen next; a time-up still says so here.
       const r = w.result;
-      let text = 'DRAW GAME';
-      if (!r.draw) text = this.match.cfg.tag ? `TEAM ${r.team === 0 ? 'A' : 'B'} WINS!` : `PLAYER ${(r.winner ?? 0) + 1} WINS!`;
-      drawBanner(g, text, g.height / 2 + 6, r.draw ? '#a0c0ff' : '#ffe040');
+      if (!r.draw) drawBanner(g, this.match.cfg.tag ? `TEAM ${r.team === 0 ? 'A' : 'B'} WINS!` : `PLAYER ${(r.winner ?? 0) + 1} WINS!`, g.height / 2 + 6, '#ffe040');
+      else if (r.timeUp) drawBanner(g, "TIME'S UP!", g.height / 2 + 6, '#a0c0ff');
     }
     if (this.match.demo && Math.floor(this.app.frame / 30) % 2 === 0) {
       g.text('DEMO PLAY', g.width / 2, g.height - 12, { align: 'center', color: '#ffe040', outline: '#000000' });

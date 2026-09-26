@@ -27,6 +27,8 @@ export class CampaignSession {
   pendingBonus: BonusStageDef | null = null;
   /** Intermission ("Bomberman Show Time") queued after this many cleared stages. */
   pendingShow = 0;
+  /** The player said yes to "Save this game?" at the start (Game Over then offers SAVE). */
+  cardSave = true;
 
   constructor(readonly version: Version = 'modern') {}
 

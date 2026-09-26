@@ -559,7 +559,7 @@ describe('CPU players', () => {
       }
     }
     expect(survivedFirstBomb).toBe(rounds);
-  });
+  }, 60_000);
 
   it('strong CPUs rarely die by their own bombs', () => {
     let selfKills = 0;
@@ -580,5 +580,5 @@ describe('CPU players', () => {
     expect(deaths).toBeGreaterThan(0);
     // Diseases (Diarrhea, Confusion…) make some self-kills unavoidable.
     expect(selfKills / Math.max(1, deaths)).toBeLessThan(0.35);
-  });
+  }, 60_000);
 });

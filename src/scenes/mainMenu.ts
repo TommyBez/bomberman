@@ -78,69 +78,68 @@ class NormalMenuScene implements Scene {
   }
 }
 
-/** "Select Version": Modern or Retro. */
+/** "Which version?": Modern or Retro, then the memory card question. */
 class VersionSelectScene implements Scene {
-  private sel = 0;
-  private checking = -1;
+  private readonly menu: Menu;
 
-  constructor(private readonly app: App) {}
+  constructor(private readonly app: App) {
+    this.menu = new Menu(
+      app,
+      [
+        { label: 'MODERN', action: () => app.scenes.go(new SaveQuestionScene(app, 'modern')), help: 'NEW LOOK AND MUSIC, SHOW TIME SKITS' },
+        { label: 'RETRO', action: () => app.scenes.go(new SaveQuestionScene(app, 'retro')), help: 'THE CLASSIC 1985 LOOK AND SOUND' },
+      ],
+      () => app.scenes.go(new NormalMenuScene(app)),
+    );
+  }
 
   update(): void {
-    const pad = this.app.input.menu;
-    if (this.checking >= 0) {
-      this.checking++;
-      if (this.checking > 70 || pad.pressed('a') || pad.pressed('start')) {
-        pad.swallow();
-        startNormalGame(this.app, new CampaignSession(this.sel === 0 ? 'modern' : 'retro'));
-      }
-      return;
-    }
-    if (pad.repeat('left') || pad.repeat('right')) {
-      this.sel = 1 - this.sel;
-      this.app.audio.sfx('menuMove');
-    } else if (pad.pressed('a') || pad.pressed('start')) {
-      pad.swallow();
-      this.app.audio.sfx('menuOk');
-      this.app.audio.stopMusic(0.3);
-      this.checking = 0;
-    } else if (pad.pressed('b') || pad.pressed('select')) {
-      pad.swallow();
-      this.app.audio.sfx('menuBack');
-      this.app.scenes.go(new NormalMenuScene(this.app));
-    }
+    this.menu.update();
   }
 
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
-    drawTitleBar(g, 'SELECT VERSION', this.app.frame);
-    if (this.checking >= 0) {
-      drawPanel(g, 40, 90, 176, 40, '#303030', '#101010');
-      g.text('CHECKING MEMORY CARD...', g.width / 2, 106, { align: 'center', color: '#ffffff', outline: '#000000' });
-      return;
-    }
-    const sp = sprites();
-    const boxes: [string, string, boolean][] = [
-      ['MODERN', 'NEW GRAPHICS & MUSIC', false],
-      ['RETRO', 'THE CLASSIC 1985 LOOK', true],
-    ];
-    boxes.forEach(([name, sub, retro], i) => {
-      const x = 16 + i * 120;
-      const sel = i === this.sel;
-      drawPanel(g, x, 44, 104, 136, sel ? '#4868e0' : '#28305c', sel ? '#162070' : '#0c1030');
-      g.text(name, x + 52, 52, { align: 'center', scale: 2, color: sel ? '#ffe040' : '#ffffff', outline: '#000000' });
-      // little preview of the look
-      const tiles = retro ? sp.tiles.retro : sp.tiles.m1;
-      for (let yy = 0; yy < 4; yy++) {
-        for (let xx = 0; xx < 5; xx++) {
-          const img = yy === 0 || xx === 0 || xx === 4 ? tiles.walls[0] : (xx + yy) % 2 === 0 ? tiles.hard : (xx * yy) % 3 === 0 ? tiles.soft : tiles.floor;
-          g.image(img, x + 12 + xx * 16, 76 + yy * 16);
-        }
-      }
-      g.image((retro ? sp.retroBomber : sp.bombers[0]).walk.down[Math.floor(this.app.frame / 8) % 4], x + 28, 92);
-      g.text(sub, x + 52, 150, { align: 'center', color: '#c8d0ff', outline: '#000000' });
-      if (sel && Math.floor(this.app.frame / 10) % 2 === 0) g.text('▶', x + 6, 56, { color: '#ffe040', outline: '#000000' });
-    });
-    g.text('← → CHOOSE   A: START   B: BACK', g.width / 2, 200, { align: 'center', color: '#c8d0ff', outline: '#000000' });
+    drawPanel(g, 40, 64, 176, 76, '#503080', '#281040');
+    drawTitleBar(g, 'WHICH VERSION?', this.app.frame);
+    this.menu.draw(g, 104, 88, { lineH: 20 });
+  }
+}
+
+/** "To save this game you need a memory card. Save?" YES / NO, then the game starts. */
+class SaveQuestionScene implements Scene {
+  private readonly menu: Menu;
+
+  constructor(
+    private readonly app: App,
+    version: 'modern' | 'retro',
+  ) {
+    const start = (save: boolean): void => {
+      this.app.audio.stopMusic(0.3);
+      const s = new CampaignSession(version);
+      s.cardSave = save;
+      startNormalGame(this.app, s);
+    };
+    this.menu = new Menu(
+      app,
+      [
+        { label: 'YES', action: () => start(true) },
+        { label: 'NO', action: () => start(false) },
+      ],
+      () => app.scenes.go(new VersionSelectScene(app)),
+    );
+  }
+
+  update(): void {
+    this.menu.update();
+  }
+
+  render(g: Gfx): void {
+    drawMenuBackdrop(g, this.app.frame);
+    drawPanel(g, 20, 56, 216, 112, '#503080', '#281040');
+    drawTitleBar(g, 'MEMORY CARD CHECK', this.app.frame);
+    const lines = ['TO SAVE THIS GAME YOU NEED', 'A MEMORY CARD (THIS BROWSER).', 'SAVE THIS GAME?'];
+    lines.forEach((l, i) => g.text(l, 36, 72 + i * 13, { color: '#ffffff', outline: '#000000' }));
+    this.menu.draw(g, 72, 128, { lineH: 16 });
   }
 }
 

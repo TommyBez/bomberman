@@ -7,6 +7,7 @@ import type { BattleWorld } from '../../game/battle/battleWorld';
 import { CHARACTERS } from '../../game/battle/characters';
 import { ITEM_NAMES, type BattleConfig, type BattleItem } from '../../game/battle/config';
 import { characterSprites } from '../../gfx/battleSprites';
+import { PixelCanvas } from '../../gfx/pixel';
 import { sprites } from '../../gfx/sprites';
 import { hudIcons } from '../../render/hud';
 import { drawMenuBackdrop, drawPanel, drawTitleBar, Menu } from '../../render/ui';
@@ -75,7 +76,8 @@ export class BattleMatch {
       this.wins[r.winner]++;
       winnerSlot = r.winner;
     }
-    this.app.scenes.go(new ResultsScene(this.app, this, r.draw, winnerSlot, r.team));
+    const results = new ResultsScene(this.app, this, r.draw, winnerSlot, r.team);
+    this.app.scenes.go(r.draw ? new DrawScene(this.app, this, () => this.app.scenes.go(results)) : results);
   }
 
   get champion(): { slot: number | null; team: number | null } | null {
@@ -153,59 +155,219 @@ class ResultsScene implements Scene {
       return;
     }
     drawMenuBackdrop(g, this.app.frame);
-    drawTitleBar(g, this.draw ? 'DRAW' : 'BATTLE RESULTS', this.app.frame);
     const cfg = this.match.cfg;
-    g.text(`${cfg.rules.wins} POINT MATCH`, g.width / 2, 34, { align: 'center', color: '#ffe040', outline: '#000000' });
-    const icons = hudIcons();
+    drawPanel(g, 14, 20, 228, 172, '#503080', '#281040');
+    drawTitleBar(g, `${cfg.rules.wins} POINT MATCH`, this.app.frame);
     const slots = cfg.players.map((p, i) => ({ p, i })).filter(({ p }) => p.type !== 'off');
-    const colW = Math.min(48, 232 / slots.length);
-    const x0 = (g.width - colW * slots.length) / 2;
+    const floor = 170;
+    // Tag: two halves, one trophy pile per team.
+    const place = (k: number): number => {
+      if (!cfg.tag) return 128 + (k - (slots.length - 1) / 2) * 44;
+      const team = slots[k].p.team;
+      const mates = slots.filter(({ p }) => p.team === team);
+      const m = mates.findIndex(({ i }) => i === slots[k].i);
+      return (team === 0 ? 71 : 185) + (m - (mates.length - 1) / 2) * 30;
+    };
+    if (cfg.tag) {
+      g.rect(127, 32, 2, 152, '#e050c8');
+      g.text('TEAM A', 71, 36, { align: 'center', color: '#ff9090', outline: '#000000' });
+      g.text('TEAM B', 185, 36, { align: 'center', color: '#90b0ff', outline: '#000000' });
+    }
+    const drop = Math.min(1, this.t / 40);
+    const pile = (x: number, wins: number, fresh: boolean): void => {
+      for (let n = 0; n < wins; n++) {
+        let y = floor - 34 - n * 17;
+        // This game's trophy drops onto the pile.
+        if (fresh && n === wins - 1) y = Math.round(40 + (y - 40) * drop * drop);
+        g.image(trophySprite(), x - 8, y);
+      }
+    };
     slots.forEach(({ p, i }, k) => {
-      const x = x0 + k * colW + colW / 2;
-      const won = cfg.tag ? this.team !== null && p.team === this.team && !this.draw : this.winner === i;
-      drawPanel(g, x - colW / 2 + 2, 48, colW - 4, 150, won ? '#806020' : '#402858', won ? '#301800' : '#180828');
+      const x = place(k);
+      const won = !this.draw && (cfg.tag ? this.team !== null && p.team === this.team : this.winner === i);
       const sp = characterSprites(p.character, i);
       const img = won ? sp.win[Math.floor(this.t / 12) % 2] : sp.walk.down[0];
-      g.image(img, x - 8, 58);
-      g.text(`P${i + 1}`, x, 86, { align: 'center', color: '#ffffff', outline: '#000000' });
-      if (cfg.tag) g.text(p.team === 0 ? 'A' : 'B', x, 96, { align: 'center', color: p.team === 0 ? '#ff8080' : '#80a0ff', outline: '#000000' });
-      const wins = cfg.tag ? this.match.teamWins[p.team] : this.match.wins[i];
-      for (let n = 0; n < cfg.rules.wins; n++) {
-        const y = 108 + n * 16;
-        if (n < wins) g.image(icons.trophy, x - 5, y);
-        else g.frame(x - 5, y, 10, 10, '#806890');
-      }
+      g.image(img, x - 8, floor - 8);
+      g.text(`${i + 1}P`, x, floor + 18, { align: 'center', color: '#ffffff', outline: '#000000' });
+      if (!cfg.tag) pile(x, this.match.wins[i], won);
     });
-    if (Math.floor(this.t / 20) % 2 === 0) g.text('→ BATTLE REPORT     A: NEXT', g.width / 2, 206, { align: 'center', color: '#e0c8ff', outline: '#000000' });
+    if (cfg.tag) for (const team of [0, 1]) pile(team === 0 ? 71 : 185, this.match.teamWins[team], !this.draw && this.team === team);
+    // The hand points on to the Battle Report.
+    if (Math.floor(this.t / 20) % 2 === 0) g.text('\u2192', 248, 104, { align: 'center', scale: 2, color: '#ffe040', outline: '#401030' });
+    g.text('A: NEXT', g.width / 2, 204, { align: 'center', color: '#ffffff', outline: '#401030' });
   }
 
+  /** Who each player knocked out, and who knocked them out, one face per KO. */
   private renderReport(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
-    drawTitleBar(g, 'BATTLE REPORT', this.app.frame);
     const cfg = this.match.cfg;
+    drawPanel(g, 14, 20, 228, 172, '#503080', '#281040');
+    drawTitleBar(g, 'BATTLE REPORT', this.app.frame);
     const slots = cfg.players.map((p, i) => ({ p, i })).filter(({ p }) => p.type !== 'off');
     const icons = hudIcons();
-    drawPanel(g, 16, 34, 224, 156, '#402858', '#180828');
-    g.text('WHO BEAT WHOM', 128, 40, { align: 'center', color: '#ffe040', outline: '#000000' });
-    const cell = slots.length > 4 ? 25 : 30;
-    const gx = 128 - (slots.length * cell) / 2 + 14;
-    const gy = 68;
-    g.text('BY', gx - 26, gy - 14, { color: '#c0a0e0' });
-    slots.forEach(({ i }, k) => {
-      g.image(icons.heads[i], gx + k * cell + (cell - 10) / 2, gy - 16);
-      g.image(icons.crying[i], gx - 22, gy + k * cell + (cell - 10) / 2);
+    const colW = 44;
+    const x0 = 128 - (slots.length * colW) / 2;
+    const rows = 5;
+    slots.forEach(({ p, i }, k) => {
+      const x = x0 + k * colW;
+      // Portrait.
+      g.rect(x + 2, 34, colW - 4, 30, '#182060');
+      g.frame(x + 2, 34, colW - 4, 30, '#6080e0');
+      g.image(characterSprites(p.character, i).walk.down[0], x + colW / 2 - 8, 37);
+      // KO and KO'D columns.
+      const half = (colW - 4) / 2;
+      g.rect(x + 2, 66, half - 1, 12, '#c02040');
+      g.rect(x + 2 + half, 66, half - 1, 12, '#3050c0');
+      g.text('KO', x + 2 + half / 2, 69, { align: 'center', color: '#ffffff' });
+      g.text('OUT', x + 2 + half * 1.5, 69, { align: 'center', color: '#ffffff' });
+      const beat: number[] = [];
+      const lost: number[] = [];
+      for (let o = 0; o < 5; o++) {
+        for (let n = 0; n < this.match.report[i][o]; n++) if (o !== i) beat.push(o);
+        for (let n = 0; n < this.match.report[o][i]; n++) lost.push(o);
+      }
+      const list = (faces: number[], cx: number): void => {
+        for (let r = 0; r < rows; r++) {
+          const y = 80 + r * 20;
+          g.frame(cx - 10, y, 20, 19, '#8070a0');
+          if (r === rows - 1 && faces.length > rows) {
+            g.text(`+${faces.length - rows + 1}`, cx, y + 6, { align: 'center', color: '#ffe040', outline: '#000000' });
+          } else if (faces[r] !== undefined) g.image(icons.heads[faces[r]], cx - 5, y + 4);
+        }
+      };
+      list(beat, x + 2 + half / 2);
+      list(lost, x + 2 + half * 1.5);
     });
-    slots.forEach(({ i: victim }, r) => {
-      slots.forEach(({ i: killer }, c) => {
-        const n = this.match.report[killer][victim];
-        const x = gx + c * cell;
-        const y = gy + r * cell;
-        g.rect(x + 2, y + 2, cell - 4, cell - 4, killer === victim ? '#502040' : '#281838');
-        g.text(String(n), x + cell / 2, y + cell / 2 - 3, { align: 'center', color: n ? '#ffffff' : '#806890' });
-      });
+    if (Math.floor(this.app.frame / 20) % 2 === 0) g.text('\u2190', 8, 104, { align: 'center', scale: 2, color: '#ffe040', outline: '#401030' });
+    g.text('A: NEXT', g.width / 2, 204, { align: 'center', color: '#ffffff', outline: '#401030' });
+  }
+}
+
+let trophy: HTMLCanvasElement | null = null;
+
+/** A gold cup, one per game won. */
+function trophySprite(): HTMLCanvasElement {
+  if (trophy) return trophy;
+  const p = new PixelCanvas(16, 16);
+  p.rows(
+    [
+      '..kkkkkkkkkkkk..',
+      '.kkYYYyyyyyyykk.',
+      'kykYYYyyyyyyykyk',
+      'kykYYyyyyyyyykyk',
+      'kykYYyyyyyyyykyk',
+      '.kkkYyyyyyyykkk.',
+      '...kyyyyyyyyk...',
+      '....kyyyyyyk....',
+      '.....kkyykk.....',
+      '......kyyk......',
+      '......kyyk......',
+      '.....kyyyyk.....',
+      '....kyyyyyyk....',
+      '...kddddddddk...',
+      '...kkkkkkkkkk...',
+      '................',
+    ],
+    { k: '#402000', y: '#e8a818', Y: '#fff080', d: '#a86808' },
+  );
+  trophy = p.canvas;
+  return trophy;
+}
+
+// ------------------------------------------------------------------ draw
+
+/** "Draw": nobody won, the game doesn't count. Everyone lines up under a sunset sky. */
+class DrawScene implements Scene {
+  private t = 0;
+
+  constructor(
+    private readonly app: App,
+    private readonly match: BattleMatch,
+    private readonly next: () => void,
+  ) {}
+
+  enter(): void {
+    this.app.audio.music('select', { restart: true });
+  }
+
+  update(): void {
+    this.t++;
+    const pad = this.app.input.menu;
+    if (this.t > 40 && (pad.pressed('a') || pad.pressed('start'))) {
+      pad.swallow();
+      this.app.audio.sfx('menuOk');
+      this.next();
+    }
+  }
+
+  render(g: Gfx): void {
+    for (let y = 0; y < g.height; y++) g.rect(0, y, g.width, 1, mix('#ffd860', '#f07818', y / g.height));
+    // Sun glow and clouds.
+    g.ctx.globalAlpha = 0.35;
+    for (let r = 40; r > 0; r -= 8) {
+      g.ctx.beginPath();
+      g.ctx.arc(128, 96, r, 0, Math.PI * 2);
+      g.ctx.fillStyle = '#fff8d0';
+      g.ctx.fill();
+    }
+    g.ctx.globalAlpha = 1;
+    const cloud = (cx: number, cy: number, w: number): void => {
+      g.ctx.fillStyle = '#e8a060';
+      for (let k = 0; k < 5; k++) {
+        g.ctx.beginPath();
+        g.ctx.ellipse(cx + (k - 2) * w * 0.22, cy + 3 + (k % 2) * 4, w * 0.2, w * 0.14, 0, 0, Math.PI * 2);
+        g.ctx.fill();
+      }
+      g.ctx.fillStyle = '#fff4dc';
+      for (let k = 0; k < 5; k++) {
+        g.ctx.beginPath();
+        g.ctx.ellipse(cx + (k - 2) * w * 0.22, cy + (k % 2) * 4, w * 0.19, w * 0.13, 0, 0, Math.PI * 2);
+        g.ctx.fill();
+      }
+    };
+    const drift = Math.sin(this.t / 90) * 3;
+    cloud(44 + drift, 30, 90);
+    cloud(212 - drift, 40, 80);
+    // Flag poles either side.
+    for (const x of [14, 238]) {
+      g.rect(x, 20, 3, 150, '#ffffff');
+      g.rect(x + 2, 20, 1, 150, '#c0c0c0');
+      g.rect(x - 1, 16, 5, 5, '#e03030');
+      const fx = x < 128 ? x + 3 : x - 21;
+      const wave = Math.floor(this.t / 12) % 2;
+      g.rect(fx, 24 + wave, 21, 16, '#fff8f0');
+      g.frame(fx, 24 + wave, 21, 16, '#c04020');
+      g.image(sprites().bomb[0], fx + 3, 24 + wave);
+    }
+    // A rail along the back of the stage, then the stage floor.
+    g.rect(0, 150, g.width, 2, '#a05010');
+    for (let x = 4; x < g.width; x += 12) g.rect(x, 150, 2, 20, '#a05010');
+    g.rect(0, 168, g.width, 56, '#e8b068');
+    for (let y = 176; y < g.height; y += 10) g.rect(0, y, g.width, 1, '#c88840');
+    // The plate.
+    const bob = Math.round(Math.sin(this.t / 20) * 2);
+    g.ctx.fillStyle = '#c05018';
+    for (const [dx, dy, r] of [[-78, 4, 22], [-44, -6, 26], [0, -10, 28], [44, -6, 26], [78, 4, 22], [-30, 14, 24], [30, 14, 24]]) {
+      g.ctx.beginPath();
+      g.ctx.arc(128 + dx, 110 + dy + bob, r + 2, 0, Math.PI * 2);
+      g.ctx.fill();
+    }
+    g.ctx.fillStyle = '#fff4dc';
+    for (const [dx, dy, r] of [[-78, 4, 22], [-44, -6, 26], [0, -10, 28], [44, -6, 26], [78, 4, 22], [-30, 14, 24], [30, 14, 24]]) {
+      g.ctx.beginPath();
+      g.ctx.arc(128 + dx, 110 + dy + bob, r, 0, Math.PI * 2);
+      g.ctx.fill();
+    }
+    g.text('DRAW', 128, 96 + bob, { align: 'center', scale: 4, gradient: ['#ff8040', '#c01808'], outline: '#401000' });
+    // Everybody, lined up.
+    const slots = this.match.cfg.players.map((p, i) => ({ p, i })).filter(({ p }) => p.type !== 'off');
+    slots.forEach(({ p, i }, k) => {
+      const x = 128 + (k - (slots.length - 1) / 2) * 40;
+      const sp = characterSprites(p.character, i);
+      const step = Math.floor((this.t + k * 7) / 16) % 4;
+      g.image(sp.walk.down[step === 1 ? 0 : step], x - 8, 172);
     });
-    g.text('← RESULTS     A: NEXT', g.width / 2, 206, { align: 'center', color: '#e0c8ff', outline: '#000000' });
-    void mix;
+    if (this.t > 40 && Math.floor(this.t / 30) % 2 === 0) g.text('THIS GAME DOES NOT COUNT', 128, 208, { align: 'center', color: '#ffffff', outline: '#602000' });
   }
 }
 

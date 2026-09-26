@@ -66,6 +66,8 @@ test('Normal Game: menus lead to stage 1 and Bomberman can walk and bomb', async
   await press(page, 'Enter'); // NEW GAME
   await page.waitForTimeout(600);
   await press(page, 'Enter'); // MODERN
+  await page.waitForTimeout(500);
+  await press(page, 'Enter'); // SAVE THIS GAME? YES
   await waitFor(page, 's && s.world && s.phase === "play"', 30_000);
   const info = await scene(page);
   expect(info.stage).toBe(1);
