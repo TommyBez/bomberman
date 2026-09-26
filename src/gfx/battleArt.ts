@@ -26,7 +26,8 @@ export const BATTLE_THEMES: Record<string, Theme> = {
   road: { name: 'road', backdrop: '#101010', floor: '#707078', floorAlt: '#808088', floorStyle: 'plain', hard: '#d83838', hardStyle: 'bevel', wall: '#50505a', wallStyle: 'metal', soft: '#303038', softStyle: 'rock', hud: ['#50505a', '#202028'], shadow: 0.3 },
   // Warp Desert: sand, pyramids, skulls.
   desert: { name: 'desert', backdrop: '#201408', floor: '#f0d060', floorAlt: '#e0c050', floorStyle: 'sand', hard: '#b87838', hardStyle: 'pyramid', wall: '#a06a40', wallStyle: 'stone', soft: '#f4f0e0', softStyle: 'skull', hud: ['#a06a40', '#502c10'], shadow: 0.3 },
-  sky: { name: 'sky', backdrop: '#3060c0', floor: '#e8f0ff', floorAlt: '#d0e0ff', floorStyle: 'plain', hard: '#80b0ff', hardStyle: 'crystal', wall: '#5080e0', wallStyle: 'bevel', soft: '#ffffff', softStyle: 'crate', hud: ['#4070d0', '#183070'], shadow: 0.18 },
+  // Head in the Clouds: sky floor, cloud puffs, orange lanterns.
+  sky: { name: 'sky', backdrop: '#3060c0', floor: '#e8f0ff', floorAlt: '#d0e0ff', floorStyle: 'plain', hard: '#f8fbff', hardStyle: 'boulder', wall: '#5080e0', wallStyle: 'bevel', soft: '#f08830', softAlt: '#ffd070', softStyle: 'buoy', hud: ['#4070d0', '#183070'], shadow: 0.18 },
   // Block World: a harlequin floor with toy blocks.
   toy: { name: 'toy', backdrop: '#200820', floor: '#f0c030', floorAlt: '#8040c0', floorStyle: 'harlequin', hard: '#e05050', hardAlt: '#40a050', hardStyle: 'checker', wall: '#8040a0', wallStyle: 'bevel', soft: '#e04040', softAlt: '#40b050', softStyle: 'toy', hud: ['#8040a0', '#401850'], shadow: 0.3 },
   snow: { name: 'snow', backdrop: '#101828', floor: '#e8f0f8', floorAlt: '#d0e0f0', floorStyle: 'plain', hard: '#7aa8d8', hardStyle: 'crystal', wall: '#6890b8', wallStyle: 'stone', soft: '#ffffff', softStyle: 'snow', hud: ['#5078a8', '#203858'], shadow: 0.2 },
