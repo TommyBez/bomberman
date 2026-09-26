@@ -2,53 +2,15 @@ import type { App } from '../app';
 import type { Gfx } from '../engine/gfx';
 import type { Scene } from '../engine/scene';
 import { CampaignSession } from '../game/campaign/session';
-import { sprites } from '../gfx/sprites';
 import { drawMenuBackdrop, drawPanel, drawTitleBar, Menu } from '../render/ui';
-import { BattleSetup } from './battle/setup';
-import { goMainMenu, goTitle } from './nav';
+import { goMainMenu } from './nav';
 import { startNormalGame } from './normal/flow';
 import { MemoryCardScene } from './normal/memoryCard';
 import { PasswordScene } from './normal/password';
-import { OptionScene } from './option';
 
-/** NORMAL GAME / BATTLE GAME / OPTION. */
-export class MainMenuScene implements Scene {
-  private readonly menu: Menu;
-
-  constructor(
-    private readonly app: App,
-    index = 0,
-  ) {
-    this.menu = new Menu(
-      app,
-      [
-        { label: 'NORMAL GAME', action: () => app.scenes.go(new NormalMenuScene(app)), help: 'THE CLASSIC 50-STAGE GAME (1 PLAYER)' },
-        { label: 'BATTLE GAME', action: () => new BattleSetup(app).start(), help: 'UP TO 5 PLAYERS BATTLE IT OUT' },
-        { label: 'OPTION', action: () => app.scenes.go(new OptionScene(app)), help: 'PASSWORD, SOUND, SCREEN, CONTROLS' },
-      ],
-      () => goTitle(app),
-    );
-    this.menu.index = index;
-  }
-
-  enter(): void {
-    this.app.audio.music('title');
-  }
-
-  update(): void {
-    this.menu.update();
-  }
-
-  render(g: Gfx): void {
-    drawMenuBackdrop(g, this.app.frame);
-    drawTitleBar(g, 'BOMBERMAN', this.app.frame);
-    drawPanel(g, 58, 70, 140, 70);
-    this.menu.draw(g, 128, 84, { center: true, lineH: 18, width: 100 });
-    const sp = sprites().bombers;
-    const f = Math.floor(this.app.frame / 8) % 4;
-    g.image(sp[0].walk.right[f], 24, 150);
-    g.image(sp[1].walk.left[f], 216, 150);
-  }
+/** NORMAL GAME from the title's mode menu. */
+export function openNormalGame(app: App): void {
+  app.scenes.go(new NormalMenuScene(app));
 }
 
 /** NORMAL GAME → NEW GAME / CONTINUE. */
