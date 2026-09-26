@@ -512,3 +512,17 @@ describe('Normal stages read from the original', () => {
     for (const layout of [...def.railLayouts!, ...def.altRailLayouts!]) expect(layout[9 - RAIL_ORIGIN][7 - RAIL_ORIGIN]).toBe('=');
   });
 });
+
+describe('CPU players and pipes', () => {
+  it('a kicked bomb heading into an L-pipe counts as a threat where it comes out', () => {
+    const w = world('a6');
+    for (let y = 1; y < w.grid.h - 1; y++) for (let x = 1; x < w.grid.w - 1; x++) if (w.grid.get(x, y) === Cell.Soft) w.grid.set(x, y, Cell.Floor);
+    const bomb = w.placeBomb(w.bombers[0], 6, 3)!;
+    w.startSlide(bomb, 'left', 3);
+    const ai = new CpuPlayer(w, w.bombers[1], 'normal') as unknown as { blastOrigins(b: unknown, fuse: number): [number, number][] };
+    const route = ai.blastOrigins(bomb, 150).map(([x, y]) => `${x},${y}`);
+    // In at (4, 3), round the elbow, out of (3, 4) heading down column 3.
+    expect(route).toContain('3,5');
+    expect(route).toContain('3,6');
+  });
+});

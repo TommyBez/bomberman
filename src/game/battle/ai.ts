@@ -171,18 +171,24 @@ export class CpuPlayer {
     const out: [number, number][] = [[b.tx, b.ty]];
     const belt = w.gim.beltAt(b.tx, b.ty);
     const conveyed = b.conveyed || (!b.slide && !!belt);
-    let d = b.slide ?? belt?.dir ?? null;
-    if (!d) return out;
+    const start = b.slide ?? belt?.dir ?? null;
+    if (!start) return out;
+    let d: Dir = start;
     const reach = conveyed ? Math.ceil((Math.max(0, fuse) * (belt?.speed ?? b.slideSpeed)) / TILE) + 1 : 16;
     let x = b.tx;
     let y = b.ty;
     const seen = new Set([this.idx(x, y)]);
     for (let k = 0; k < reach; k++) {
-      let nx = x + DX[d];
-      let ny = y + DY[d];
-      if (!w.grid.inside(nx, ny)) {
-        if (!w.gim.gapAt(x, y)) break;
-        [nx, ny] = w.gim.wrapTile(nx, ny);
+      // One tile on, the way the bomb itself goes: through the wall gaps, into a pipe's mouth
+      // and out of its partner, round bent pipes, never off the edge of a floor.
+      const n = w.gim.step(x, y, d);
+      if (!n || w.gim.floorEdge(x, y, n[0], n[1])) break;
+      let [nx, ny] = n;
+      const pipe = w.gim.at(nx, ny);
+      if (pipe && (pipe.kind === 'portal' || pipe.kind === 'bend')) {
+        const through = pipe.kind === 'portal' ? w.gim.throughPortal(pipe, d) : w.gim.throughBends(nx, ny, d);
+        if (!through) break;
+        [nx, ny, d] = through;
       }
       const i = this.idx(nx, ny);
       const other = w.bombAt[i];
