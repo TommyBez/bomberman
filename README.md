@@ -96,8 +96,9 @@ letters directly.
   battle passwords open them level by level: `56565656`, `16161616` and `49894989`,
   typed on the password screen.
   Gimmicks include see-saws, trolleys and switches, arrows, pipes, conveyor belts,
-  warps, a two-floor sky stage and snow huts. The Advanced stages add a stomping robot,
-  jungle tunnels, the Super Power arena and the Seven Seas.
+  warps, a two-floor sky stage and snow huts. The Advanced stages add a four-legged
+  giant robot, turning flowers, jungle tunnels, L-shaped pipes, belts that run through
+  the walls, the Super Power arena and the Seven Seas.
 - **Items:**
   - Bomb, Fire, Full Fire (edge to edge), Speed, Kick, Bomb Pass, Punch, Push.
   - Power Glove: throw bombs or other players, and bat thrown bombs back while holding one.
@@ -119,7 +120,8 @@ letters directly.
     screen.
 - **CPU players** read a danger map and use a time-aware escape search. They check that
   a bomb has an escape route before placing it, and they watch the stage: the trolley's
-  route, the robot's stomp, and bombs carried by belts or turned by arrows. There are
+  route (through every warp hole), where the robot's feet will land, and bombs carried
+  by belts or turned by arrows. There are
   three difficulty levels.
 
 ### Everything else
@@ -141,9 +143,10 @@ letters directly.
 - Timings follow the originals: 60 Hz fixed step, a 159-frame fuse, and player and
   monster speeds in px/frame. The stage tables (rosters, items, bonus stages and panel
   stages) follow the NES and PS1 data. `docs/SPEC.md` lists the sources and values.
-- Battle stage layouts and gimmicks were rebuilt from manuals, descriptions and footage.
-  They play like the originals but are not tile-exact copies. The alternate layouts use
-  fixed block patterns because the originals' placements aren't documented.
+- The Beginner and Advanced battle stages were read tile by tile from the stage
+  screenshots in the Japanese manual. The other stages were rebuilt from manuals and
+  descriptions. The alternate layouts use fixed block patterns because the originals'
+  placements aren't documented.
 - All music, Show Time skits, dialogue and artwork are new, written for this remake.
 
 ## Development

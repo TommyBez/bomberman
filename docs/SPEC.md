@@ -145,17 +145,46 @@ The stage table (enemies and item for all 50 stages) lives in `src/game/campaign
 | 7 | Factory | Coming and Going | The Fast Lane |
 | 8 | Warp Desert | Winter Wonderland | The Seven Seas |
 
-Gimmick details that follow the Japanese sources (Wikipedia and the manual):
+The Beginner and Advanced layouts were read tile by tile from the stage screenshots in
+the Japanese manual (pp. 22 and 24), checked against the stages' background art. A
+screenshot of the first seconds of a round also shows the starting blocks:
 
-- **Take the Train:** the trolley smashes blocks and bombs on its rails and runs over
-  anyone in its way; a floor switch sets the points.
+- Super Power has a fixed 26-block layout.
+- Robo Bomber has blocks on every other tile.
+- The Seven Seas starts with every bridge piled with floats.
+
+Soft blocks may lie on belts, rails and bridges, as they do in the screenshots.
+
+Gimmick details that follow the Japanese sources (Wikipedia, the manual and its screenshots):
+
+- **SeeSaw Park:** four three-tile seesaws, each tipping over a pivot between two pillars.
+  Stepping on the raised end flings whoever stands on the other end.
+- **Life in the Slow Lane:** a road network walled with cones. Its one soft block is a
+  tyre by the stop sign, which comes back after it is blown up. Two signs set speed 3.
+- **Take the Train:** one line with three dead-end stations and points at a junction. A
+  floor switch sets the points. The trolley smashes blocks and bombs on its rails and runs
+  over anyone in its way.
+- **One-Way Street:** three rings of arrows: round the start corners one way, the middle
+  ring the other way, the inner ring the first way again.
+- **Pipe City:** four pipe crossroads that hide bombers and bombs.
+- **Warp Desert:** a sand pit inward of each corner. Six of the pillars are palms.
 - **Switcheroo:** the rails are relaid at random, three layouts on the stage and six on
   its alternate.
-- **Destination Unknown:** grew out of Switcheroo; the trolley (never a bomber on foot)
-  warps between the two holes.
-- **Round and Round:** pushing a flower turns it 90°; a blast that enters a flower's mouth
-  bursts out of its partner's.
-- **The Fast Lane:** grew out of Coming and Going; besides the switches that reverse the
-  belts it has switches that change their speed.
-- **King of the Jungle:** grew out of Block World (fixed and spinning arrows), adding
-  leaves that hide bombs and give them maximum fire.
+- **Destination Unknown:** grew out of Switcheroo. Four warp holes round the centre send
+  the trolley (never a bomber on foot) out of any other hole.
+- **Round and Round:** four bushes stand in for pillars, each with a pair of flowers either
+  side of it. Pushing a flower turns it 90°. A blast that enters a flower's mouth bursts
+  out of its partner's.
+- **Robo Bomber:** a four-legged giant walks the arena two tiles at a time, one foot
+  after another. A shadow shows where each foot will land. Whoever a foot comes down on
+  can't move for a while and drops items, and the robot leaves when a minute is left.
+- **King of the Jungle:** grew out of Block World (fixed and spinning arrows). Four trees
+  hide a plus of leafy tiles each; bombs under the leaves get maximum fire. Tunnels
+  through the hedge wrap round.
+- **Incoming!:** four L-shaped pipes, three tiles each, turn kicked bombs and blasts
+  round the corner.
+- **The Fast Lane:** grew out of Coming and Going. One belt loop runs through the walls
+  in four L-shaped runs. Besides the switch that reverses the belts (they run back round
+  their corners), a switch changes their speed.
+- **The Seven Seas:** four decks joined by bridges, with a raft in the middle. Bombs
+  sink, blasts carry across the sea, and a fish leaping out makes you drop items.
