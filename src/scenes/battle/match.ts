@@ -255,10 +255,9 @@ class HyperBomberScene implements Scene {
     for (const p of this.panels) p.x = (p.x + 1.4) % 264;
     if (this.phase === 'done') {
       if (this.t > 120 || menu.pressed('start')) {
-        if (this.hit) {
-          this.match.prizes[this.slot] = this.hit;
-          this.match.gold[this.slot] = true;
-        }
+        // Win or miss, the challenger turns gold for the next game.
+        if (this.hit) this.match.prizes[this.slot] = this.hit;
+        this.match.gold[this.slot] = true;
         this.match.playRound();
       }
       return;

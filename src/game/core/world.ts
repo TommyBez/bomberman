@@ -478,6 +478,12 @@ export class World {
     return bomb;
   }
 
+  /** Hook: a bomb landed on (or slammed into) a bomber. */
+  protected onBombHit(victim: Bomber, _bomb: Bomb): void {
+    victim.stunned = Math.max(victim.stunned, 60);
+    this.emit({ type: 'stun', who: victim.id });
+  }
+
   /** Hook: a bomb was just placed. */
   protected onBombPlaced(_b: Bomber, _bomb: Bomb): void {}
 
@@ -775,10 +781,7 @@ export class World {
     bomb.tx = tx;
     bomb.ty = ty;
     const victim = this.bombers.find((b) => b.alive && !b.airborne && b.tx === tx && b.ty === ty);
-    if (victim) {
-      victim.stunned = Math.max(victim.stunned, 60);
-      this.emit({ type: 'stun', who: victim.id });
-    }
+    if (victim) this.onBombHit(victim, bomb);
     if (!victim && this.grid.get(tx, ty) === Cell.Void) {
       bomb.flight = null;
       this.sinkBomb(bomb);
@@ -905,7 +908,8 @@ export class World {
           const item = this.items[this.idx(nx, ny)];
           if (item && !item.hidden && item.burning === 0 && this.rules.flamesBurnItems) {
             hits.push({ tx: nx, ty: ny, kind: 'item' });
-            if (this.rules.flamesStopAtItems) break;
+            // Metabomb fire burns straight through items.
+            if (this.rules.flamesStopAtItems && !pierce) break;
           }
           if (this.stopFlameAt(nx, ny)) break;
         }

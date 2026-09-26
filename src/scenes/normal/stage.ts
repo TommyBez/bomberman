@@ -158,6 +158,7 @@ export class StageScene implements Scene {
       case 'explode':
         a.sfx('explode');
         this.shake = Math.max(this.shake, e.size > 6 ? 6 : 4);
+        this.app.input.rumble(this.app.input.players[0].devices, 0.35, 90);
         break;
       case 'item':
         a.sfx(e.item.startsWith('secret') ? 'bigItem' : 'item');

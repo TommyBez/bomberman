@@ -242,7 +242,10 @@ export class BattleRenderer {
       if (f.style === 'pipe') {
         const horiz = gim.at(tx - 1, ty)?.kind === 'cover' || gim.at(tx + 1, ty)?.kind === 'cover';
         g.image(horiz ? gs.pipeH : gs.pipeV, x, y);
-      } else if (f.style === 'hut') g.image(gs.hut, x, y);
+      } else if (f.style === 'hut') {
+        // Roof blown off: the inside shows until it is rebuilt (blinking just before).
+        if (!f.open || (f.open < 40 && Math.floor(f.open / 4) % 2 === 0)) g.image(gs.hut, x, y);
+      }
       else g.image(gs.foliage[(tx + ty) % 3], x, y);
     }
   }

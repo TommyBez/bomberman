@@ -15,7 +15,7 @@ export type Feature =
   | { kind: 'tyre' }
   | { kind: 'rail'; trolleyWarp: boolean }
   | { kind: 'switch' }
-  | { kind: 'cover'; style: 'pipe' | 'hut' | 'foliage' }
+  | { kind: 'cover'; style: 'pipe' | 'hut' | 'foliage'; open?: number }
   | { kind: 'bridge' }
   | { kind: 'ice'; cracks: number }
   | { kind: 'hole' }
@@ -63,6 +63,8 @@ export interface Fish {
 
 /** Conveyor belt speed in px per tick (×2 when a Fast Lane switch is on). */
 export const BELT_SPEED = 0.5;
+/** How long a hut stays roofless after a blast inside it. */
+export const HUT_OPEN_TICKS = 300;
 const SIGN_SPEEDS = [0.55, 0.8, 1.1, 1.5, 2.0];
 const TYRE_RESPAWN = 8 * 60;
 
@@ -308,6 +310,7 @@ export class Gimmicks {
   update(): void {
     this.tick++;
     const w = this.w;
+    for (const f of this.features) if (f && f.kind === 'cover' && f.open) f.open--;
     // Rotating arrows turn clockwise every three seconds.
     if (this.tick % 180 === 0) {
       for (const f of this.features) {
@@ -584,10 +587,10 @@ export class Gimmicks {
     w.emit({ type: 'block', tx: x, ty: y });
   }
 
-  /** A blast went off inside a hut: the roof is blown away. */
+  /** A blast went off inside a hut: the roof is blown off for a while. */
   onBlastAt(tx: number, ty: number): void {
     const f = this.at(tx, ty);
-    if (f && f.kind === 'cover' && f.style === 'hut') this.set(tx, ty, null);
+    if (f && f.kind === 'cover' && f.style === 'hut') f.open = HUT_OPEN_TICKS;
   }
 
   // ------------------------------------------------------------------ trolleys

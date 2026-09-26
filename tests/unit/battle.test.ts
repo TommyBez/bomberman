@@ -5,6 +5,7 @@ import { BATTLE_MAX_FIRE, BattleWorld, customCounts, HURRY_TICKS, perimeterPath,
 import { defaultConfig, type BattleConfig } from '../../src/game/battle/config';
 import { NO_INTENT } from '../../src/game/core/bomber';
 import { ALL_DIRS, Cell, tileCenter } from '../../src/game/core/types';
+import { HUT_OPEN_TICKS } from '../../src/game/battle/gimmicks';
 
 function config(level: BattleConfig['level'], players = 5): BattleConfig {
   const cfg = defaultConfig();
@@ -193,6 +194,78 @@ describe('battle world', () => {
     expect(bombs).toHaveLength(1);
     expect(bombs[0].square).toBe(2);
     expect(bombs[0].kind).toBe('super');
+  });
+
+  const collide = (kinds: [string, string], squares: [number, number] = [0, 0]) => {
+    const w = new BattleWorld({ cfg: config('beginner', 2), arena: ARENAS[0], seed: 8 });
+    for (let y = 1; y < 12; y++) for (let x = 1; x < 14; x++) if (w.grid.get(x, y) === Cell.Soft) w.grid.set(x, y, Cell.Floor);
+    const [a] = w.bombers;
+    a.x = tileCenter(1);
+    a.y = tileCenter(9);
+    a.stats.bombs = 2;
+    const left = w.placeBomb(a, 4, 5)!;
+    const right = w.placeBomb(a, 10, 5)!;
+    left.kind = kinds[0] as typeof left.kind;
+    right.kind = kinds[1] as typeof right.kind;
+    left.square = squares[0];
+    right.square = squares[1];
+    w.startSlide(left, 'right', 3);
+    w.startSlide(right, 'left', 3);
+    for (let t = 0; t < 40; t++) w.update();
+    return { w, a, bombs: w.bombs.filter((x) => !x.exploded) };
+  };
+
+  it('merges kicked bombs: Dangerous (5×5), and Super Dangerous (7×7) from two Power Bombs', () => {
+    expect(collide(['normal', 'power']).bombs[0]).toMatchObject({ kind: 'super', square: 2 });
+    expect(collide(['power', 'power']).bombs[0]).toMatchObject({ kind: 'ultra', square: 3 });
+    expect(collide(['super', 'super'], [2, 2]).bombs[0]).toMatchObject({ kind: 'ultra', square: 3 });
+  });
+
+  it('a merged bomb gives its owner the bomb slot back when it blows', () => {
+    const { w, a, bombs } = collide(['normal', 'normal']);
+    expect(a.activeBombs).toBe(1);
+    w.explode(bombs[0]);
+    expect(a.activeBombs).toBe(0);
+  });
+
+  it('Metabomb fire burns through items', () => {
+    const w = new BattleWorld({ cfg: config('beginner', 2), arena: ARENAS[0], seed: 8 });
+    for (let x = 1; x < 14; x++) w.grid.set(x, 5, Cell.Floor);
+    w.setItem(6, 5, 'bomb', false);
+    const normal = w.computeBlast(4, 5, 5, false, null, 0);
+    const meta = w.computeBlast(4, 5, 5, true, null, 0);
+    expect(normal.tiles.some((t) => t.x === 7 && t.y === 5)).toBe(false);
+    expect(meta.tiles.some((t) => t.x === 7 && t.y === 5)).toBe(true);
+  });
+
+  it('a bomb landing on a bomber stuns them and knocks items loose', () => {
+    const w = new BattleWorld({ cfg: config('beginner', 2), arena: ARENAS[0], seed: 8 });
+    for (let x = 1; x < 14; x++) w.grid.set(x, 5, Cell.Floor);
+    const [a, b] = w.bombers;
+    b.x = tileCenter(8);
+    b.y = tileCenter(5);
+    w.giveItem(b, 'bomb', true);
+    w.giveItem(b, 'fire', true);
+    a.x = tileCenter(4);
+    a.y = tileCenter(5);
+    const bomb = w.placeBomb(a)!;
+    w.throwTo(bomb, 8, 5);
+    for (let t = 0; t < 60 && bomb.flight; t++) w.update();
+    expect(b.stunned).toBeGreaterThan(0);
+    expect(b.collected).toHaveLength(0);
+  });
+
+  it('a blast inside a snow hut lifts the roof only for a while', () => {
+    const arena = ARENAS.find((a) => a.id === 'n8')!;
+    const w = new BattleWorld({ cfg: config('normal', 2), arena, seed: 3 });
+    const i = w.gim.features.findIndex((f) => f?.kind === 'cover' && f.style === 'hut');
+    expect(i).toBeGreaterThanOrEqual(0);
+    const [x, y] = [i % w.grid.w, Math.floor(i / w.grid.w)];
+    w.gim.onBlastAt(x, y);
+    expect(w.gim.features[i]).toMatchObject({ kind: 'cover', open: HUT_OPEN_TICKS });
+    expect(w.gim.boosts(x, y)).toBe(true);
+    for (let t = 0; t < HUT_OPEN_TICKS; t++) w.gim.update();
+    expect(w.gim.features[i]).toMatchObject({ kind: 'cover', style: 'hut', open: 0 });
   });
 
   it('knocked-out bombers ride carts around the edge', () => {

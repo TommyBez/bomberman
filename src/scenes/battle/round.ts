@@ -156,6 +156,7 @@ export class BattleRoundScene implements Scene {
       case 'explode':
         a.sfx('explode');
         this.shake = Math.max(this.shake, e.size > 8 ? 6 : 3);
+        this.rumbleHumans(0.3, 80);
         break;
       case 'item':
         a.sfx(e.item.startsWith('partner') ? 'bigItem' : 'item');
@@ -168,6 +169,7 @@ export class BattleRoundScene implements Scene {
       }
       case 'death':
         a.sfx('die');
+        if (!this.cpus.has(e.who)) this.app.input.rumble(this.app.input.players[e.who]?.devices ?? [], 1, 400);
         break;
       case 'kick':
         a.sfx('kick');
@@ -208,6 +210,11 @@ export class BattleRoundScene implements Scene {
       default:
         break;
     }
+  }
+
+  /** Vibration for every human player's gamepad. */
+  private rumbleHumans(strength: number, ms: number): void {
+    for (const b of this.world.bombers) if (!this.cpus.has(b.id)) this.app.input.rumble(this.app.input.players[b.id].devices, strength, ms);
   }
 
   // ------------------------------------------------------------------ rendering

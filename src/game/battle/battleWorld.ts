@@ -319,23 +319,23 @@ export class BattleWorld extends World {
     const nx = bomb.tx + DX[dir];
     const ny = bomb.ty + DY[dir];
     const other = this.bombAtTile(nx, ny);
-    // Two kicked bombs meeting head-on merge into a Super (or Ultra) bomb.
+    // Two kicked bombs meeting head-on merge into a Dangerous Bomb (5×5); two Power
+    // Bombs, or two Dangerous Bombs, make a Super Dangerous Bomb (7×7).
     if (other && other.slide === OPPOSITE[dir] && !other.conveyed && !bomb.conveyed) {
-      const ultra = bomb.square > 0 || other.square > 0 || bomb.kind === 'power' || other.kind === 'power';
+      const ultra = (bomb.kind === 'power' && other.kind === 'power') || (bomb.square > 0 && other.square > 0);
       this.removeBomb(other);
-      if (bomb.owner) bomb.owner.activeBombs++;
-      if (other.owner && bomb.owner !== other.owner) other.owner.activeBombs = Math.max(0, other.owner.activeBombs);
       bomb.square = ultra ? 3 : 2;
       bomb.kind = ultra ? 'ultra' : 'super';
       bomb.fuse = Math.max(bomb.fuse, 90);
       bomb.remote = false;
+      bomb.pierce = false;
       this.emit({ type: 'kick', tx: bomb.tx, ty: bomb.ty });
       return;
     }
-    // A kicked Power Bomb hurts whoever it slams into.
-    if (bomb.kind === 'power' && !bomb.conveyed) {
+    // A kicked Power Bomb, or a bouncing Rubber Bomb, knocks items out of whoever it hits.
+    if ((bomb.kind === 'power' || bomb.kind === 'rubber') && !bomb.conveyed) {
       for (const b of this.bombers) {
-        if (b.alive && b.tx === nx && b.ty === ny) this.kill(b, bomb.kicker ?? bomb.owner);
+        if (b.alive && b.airborne <= 0 && b.tx === nx && b.ty === ny) this.onBombHit(b, bomb);
       }
     }
     // Rubber bombs bounce back.
@@ -936,6 +936,12 @@ export class BattleWorld extends World {
       if (this.grid.inside(x, y) && this.grid.get(x, y) === Cell.Floor && !this.bombAt[this.idx(x, y)]) return [x, y];
     }
     return [b.tx, b.ty];
+  }
+
+  /** A bomb thrown, punched or slammed into a bomber: stunned, and items fly out. */
+  protected override onBombHit(b: Bomber, _bomb: Bomb): void {
+    super.onBombHit(b, _bomb);
+    this.scatterItems(b, 2);
   }
 
   protected override onLand(b: Bomber): void {
