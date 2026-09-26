@@ -5,6 +5,11 @@ released in North America as *Bomberman Party Edition*). It covers the 50-stage
 **Normal Game** and the five-player **Battle Game**. It is written in TypeScript and runs
 on an HTML5 canvas at the original 256×224 resolution.
 
+| | |
+|---|---|
+| ![Title screen](docs/screenshots/title.png) | ![Normal Game, Modern version](docs/screenshots/normal.png) |
+| ![Normal Game, Retro version](docs/screenshots/retro.png) | ![Battle Game: The Seven Seas](docs/screenshots/battle.png) |
+
 > **Unofficial fan project.** It is not affiliated with or endorsed by Konami or Hudson
 > Soft. "Bomberman" is their trademark and is used here only to name the game being
 > remade. Every sprite, tile, tune and sound effect in this repository is original,
