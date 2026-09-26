@@ -170,11 +170,21 @@ export function railTile(conn: number, warp: boolean): Sprite {
   return p.canvas;
 }
 
-export function switchTile(on: boolean): Sprite {
+/** Floor switch: blue (points, belt reverse) or red with chevrons (belt speed). */
+export function switchTile(on: boolean, speed = false): Sprite {
   const p = new PixelCanvas(16, 16);
   p.roundRect(2, 2, 12, 12, '#202030', 2);
-  p.roundRect(3, on ? 5 : 3, 10, 9, on ? '#2040a0' : '#4080ff', 2);
-  p.rect(5, on ? 6 : 4, 6, 2, '#a0c8ff');
+  const [up, down, shine] = speed ? ['#ff5030', '#a02010', '#ffc0a0'] : ['#4080ff', '#2040a0', '#a0c8ff'];
+  p.roundRect(3, on ? 5 : 3, 10, 9, on ? down : up, 2);
+  p.rect(5, on ? 6 : 4, 6, 2, shine);
+  if (speed) {
+    const y = on ? 9 : 7;
+    for (const x of [5, 8]) {
+      p.px(x, y, shine);
+      p.px(x + 1, y + 1, shine);
+      p.px(x, y + 2, shine);
+    }
+  }
   return p.canvas;
 }
 
@@ -252,17 +262,9 @@ export function bridgeTile(horizontal: boolean): Sprite {
   return p.canvas;
 }
 
-export function portalTile(style: 'pipe' | 'flower'): Sprite {
+/** A pipe mouth (Every Which Way): blasts go in here and out of its partner. */
+export function portalTile(): Sprite {
   const p = new PixelCanvas(16, 16);
-  if (style === 'flower') {
-    for (let k = 0; k < 6; k++) {
-      const a = (k / 6) * Math.PI * 2;
-      p.circle(7.5 + Math.cos(a) * 4.5, 7.5 + Math.sin(a) * 4.5, 3.2, '#f070b0');
-    }
-    p.circle(7.5, 7.5, 3.6, '#ffe040');
-    p.circle(7.5, 7.5, 2, '#a06000');
-    return p.canvas;
-  }
   p.circle(7.5, 7.5, 7.5, '#000000');
   p.circle(7.5, 7.5, 6.6, '#30a040');
   p.circle(7.5, 7.5, 5.2, '#70e070');
@@ -293,21 +295,33 @@ export function bendTile(turn: Partial<Record<Dir, Dir>>): Sprite {
 
 const OPP: Record<Dir, Dir> = { up: 'down', down: 'up', left: 'right', right: 'left' };
 
-/** Flower door: petals block the closed axis. */
-export function doorTile(open: 'h' | 'v', turning: boolean): Sprite {
+/**
+ * Round and Round's flower: petals round a trumpet whose mouth faces `face` (blasts go in
+ * and come out there). White petals while it turns.
+ */
+export function flowerTile(face: Dir, turning: boolean): Sprite {
   const p = new PixelCanvas(16, 16);
-  const blade = turning ? '#ffffff' : '#e050a0';
-  if (open === 'h') {
-    p.rect(6, 0, 4, 16, '#000000');
-    p.rect(7, 0, 2, 16, blade);
-  } else {
-    p.rect(0, 6, 16, 4, '#000000');
-    p.rect(0, 7, 16, 2, blade);
+  const petal = turning ? '#ffffff' : '#f070b0';
+  for (let k = 0; k < 6; k++) {
+    const a = (k / 6) * Math.PI * 2;
+    p.circle(7.5 + Math.cos(a) * 4.6, 7.5 + Math.sin(a) * 4.6, 3.3, '#000000');
   }
-  p.circle(7.5, 7.5, 3.4, '#000000');
-  p.circle(7.5, 7.5, 2.6, '#ffe040');
+  for (let k = 0; k < 6; k++) {
+    const a = (k / 6) * Math.PI * 2;
+    p.circle(7.5 + Math.cos(a) * 4.5, 7.5 + Math.sin(a) * 4.5, 2.7, petal);
+  }
+  p.circle(7.5, 7.5, 4, '#000000');
+  p.circle(7.5, 7.5, 3.3, '#ffe040');
+  // The mouth: a dark throat opening toward `face`.
+  const mx = 7.5 + DXY[face][0] * 3.5;
+  const my = 7.5 + DXY[face][1] * 3.5;
+  p.circle(mx, my, 2.9, '#000000');
+  p.circle(mx, my, 2.1, '#5a1030');
+  p.circle(7.5 - DXY[face][0] * 1.2, 7.5 - DXY[face][1] * 1.2, 1, '#fff8c0');
   return p.canvas;
 }
+
+const DXY: Record<Dir, [number, number]> = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
 /** Overlays that hide whoever stands under them. */
 export function coverSprite(style: 'pipe' | 'hut' | 'foliage', variant: number): Sprite {

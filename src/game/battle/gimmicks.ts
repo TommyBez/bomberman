@@ -2,7 +2,7 @@ import type { Bomber } from '../core/bomber';
 import { moveBody } from '../core/movement';
 import { ALL_DIRS, Cell, DX, DY, OPPOSITE, TILE, isHorizontal, tileCenter, toTile, type Dir } from '../core/types';
 import type { Bomb } from '../core/world';
-import type { ArenaDef } from './arenas';
+import { RAIL_ORIGIN, type ArenaDef } from './arenas';
 import type { BattleWorld } from './battleWorld';
 
 export type Feature =
@@ -14,7 +14,7 @@ export type Feature =
   | { kind: 'sign'; speed: number }
   | { kind: 'tyre' }
   | { kind: 'rail'; trolleyWarp: boolean }
-  | { kind: 'switch' }
+  | { kind: 'switch'; mode: 'points' | 'reverse' | 'speed' }
   | { kind: 'cover'; style: 'pipe' | 'hut' | 'foliage'; open?: number }
   | { kind: 'bridge' }
   | { kind: 'ice'; cracks: number }
@@ -22,7 +22,8 @@ export type Feature =
   | { kind: 'water' }
   | { kind: 'portal'; to: [number, number] }
   | { kind: 'bend'; turn: Partial<Record<Dir, Dir>> }
-  | { kind: 'door'; open: 'h' | 'v'; push: number; turn: number }
+  /** Round and Round: turns a quarter when pushed; a blast into its mouth leaves its partner's. */
+  | { kind: 'flower'; to: [number, number]; face: Dir; push: number; turn: number }
   | { kind: 'gap' };
 
 export interface Seesaw {
@@ -66,6 +67,12 @@ export const BELT_SPEED = 0.5;
 /** How long a hut stays roofless after a blast inside it. */
 export const HUT_OPEN_TICKS = 300;
 const SIGN_SPEEDS = [0.55, 0.8, 1.1, 1.5, 2.0];
+/** Belt speed multiplier with a speed switch on (The Fast Lane). */
+const FAST_BELT = 2.2;
+/** Ticks of pushing that turn a flower. */
+const FLOWER_PUSH = 18;
+/** The rails change at random every 8 to 16 seconds. */
+const RAIL_CHANGE_TICKS = 8 * 60;
 const TYRE_RESPAWN = 8 * 60;
 
 export class Gimmicks {
@@ -82,6 +89,13 @@ export class Gimmicks {
   wrap = false;
   private tyres: { tx: number; ty: number; timer: number }[] = [];
   private stations = new Set<number>();
+  /** Switcheroo / Destination Unknown: the rail layouts (tile lists) and the current one. */
+  private railLayouts: [number, number, boolean][][] = [];
+  railLayout = 0;
+  /** Frames left of the blink after the rails were relaid. */
+  railFlash = 0;
+  private railChangeAt = 0;
+  private railPending = false;
   /** Last tile of each bomber (index by bomber id) for "entered a tile" triggers. */
   private lastTile = new Map<number, number>();
   /** Warp/trampoline cooldown: the tile a bomber must leave before it triggers again. */
@@ -131,6 +145,7 @@ export class Gimmicks {
         this.set(x, y, { kind: 'arrow', dir: 'up', rotating: true });
         return Cell.Floor;
       case 'W':
+        if (g === 'mystery' && this.arena.railLayouts) return Cell.Floor; // laid by the rail layouts
         if (g === 'mystery') {
           this.set(x, y, { kind: 'rail', trolleyWarp: true });
         } else {
@@ -176,7 +191,10 @@ export class Gimmicks {
         this.set(x, y, { kind: 'rail', trolleyWarp: false });
         return Cell.Floor;
       case 's':
-        this.set(x, y, { kind: 'switch' });
+        this.set(x, y, { kind: 'switch', mode: g === 'train' ? 'points' : 'reverse' });
+        return Cell.Floor;
+      case 'k':
+        this.set(x, y, { kind: 'switch', mode: 'speed' });
         return Cell.Floor;
       case 'P':
         this.set(x, y, { kind: 'cover', style: 'pipe' });
@@ -194,14 +212,12 @@ export class Gimmicks {
         this.set(x, y, { kind: 'water' });
         return Cell.Void;
       case 'p':
-        this.set(x, y, { kind: 'portal', to: [x, y] });
+        if (g === 'flowers') this.set(x, y, { kind: 'flower', to: [x, y], face: this.arena.flowerFaces?.[`${x},${y}`] ?? 'up', push: 0, turn: 0 });
+        else this.set(x, y, { kind: 'portal', to: [x, y] });
         return Cell.Hard;
       case 'J':
         this.set(x, y, { kind: 'bend', turn: this.arena.bends?.[`${x},${y}`] ?? {} });
         return Cell.Hard;
-      case 'G':
-        this.set(x, y, { kind: 'door', open: (x + y) % 4 === 0 ? 'h' : 'v', push: 0, turn: 0 });
-        return Cell.Floor;
       case 'w':
         this.set(x, y, { kind: 'gap' });
         this.wrap = true;
@@ -215,8 +231,21 @@ export class Gimmicks {
   finish(): void {
     for (const pair of this.arena.portalPairs ?? []) {
       const [a, b] = pair;
-      this.set(a[0], a[1], { kind: 'portal', to: b });
-      this.set(b[0], b[1], { kind: 'portal', to: a });
+      for (const [from, to] of [[a, b], [b, a]]) {
+        const f = this.at(from[0], from[1]);
+        if (f && f.kind === 'flower') f.to = to;
+        else this.set(from[0], from[1], { kind: 'portal', to });
+      }
+    }
+    if (this.arena.railLayouts) {
+      const layouts = this.arena.alternate ? [...this.arena.railLayouts, ...(this.arena.altRailLayouts ?? [])] : this.arena.railLayouts;
+      this.railLayouts = layouts.map((rows) => {
+        const tiles: [number, number, boolean][] = [];
+        rows.forEach((row, dy) => [...row].forEach((ch, dx) => (ch === '=' || ch === 'W') && tiles.push([RAIL_ORIGIN + dx, RAIL_ORIGIN + dy, ch === 'W'])));
+        return tiles;
+      });
+      this.layRails(0);
+      this.railChangeAt = RAIL_CHANGE_TICKS;
     }
     for (const [a, b] of this.arena.trampolinePairs ?? []) {
       this.set(a[0], a[1], { kind: 'trampoline', to: b });
@@ -259,16 +288,8 @@ export class Gimmicks {
 
   // ------------------------------------------------------------------ movement hooks
 
-  /** Extra walkability rules: doors, the trolley and the robot. */
+  /** Extra walkability rules: the trolley and the robot. */
   canEnter(b: Bomber, tx: number, ty: number): boolean {
-    const f = this.at(tx, ty);
-    if (f && f.kind === 'door') {
-      const dir = dirBetween(b.tx, b.ty, tx, ty);
-      if (dir && (isHorizontal(dir) ? f.open !== 'h' : f.open !== 'v')) {
-        f.push++;
-        return false;
-      }
-    }
     for (const t of this.trolleys) {
       if (t.stop <= 0 && toTile(t.x) === tx && toTile(t.y) === ty && !t.riders.includes(b)) return false;
     }
@@ -294,7 +315,7 @@ export class Gimmicks {
     if (b.y >= H) b.y -= H;
   }
 
-  /** Where a flame goes next: pipes teleport it, bends turn it, gaps wrap it. */
+  /** Where a flame goes next: pipes and flowers teleport it, bends turn it, gaps wrap it. */
   flameNext(x: number, y: number, d: Dir): [number, number, Dir] | null {
     let nx = x + DX[d];
     let ny = y + DY[d];
@@ -313,8 +334,11 @@ export class Gimmicks {
       if (!nd) return null;
       return [nx + DX[nd], ny + DY[nd], nd];
     }
-    if (f.kind === 'door') {
-      if (isHorizontal(d) ? f.open !== 'h' : f.open !== 'v') return null;
+    if (f.kind === 'flower') {
+      // In through the mouth, out of the partner's mouth.
+      const to = this.at(f.to[0], f.to[1]);
+      if (f.face !== OPPOSITE[d] || !to || to.kind !== 'flower') return null;
+      return [f.to[0] + DX[to.face], f.to[1] + DY[to.face], to.face];
     }
     return [nx, ny, d];
   }
@@ -331,13 +355,13 @@ export class Gimmicks {
         if (f && f.kind === 'arrow' && f.rotating) f.dir = CLOCKWISE[f.dir];
       }
     }
-    // Pushed flower doors turn a quarter.
+    // A flower pushed for a moment turns a quarter, clockwise.
     for (let i = 0; i < this.features.length; i++) {
       const f = this.features[i];
-      if (f && f.kind === 'door') {
+      if (f && f.kind === 'flower') {
         if (f.turn > 0) f.turn--;
-        if (f.push > 18) {
-          f.open = f.open === 'h' ? 'v' : 'h';
+        if (f.push > FLOWER_PUSH) {
+          f.face = CLOCKWISE[f.face];
           f.push = 0;
           f.turn = 12;
           w.emit({ type: 'warp', tx: i % w.grid.w, ty: Math.floor(i / w.grid.w) });
@@ -452,7 +476,6 @@ export class Gimmicks {
       }
       return 'blocked';
     }
-    if (f?.kind === 'door' && (isHorizontal(d) ? f.open !== 'h' : f.open !== 'v')) return 'blocked';
     if (w.grid.get(nx, ny) === Cell.Void) return 'sink';
     return 'ok';
   }
@@ -520,7 +543,7 @@ export class Gimmicks {
         }
         break;
       case 'switch':
-        this.toggleSwitch();
+        this.toggleSwitch(f.mode);
         break;
       case 'seesaw':
         this.stepSeesaw(f.id, f.end);
@@ -530,16 +553,23 @@ export class Gimmicks {
     }
   }
 
-  private toggleSwitch(): void {
-    const w = this.w;
-    this.switchOn = !this.switchOn;
-    const g = this.arena.gimmick;
-    if (g === 'switchbelt') this.beltReverse = this.switchOn;
-    if (g === 'fastlane') {
-      this.beltReverse = this.switchOn;
-      this.beltSpeed = this.switchOn ? 2.2 : 1;
-    }
-    w.emit({ type: 'warp', tx: 0, ty: 0 });
+  /** Points switch (trolley junctions), belt reverse switch, or belt speed switch. */
+  private toggleSwitch(mode: 'points' | 'reverse' | 'speed'): void {
+    if (mode === 'points') this.switchOn = !this.switchOn;
+    else if (mode === 'reverse') this.beltReverse = !this.beltReverse;
+    else this.beltSpeed = this.beltSpeed > 1 ? 1 : FAST_BELT;
+    this.w.emit({ type: 'warp', tx: 0, ty: 0 });
+  }
+
+  /** Is this switch on (drawn pressed)? */
+  switchState(mode: 'points' | 'reverse' | 'speed'): boolean {
+    return mode === 'points' ? this.switchOn : mode === 'reverse' ? this.beltReverse : this.beltSpeed > 1;
+  }
+
+  /** A bomber pushes against the tile ahead: flowers turn after a moment of pushing. */
+  push(tx: number, ty: number): void {
+    const f = this.at(tx, ty);
+    if (f && f.kind === 'flower') f.push++;
   }
 
   private stepSeesaw(id: number, end: 0 | 1): void {
@@ -579,7 +609,7 @@ export class Gimmicks {
       for (let x = 1; x < w.grid.w - 1; x++) {
         if (w.grid.get(x, y) !== Cell.Floor || w.bombAtTile(x, y)) continue;
         const f = this.at(x, y);
-        if (f && (f.kind === 'trampoline' || f.kind === 'warp' || f.kind === 'seesaw' || f.kind === 'rail' || f.kind === 'door')) continue;
+        if (f && (f.kind === 'trampoline' || f.kind === 'warp' || f.kind === 'seesaw' || f.kind === 'rail')) continue;
         if (Math.abs(x - fromX) + Math.abs(y - fromY) < minDist) continue;
         cands.push([x, y]);
       }
@@ -615,10 +645,36 @@ export class Gimmicks {
     return !!f && f.kind === 'rail';
   }
 
+  /** Lay rail layout `n`, lifting the rails of the current one. Blocks that fell stay put. */
+  private layRails(n: number): void {
+    const g = this.w.grid;
+    for (const [x, y] of this.railLayouts[this.railLayout] ?? []) if (this.at(x, y)?.kind === 'rail') this.set(x, y, null);
+    for (const [x, y, warp] of this.railLayouts[n]) {
+      const c = g.get(x, y);
+      if (c === Cell.Floor || c === Cell.Soft) this.set(x, y, { kind: 'rail', trolleyWarp: warp });
+    }
+    this.railLayout = n;
+  }
+
+  /** The trolley reached a tile centre while a relay is due: switch to a layout that keeps it on the rails. */
+  private relayRails(tx: number, ty: number): void {
+    const w = this.w;
+    const options = this.railLayouts.map((_, n) => n).filter((n) => n !== this.railLayout && this.railLayouts[n].some(([x, y]) => x === tx && y === ty));
+    if (!options.length) return;
+    this.layRails(w.rng.pick(options));
+    this.railPending = false;
+    this.railFlash = 40;
+    this.railChangeAt = this.tick + RAIL_CHANGE_TICKS + w.rng.int(RAIL_CHANGE_TICKS);
+    w.emit({ type: 'warp', tx, ty });
+  }
+
   private updateTrolleys(): void {
     const w = this.w;
     // Switcheroo: the rail junctions rearrange every few seconds.
     if (this.arena.gimmick === 'switcheroo' && this.tick % 300 === 0) this.switchOn = w.rng.chance(0.5);
+    // Karakuri trolleys: now and then the whole rail layout changes.
+    if (this.railFlash > 0) this.railFlash--;
+    if (this.railLayouts.length > 1 && this.tick >= this.railChangeAt) this.railPending = true;
     for (const t of this.trolleys) {
       if (t.flash > 0) t.flash--;
       if (t.stop > 0) {
@@ -663,6 +719,7 @@ export class Gimmicks {
     const w = this.w;
     let tx = toTile(t.x);
     let ty = toTile(t.y);
+    if (this.railPending) this.relayRails(tx, ty);
     const f = this.at(tx, ty);
     if (f && f.kind === 'rail' && f.trolleyWarp && t.flash === 0) {
       // Destination Unknown: jump to the other warp on the rails.
@@ -714,7 +771,12 @@ export class Gimmicks {
     }
     const bomb = w.bombAtTile(tx, ty);
     if (bomb && !bomb.flight) w.crushBomb(bomb);
-    if (w.grid.get(tx, ty) === Cell.Soft) w.grid.set(tx, ty, Cell.Floor);
+    if (w.grid.get(tx, ty) === Cell.Soft) {
+      // The trolley smashes soft blocks on its rails; whatever they hid shows up.
+      w.grid.set(tx, ty, Cell.Floor);
+      const item = w.items[this.idx(tx, ty)];
+      if (item) item.hidden = false;
+    }
   }
 
   // ------------------------------------------------------------------ robot
@@ -825,14 +887,6 @@ export class Gimmicks {
 }
 
 const CLOCKWISE: Record<Dir, Dir> = { up: 'right', right: 'down', down: 'left', left: 'up' };
-
-function dirBetween(ax: number, ay: number, bx: number, by: number): Dir | null {
-  if (bx > ax) return 'right';
-  if (bx < ax) return 'left';
-  if (by > ay) return 'down';
-  if (by < ay) return 'up';
-  return null;
-}
 
 function w_bombAt(w: BattleWorld, x: number, y: number): Bomb | null {
   return w.bombAtTile(x, y);

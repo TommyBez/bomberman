@@ -4,7 +4,7 @@ import { BattleWorld } from '../../src/game/battle/battleWorld';
 import { defaultConfig } from '../../src/game/battle/config';
 import { ALL_DIRS, Cell, DX, DY } from '../../src/game/core/types';
 
-const VALID = new Set([...'#._x12345O><^vRLUD@WTSabcde!=sPHF~biGpJw']);
+const VALID = new Set([...'#._x12345O><^vRLUD@WTSabcde!=skPHF~bipJw']);
 
 describe('battle arenas', () => {
   it('has 8 stages per level', () => {

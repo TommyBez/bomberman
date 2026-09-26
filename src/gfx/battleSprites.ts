@@ -8,7 +8,7 @@ import {
   bridgeTile,
   cartSprite,
   coverSprite,
-  doorTile,
+  flowerTile,
   drawAccessory,
   fishSprite,
   holeTile,
@@ -66,6 +66,8 @@ export interface GimmickSprites {
   railWarp: Sprite[];
   switchOn: Sprite;
   switchOff: Sprite;
+  speedSwitchOn: Sprite;
+  speedSwitchOff: Sprite;
   ice: Sprite[];
   cloud: Sprite[];
   hole: Sprite[];
@@ -73,8 +75,7 @@ export interface GimmickSprites {
   bridgeH: Sprite;
   bridgeV: Sprite;
   pipeMouth: Sprite;
-  flower: Sprite;
-  door: Record<'h' | 'v', Sprite[]>;
+  flower: Record<Dir, Sprite[]>; // [still, turning]
   pipeH: Sprite;
   pipeV: Sprite;
   hut: Sprite;
@@ -114,15 +115,16 @@ export function gimmickSprites(): GimmickSprites {
     railWarp: Array.from({ length: 16 }, (_, c) => railTile(c, true)),
     switchOn: switchTile(true),
     switchOff: switchTile(false),
+    speedSwitchOn: switchTile(true, true),
+    speedSwitchOff: switchTile(false, true),
     ice: [iceTile(0), iceTile(1)],
     cloud: [0, 1, 2, 3].map((v) => cloudTile(v)),
     hole: [0, 1, 2, 3].map(holeTile),
     water: [0, 1, 2, 3, 4, 5, 6, 7].map(waterTile),
     bridgeH: bridgeTile(true),
     bridgeV: bridgeTile(false),
-    pipeMouth: portalTile('pipe'),
-    flower: portalTile('flower'),
-    door: { h: [doorTile('h', false), doorTile('h', true)], v: [doorTile('v', false), doorTile('v', true)] },
+    pipeMouth: portalTile(),
+    flower: rec((d) => [flowerTile(d, false), flowerTile(d, true)]),
     pipeH: coverSprite('pipe', 0),
     pipeV: coverSprite('pipe', 1),
     hut: coverSprite('hut', 0),

@@ -64,6 +64,14 @@ export interface ArenaDef {
   lowerFloor?: [number, number];
   /** Rails: stop stations (tiles where the trolley pauses). */
   stations?: [number, number][];
+  /**
+   * Changing rails: layouts drawn from tile (3, 3) ('=' rail, 'W' trolley warp). The
+   * rails switch between them at random; the alternate stage adds `altRailLayouts`.
+   */
+  railLayouts?: string[][];
+  altRailLayouts?: string[][];
+  /** Round and Round: which way each flower's mouth faces at the start ("x,y"). */
+  flowerFaces?: Record<string, Dir>;
   /** Area spared by the sudden-death blocks (inclusive tile rectangle). */
   refuge?: [number, number, number, number];
   /** Players start with maximum fire. */
@@ -76,6 +84,8 @@ export interface ArenaDef {
   noSoft?: [number, number][];
   /** The alternate ("ura") version of a stage. */
   alternate?: boolean;
+  /** Which fixed block pattern the alternate uses (by default it follows the stage order). */
+  altPattern?: number;
 }
 
 const STD = [
@@ -93,6 +103,53 @@ const STD = [
   '#4_........._2#',
   '###############',
 ];
+
+/** Rail layouts are drawn from this tile (x and y). */
+export const RAIL_ORIGIN = 3;
+
+/**
+ * Switcheroo's rail layouts (x 3–11, y 3–9): three on the stage, three more on its
+ * alternate. Every layout runs down columns 3 and 11 so both stations stay on the rails.
+ */
+const SWITCHEROO_RAILS: string[][] = [
+  ['=========', '=...=...=', '=...=...=', '=...=...=', '=...=...=', '=...=...=', '========='],
+  ['=========', '=.......=', '=.......=', '=.......=', '=========', '=.......=', '========='],
+  ['=========', '=.......=', '=====...=', '=...=...=', '=...=====', '=.......=', '========='],
+  ['=========', '=.=.....=', '=.=.....=', '=.=.....=', '=.=======', '=.=.....=', '========='],
+  ['=========', '=...=...=', '=...=...=', '=...=...=', '=========', '=.......=', '========='],
+  ['=====....', '=...=....', '=...=....', '=...=...=', '=========', '=.......=', '========='],
+];
+
+/**
+ * Destination Unknown's layouts: the warp holes ('W') at (7, 3) and (7, 9) are always there,
+ * and nothing runs next to the centre start at (7, 7).
+ */
+const MYSTERY_RAILS: string[][] = [
+  ['====W====', '=.......=', '=.......=', '=.......=', '=.......=', '=.......=', '====W===='],
+  ['====W====', '=.......=', '=========', '=.......=', '=.......=', '=.......=', '====W===='],
+  ['====W====', '=.=...=.=', '=.=...=.=', '=.=...=.=', '=.=...=.=', '=.=...=.=', '====W===='],
+  ['====W====', '=.=.....=', '===.....=', '=.......=', '=.....===', '=.....=.=', '====W===='],
+  ['====W====', '=...=...=', '=========', '=.......=', '=.......=', '=.......=', '====W===='],
+  ['====W....', '=...=....', '=========', '=.......=', '=.......=', '=.......=', '=...W===='],
+];
+
+/**
+ * Keep the tiles the stage's rail layouts use free of soft blocks. (The alternate's extra
+ * layouts may run under blocks: the trolley smashes them.)
+ */
+function reserveRails(map: string[], layouts: string[][]): string[] {
+  const rows = map.map((r) => [...r]);
+  for (const layout of layouts) {
+    layout.forEach((row, dy) =>
+      [...row].forEach((ch, dx) => {
+        const y = RAIL_ORIGIN + dy;
+        const x = RAIL_ORIGIN + dx;
+        if (ch !== '.' && rows[y][x] === '.') rows[y][x] = '_';
+      }),
+    );
+  }
+  return rows.map((r) => r.join(''));
+}
 
 export const ARENAS: ArenaDef[] = [
   // ------------------------------------------------------------------ BEGINNER
@@ -308,25 +365,31 @@ export const ARENAS: ArenaDef[] = [
   },
   {
     id: 'n4', name: 'SWITCHEROO', jpName: 'KARAKURI TROCCO', level: 'normal', gimmick: 'switcheroo', theme: 'mine', density: 0.55,
-    blurb: 'THE TROLLEY RAILS REARRANGE THEMSELVES.',
+    blurb: 'THE RAILS ARE RELAID AT RANDOM. WATCH WHERE THE TROLLEY GOES!',
     spawns: [[1, 1], [13, 11], [13, 1], [1, 11], [9, 5]],
     stations: [[3, 6], [11, 6]],
     trolley: { x: 3, y: 3, dir: 'right' },
-    map: [
-      '###############',
-      '#1_........._3#',
-      '#_#.#.#.#.#.#_#',
-      '#..=========..#',
-      '#.#=#.#=#.#=#.#',
-      '#..=...=.5.=..#',
-      '#.#=#.#=#.#=#.#',
-      '#..=========..#',
-      '#.#=#.#=#.#=#.#',
-      '#..=========..#',
-      '#_#.#.#.#.#.#_#',
-      '#4_........._2#',
-      '###############',
-    ],
+    railLayouts: SWITCHEROO_RAILS.slice(0, 3),
+    altRailLayouts: SWITCHEROO_RAILS.slice(3),
+    altPattern: 4, // the rails leave little room: a denser pattern
+    map: reserveRails(
+      [
+        '###############',
+        '#1_........._3#',
+        '#_#.#.#.#.#.#_#',
+        '#.............#',
+        '#.#.#.#.#.#.#.#',
+        '#........5....#',
+        '#.#.#.#.#.#.#.#',
+        '#.............#',
+        '#.#.#.#.#.#.#.#',
+        '#.............#',
+        '#_#.#.#.#.#.#_#',
+        '#4_........._2#',
+        '###############',
+      ],
+      SWITCHEROO_RAILS.slice(0, 3),
+    ),
   },
   {
     id: 'n5', name: 'BLOCK WORLD', jpName: 'BLOCK WORLD', level: 'normal', gimmick: 'blockworld', theme: 'toy', density: 0.55,
@@ -420,19 +483,23 @@ export const ARENAS: ArenaDef[] = [
   },
   {
     id: 'a3', name: 'ROUND AND ROUND', jpName: 'KURUKURU DOKAN', level: 'advanced', gimmick: 'flowers', theme: 'garden', density: 0.5,
-    blurb: 'FLOWER DOORS TURN WHEN PUSHED. PAIRED FLOWERS SHARE BLASTS.',
-    portalPairs: [[[7, 4], [7, 8]], [[3, 6], [11, 6]]],
+    blurb: 'PUSH A FLOWER TO TURN IT. A BLAST INTO ITS MOUTH BURSTS OUT OF ITS PARTNER.',
+    portalPairs: [[[7, 4], [7, 8]], [[3, 6], [11, 6]], [[3, 3], [11, 9]], [[11, 3], [3, 9]]],
+    flowerFaces: {
+      '7,4': 'up', '7,8': 'down', '3,6': 'down', '11,6': 'up',
+      '3,3': 'right', '11,9': 'left', '11,3': 'down', '3,9': 'up',
+    },
     map: [
       '###############',
       '#1_........._3#',
       '#_#.#.#.#.#.#_#',
-      '#..G.......G..#',
+      '#..p.......p..#',
       '#.#.#.#p#.#.#.#',
-      '#.....G.G.....#',
+      '#.............#',
       '#.#p#.#5#.#p#.#',
-      '#.....G.G.....#',
+      '#.............#',
       '#.#.#.#p#.#.#.#',
-      '#..G.......G..#',
+      '#..p.......p..#',
       '#_#.#.#.#.#.#_#',
       '#4_........._2#',
       '###############',
@@ -444,36 +511,41 @@ export const ARENAS: ArenaDef[] = [
     spawns: [[1, 1], [13, 11], [13, 1], [1, 11], [7, 7]],
     stations: [[3, 6], [11, 6]],
     trolley: { x: 3, y: 3, dir: 'right', warps: true },
-    map: [
-      '###############',
-      '#1_........._3#',
-      '#_#.#.#.#.#.#_#',
-      '#..====W====..#',
-      '#.#=#.#.#.#=#.#',
-      '#..=.......=..#',
-      '#.#=#.#.#.#=#.#',
-      '#..=...5...=..#',
-      '#.#=#.#.#.#=#.#',
-      '#..====W====..#',
-      '#_#.#.#.#.#.#_#',
-      '#4_........._2#',
-      '###############',
-    ],
+    railLayouts: MYSTERY_RAILS.slice(0, 3),
+    altRailLayouts: MYSTERY_RAILS.slice(3),
+    map: reserveRails(
+      [
+        '###############',
+        '#1_........._3#',
+        '#_#.#.#.#.#.#_#',
+        '#.............#',
+        '#.#.#.#.#.#.#.#',
+        '#.............#',
+        '#.#.#.#.#.#.#.#',
+        '#......5......#',
+        '#.#.#.#.#.#.#.#',
+        '#.............#',
+        '#_#.#.#.#.#.#_#',
+        '#4_........._2#',
+        '###############',
+      ],
+      MYSTERY_RAILS.slice(0, 3),
+    ),
   },
   {
     id: 'a5', name: 'KING OF THE JUNGLE', jpName: 'JUNGLE TUNNEL', level: 'advanced', gimmick: 'jungle', theme: 'jungle', density: 0.5,
-    blurb: 'LEAVES HIDE BOMBS (AND BOOST THEM). SPINNING ARROWS. EDGES WRAP.',
+    blurb: 'LEAVES HIDE BOMBS (AND BOOST THEM). FIXED AND SPINNING ARROWS. EDGES WRAP.',
     map: [
       '###############',
       '#1_..FFF...._3#',
       '#_#.#F#F#.#.#_#',
-      '#....FFF..@...#',
+      '#R...FFF.D@...#',
       '#.#.#.#.#.#.#.#',
       'w...@.....FFF.w',
       '#.#.#.#5#.#F#.#',
       'w.FFF.....@...w',
       '#.#F#.#.#.#.#.#',
-      '#...@..FFF....#',
+      '#...@U.FFF...L#',
       '#_#.#.#F#F#.#_#',
       '#4_....FFF.._2#',
       '###############',
@@ -506,18 +578,18 @@ export const ARENAS: ArenaDef[] = [
   },
   {
     id: 'a7', name: 'THE FAST LANE', jpName: 'KARAKURI BELCON', level: 'advanced', gimmick: 'fastlane', theme: 'factory', density: 0.45,
-    blurb: 'SWITCHES CHANGE THE BELTS\' DIRECTION AND SPEED. EDGES WRAP.',
+    blurb: 'BLUE SWITCHES REVERSE THE BELTS, RED ONES CHANGE THEIR SPEED. EDGES WRAP.',
     map: [
       '#######w#######',
       '#1_........._3#',
       '#_#.#.#v#.#.#_#',
-      '#.....sv......#',
+      '#.....svk.....#',
       '#.#.#.#v#.#.#.#',
       'w>>>>>>>>>>>>>w',
       '#.#.#.#5#.#.#.#',
       'w<<<<<<<<<<<<<w',
       '#.#.#.#^#.#.#.#',
-      '#......^s.....#',
+      '#.....k^s.....#',
       '#_#.#.#^#.#.#_#',
       '#4_........._2#',
       '#######w#######',
@@ -582,7 +654,7 @@ export function alternateArena(def: ArenaDef): ArenaDef {
   const cached = altCache.get(def.id);
   if (cached) return cached;
   const index = arenasFor(def.level).indexOf(def);
-  const pattern = (index + LEVEL_OFFSET[def.level]) % ALT_PATTERNS.length;
+  const pattern = def.altPattern ?? (index + LEVEL_OFFSET[def.level]) % ALT_PATTERNS.length;
   const h = def.map.length;
   const w = def.map[0].length;
   const spawns: [number, number][] = def.spawns ? [...def.spawns] : [];

@@ -334,6 +334,13 @@ export class BattleWorld extends World {
     return super.bomberCanEnter(b, tx, ty);
   }
 
+  /** Walking into something: kicks (core rules), and pushing turns flowers. */
+  protected override onBlocked(b: Bomber, dir: Dir): void {
+    super.onBlocked(b, dir);
+    if (Math.abs(b.x - tileCenter(b.tx)) > 0.01 || Math.abs(b.y - tileCenter(b.ty)) > 0.01) return;
+    this.gim.push(b.tx + DX[dir], b.ty + DY[dir]);
+  }
+
   protected override afterMove(b: Bomber): void {
     this.gim.wrapBody(b);
   }
@@ -366,8 +373,6 @@ export class BattleWorld extends World {
 
   override bombCanEnter(tx: number, ty: number, self: Bomb | null = null): boolean {
     if (!super.bombCanEnter(tx, ty, self)) return false;
-    const f = this.gim.at(tx, ty);
-    if (f && f.kind === 'door') return true;
     for (const t of this.gim.trolleys) if (toTile(t.x) === tx && toTile(t.y) === ty) return false;
     return true;
   }

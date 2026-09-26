@@ -144,3 +144,18 @@ The stage table (enemies and item for all 50 stages) lives in `src/game/campaign
 | 6 | Pipe City | Every Which Way | Incoming! |
 | 7 | Factory | Coming and Going | The Fast Lane |
 | 8 | Warp Desert | Winter Wonderland | The Seven Seas |
+
+Gimmick details that follow the Japanese sources (Wikipedia and the manual):
+
+- **Take the Train:** the trolley smashes blocks and bombs on its rails and runs over
+  anyone in its way; a floor switch sets the points.
+- **Switcheroo:** the rails are relaid at random, three layouts on the stage and six on
+  its alternate.
+- **Destination Unknown:** grew out of Switcheroo; the trolley (never a bomber on foot)
+  warps between the two holes.
+- **Round and Round:** pushing a flower turns it 90°; a blast that enters a flower's mouth
+  bursts out of its partner's.
+- **The Fast Lane:** grew out of Coming and Going; besides the switches that reverse the
+  belts it has switches that change their speed.
+- **King of the Jungle:** grew out of Block World (fixed and spinning arrows), adding
+  leaves that hide bombs and give them maximum fire.

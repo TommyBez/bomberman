@@ -208,12 +208,17 @@ export class BattleRenderer {
           if (isRail(tx + 1, ty)) conn |= 2;
           if (isRail(tx, ty + 1)) conn |= 4;
           if (isRail(tx - 1, ty)) conn |= 8;
+          // Freshly relaid rails blink for a moment.
+          if (gim.railFlash > 0 && Math.floor(frame / 4) % 2 === 0) break;
           g.image(f.trolleyWarp ? gs.railWarp[conn] : gs.rail[conn], x, y);
           break;
         }
-        case 'switch':
-          g.image(gim.switchOn ? gs.switchOn : gs.switchOff, x, y);
+        case 'switch': {
+          const on = gim.switchState(f.mode);
+          if (f.mode === 'speed') g.image(on ? gs.speedSwitchOn : gs.speedSwitchOff, x, y);
+          else g.image(on ? gs.switchOn : gs.switchOff, x, y);
           break;
+        }
         case 'ice':
           g.image(gs.ice[Math.min(1, f.cracks)], x, y);
           break;
@@ -229,7 +234,10 @@ export class BattleRenderer {
           break;
         }
         case 'portal':
-          g.image(w.arena.gimmick === 'flowers' ? gs.flower : gs.pipeMouth, x, y);
+          g.image(gs.pipeMouth, x, y);
+          break;
+        case 'flower':
+          g.image(gs.flower[f.face][f.turn > 0 ? 1 : 0], x, y);
           break;
         case 'bend': {
           const key = JSON.stringify(f.turn);
@@ -241,9 +249,6 @@ export class BattleRenderer {
           g.image(img, x, y);
           break;
         }
-        case 'door':
-          g.image(gs.door[f.open][f.turn > 0 ? 1 : 0], x, y);
-          break;
         default:
           break;
       }
