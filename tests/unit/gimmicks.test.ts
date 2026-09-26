@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { alternateArena, ARENAS, RAIL_ORIGIN, type ArenaDef } from '../../src/game/battle/arenas';
+import { HUT_OPEN_TICKS } from '../../src/game/battle/gimmicks';
 import { BattleWorld } from '../../src/game/battle/battleWorld';
 import { defaultConfig } from '../../src/game/battle/config';
 import { CpuPlayer } from '../../src/game/battle/ai';
@@ -23,7 +24,7 @@ function railTiles(layout: string[]): [number, number][] {
 describe('changing rails (Switcheroo, Destination Unknown)', () => {
   for (const id of ['n4', 'a4']) {
     const def = ARENAS.find((a) => a.id === id) as ArenaDef;
-    it(`${id}: three layouts, six on the alternate, all connected and on open floor`, () => {
+    it(`${id}: three layouts, six on the alternate, all connected, clear of pillars and starts`, () => {
       expect(def.railLayouts).toHaveLength(3);
       expect([...def.railLayouts!, ...def.altRailLayouts!]).toHaveLength(6);
       const starts = def.spawns!;
@@ -32,8 +33,7 @@ describe('changing rails (Switcheroo, Destination Unknown)', () => {
         const key = new Set(tiles.map(([x, y]) => `${x},${y}`));
         for (const [x, y] of tiles) {
           expect(x % 2 === 0 && y % 2 === 0, `rail on a pillar at ${x},${y}`).toBe(false);
-          // Switcheroo's own layouts stay clear of soft blocks; none comes near a start.
-          if (id === 'n4' && def.railLayouts!.includes(layout)) expect(def.map[y][x], `rail at ${x},${y}`).toBe('_');
+          // None comes near a start.
           for (const [sx, sy] of starts) expect(Math.abs(sx - x) + Math.abs(sy - y), `rail at ${x},${y}`).toBeGreaterThan(1);
         }
         for (const [x, y] of def.stations!) expect(key.has(`${x},${y}`), `station ${x},${y}`).toBe(true);
@@ -422,5 +422,68 @@ describe('stage maps read from the original', () => {
       seen.add(`${toTile(r.x)},${toTile(r.y)}`);
     }
     expect(seen.size).toBeGreaterThan(3);
+  });
+});
+
+describe('Normal stages read from the original', () => {
+  const clearAll = (w: BattleWorld): void => {
+    for (let y = 1; y < w.grid.h - 1; y++) for (let x = 1; x < w.grid.w - 1; x++) if (w.grid.get(x, y) === Cell.Soft) w.grid.set(x, y, Cell.Floor);
+  };
+
+  it('Head in the Clouds: the cloud and the sky are two floors, joined only by trampolines', () => {
+    const w = world('n3');
+    clearAll(w);
+    const b = w.bombers[0];
+    // On the cloud's edge at (5, 5): the sky at (3, 5) lies beyond a drop.
+    b.x = tileCenter(4);
+    b.y = tileCenter(5);
+    b.intent = { ...NO_INTENT, dirs: ['left'] };
+    for (let t = 0; t < 40; t++) w.update();
+    expect(b.tx).toBe(4);
+    // A blast on the cloud stops at its edge.
+    const lit = new Set(w.computeBlast(4, 5, 4, false, null).tiles.map((t) => `${t.x},${t.y}`));
+    expect(lit.has('5,5')).toBe(true);
+    expect(lit.has('3,5')).toBe(false);
+    // A trampoline on the sky throws you onto the cloud.
+    b.intent = NO_INTENT;
+    b.x = tileCenter(9);
+    b.y = tileCenter(1);
+    for (let t = 0; t < 120 && !(b.airborne === 0 && w.gim.floorOf(b.tx, b.ty) === 1); t++) w.update();
+    expect(w.gim.floorOf(b.tx, b.ty)).toBe(1);
+  });
+
+  it('Every Which Way: a pipe only takes a blast by its mouth, and fires it out of its partner\'s', () => {
+    const w = world('n6');
+    clearAll(w);
+    // Down into (5, 4), whose mouth faces up: out of (2, 5), heading right.
+    const lit = new Set(w.computeBlast(5, 3, 4, false, null).tiles.map((t) => `${t.x},${t.y}`));
+    expect(lit.has('3,5')).toBe(true);
+    expect(lit.has('4,5')).toBe(true);
+    // From below, the back of the same pipe stops the blast.
+    const back = new Set(w.computeBlast(5, 5, 1, false, null).tiles.map((t) => `${t.x},${t.y}`));
+    expect(back.has('5,3')).toBe(false);
+    expect(back.has('4,5')).toBe(true);
+  });
+
+  it('Winter Wonderland: a blast in a big hut lifts its whole roof, and cracked ice gives way to fire', () => {
+    const w = world('n8');
+    clearAll(w);
+    w.gim.onBlastAt(5, 3);
+    for (let y = 2; y <= 4; y++) for (let x = 4; x <= 6; x++) expect(w.gim.at(x, y)).toMatchObject({ kind: 'cover', open: HUT_OPEN_TICKS });
+    const other = w.gim.at(11, 5);
+    expect(other?.kind === 'cover' && other.style === 'hut' && !other.open).toBe(true);
+    // A bomb beside the cracked ice at (3, 3): its blast opens a hole there.
+    const bomb = w.placeBomb(w.bombers[0], 2, 3)!;
+    w.bombers[0].x = tileCenter(1);
+    w.bombers[0].y = tileCenter(1);
+    w.explode(bomb);
+    w.update();
+    expect(w.grid.get(3, 3)).toBe(Cell.Void);
+    expect(w.gim.at(3, 3)?.kind).toBe('hole');
+  });
+
+  it('Switcheroo: every layout runs over the wooden junction where the trolley stops', () => {
+    const def = ARENAS.find((a) => a.id === 'n4')!;
+    for (const layout of [...def.railLayouts!, ...def.altRailLayouts!]) expect(layout[9 - RAIL_ORIGIN][7 - RAIL_ORIGIN]).toBe('=');
   });
 });

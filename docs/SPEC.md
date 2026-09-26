@@ -145,9 +145,9 @@ The stage table (enemies and item for all 50 stages) lives in `src/game/campaign
 | 7 | Factory | Coming and Going | The Fast Lane |
 | 8 | Warp Desert | Winter Wonderland | The Seven Seas |
 
-The Beginner and Advanced layouts were read tile by tile from the stage screenshots in
-the Japanese manual (pp. 22 and 24), checked against the stages' background art. A
-screenshot of the first seconds of a round also shows the starting blocks:
+All 24 layouts were read tile by tile from the stage screenshots in the Japanese manual
+(pp. 22–24), checked against the stages' background art. A screenshot of the first
+seconds of a round also shows the starting blocks:
 
 - Super Power has a fixed 26-block layout.
 - Robo Bomber has blocks on every other tile.
@@ -168,8 +168,23 @@ Gimmick details that follow the Japanese sources (Wikipedia, the manual and its 
   ring the other way, the inner ring the first way again.
 - **Pipe City:** four pipe crossroads that hide bombers and bombs.
 - **Warp Desert:** a sand pit inward of each corner. Six of the pillars are palms.
+- **All Together Now:** everyone starts round the centre, in a clear pocket among
+  close-packed blocks.
+- **SeeSaw Land:** SeeSaw Park's four long seesaws, linked so that they all tip at once.
+- **Head in the Clouds:** two floors, a cloud bank in the middle and the sky round it.
+  Nobody walks from one to the other, and bombs don't slide across nor blasts burn across.
+  Eight trampolines bounce you onto the other floor.
 - **Switcheroo:** the rails are relaid at random, three layouts on the stage and six on
-  its alternate.
+  its alternate. Every layout runs over the wooden junction where the trolley stops. The
+  first is the one in the manual's screenshot.
+- **Block World:** six fixed arrows (blocks may cover them) and two spinning ones.
+- **Every Which Way:** eight pipes between pillars, each opening one way. A blast into a
+  pipe's mouth bursts out of its partner's.
+- **Coming and Going:** two belt rings either side of a clear middle lane, with a switch
+  at its top that reverses them.
+- **Winter Wonderland:** three big snow huts stand where pillars would. Bombs inside get
+  maximum fire, and a blast inside lifts the whole roof for a while. Cracked ice gives way
+  after two crossings (Japanese Wikipedia) or in a blast (the manual).
 - **Destination Unknown:** grew out of Switcheroo. Four warp holes round the centre send
   the trolley (never a bomber on foot) out of any other hole.
 - **Round and Round:** four bushes stand in for pillars, each with a pair of flowers either

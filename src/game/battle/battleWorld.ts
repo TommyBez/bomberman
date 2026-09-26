@@ -482,6 +482,10 @@ export class BattleWorld extends World {
     for (const c of this.carts) if (c.bomb === bomb) c.bomb = null;
   }
 
+  protected override onLight(tx: number, ty: number): void {
+    this.gim.onFlame(tx, ty);
+  }
+
   override burnItem(tx: number, ty: number): void {
     const it = this.items[this.idx(tx, ty)];
     if (it && it.kind === 'skull' && !this.cfg.rules.skullBomb) return;

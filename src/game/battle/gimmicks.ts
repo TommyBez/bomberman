@@ -10,7 +10,7 @@ export type Feature =
   | { kind: 'conveyor'; dir: Dir; rev: Dir }
   | { kind: 'arrow'; dir: Dir; rotating: boolean }
   | { kind: 'warp'; index: number }
-  | { kind: 'trampoline'; to?: [number, number] }
+  | { kind: 'trampoline' }
   /** A seesaw's ends (0, 1) and, on three-tile seesaws, its pivot (2). */
   | { kind: 'seesaw'; id: number; end: 0 | 1 | 2 }
   | { kind: 'sign'; speed: number }
@@ -22,7 +22,8 @@ export type Feature =
   | { kind: 'ice'; cracks: number }
   | { kind: 'hole' }
   | { kind: 'water' }
-  | { kind: 'portal'; to: [number, number] }
+  /** A pipe mouth: blasts go in and come out of its partner (facing a side, only by that side). */
+  | { kind: 'portal'; to: [number, number]; face?: Dir }
   | { kind: 'bend'; turn: Partial<Record<Dir, Dir>> }
   /** Round and Round: turns a quarter when pushed; a blast into its mouth leaves its partner's. */
   | { kind: 'flower'; to: [number, number]; face: Dir; push: number; turn: number }
@@ -263,10 +264,12 @@ export class Gimmicks {
       case '~':
         this.set(x, y, { kind: 'water' });
         return Cell.Void;
-      case 'p':
-        if (g === 'flowers') this.set(x, y, { kind: 'flower', to: [x, y], face: this.arena.flowerFaces?.[`${x},${y}`] ?? 'up', push: 0, turn: 0 });
-        else this.set(x, y, { kind: 'portal', to: [x, y] });
+      case 'p': {
+        const face = this.arena.faces?.[`${x},${y}`];
+        if (g === 'flowers') this.set(x, y, { kind: 'flower', to: [x, y], face: face ?? 'up', push: 0, turn: 0 });
+        else this.set(x, y, { kind: 'portal', to: [x, y], face });
         return Cell.Hard;
+      }
       case 'J':
         this.set(x, y, { kind: 'bend', turn: this.arena.bends?.[`${x},${y}`] ?? {} });
         return Cell.Hard;
@@ -311,7 +314,7 @@ export class Gimmicks {
       const [a, b] = pair;
       for (const [from, to] of [[a, b], [b, a]]) {
         const f = this.at(from[0], from[1]);
-        if (f && f.kind === 'flower') f.to = to;
+        if (f && (f.kind === 'flower' || f.kind === 'portal')) f.to = to;
         else this.set(from[0], from[1], { kind: 'portal', to });
       }
     }
@@ -324,10 +327,6 @@ export class Gimmicks {
       });
       this.layRails(0);
       this.railChangeAt = RAIL_CHANGE_TICKS;
-    }
-    for (const [a, b] of this.arena.trampolinePairs ?? []) {
-      this.set(a[0], a[1], { kind: 'trampoline', to: b });
-      this.set(b[0], b[1], { kind: 'trampoline', to: a });
     }
     for (const [x, y] of this.arena.stations ?? []) this.stations.add(this.idx(x, y));
     const t = this.arena.trolley;
@@ -350,6 +349,17 @@ export class Gimmicks {
     return null;
   }
 
+  /** Two-floor stages: 1 on the cloud floor, 0 on the sky floor (0 everywhere elsewhere). */
+  floorOf(x: number, y: number): number {
+    for (const [x0, y0, x1, y1] of this.arena.cloud ?? []) if (x >= x0 && x <= x1 && y >= y0 && y <= y1) return 1;
+    return 0;
+  }
+
+  /** Is the step from one tile to its neighbour a drop between floors (never walked, slid or burnt)? */
+  floorEdge(fx: number, fy: number, tx: number, ty: number): boolean {
+    return !!this.arena.cloud && this.floorOf(fx, fy) !== this.floorOf(tx, ty);
+  }
+
   /**
    * Tiles that must never receive a random soft block. Blocks do lie on belts, rails,
    * bridges and thin ice (the trolley smashes the ones on its rails).
@@ -358,6 +368,8 @@ export class Gimmicks {
     const f = this.at(x, y);
     if (!f) return false;
     if (f.kind === 'rail') return f.trolleyWarp;
+    // Block World (and the jungle that grew out of it) hides fixed arrows under blocks too.
+    if (f.kind === 'arrow') return f.rotating || (this.arena.gimmick !== 'blockworld' && this.arena.gimmick !== 'jungle');
     return f.kind !== 'ice' && f.kind !== 'conveyor' && f.kind !== 'bridge';
   }
 
@@ -374,8 +386,9 @@ export class Gimmicks {
 
   // ------------------------------------------------------------------ movement hooks
 
-  /** Extra walkability rules: nobody walks into a moving trolley. */
+  /** Extra walkability rules: nobody walks into a moving trolley, or off their floor. */
   canEnter(b: Bomber, tx: number, ty: number): boolean {
+    if (this.floorEdge(b.tx, b.ty, tx, ty)) return false;
     for (const t of this.trolleys) {
       if (t.stop <= 0 && toTile(t.x) === tx && toTile(t.y) === ty && !t.riders.includes(b)) return false;
     }
@@ -402,6 +415,18 @@ export class Gimmicks {
     const ny = y + DY[d];
     if (this.w.grid.inside(nx, ny)) return [nx, ny];
     return this.gapAt(x, y) ? this.wrapTile(nx, ny) : null;
+  }
+
+  /**
+   * Into a pipe mouth heading `d`: out of its partner's mouth. A mouth that faces a side
+   * only takes what comes at it from that side, and sends it out the way its partner faces.
+   */
+  throughPortal(f: Extract<Feature, { kind: 'portal' }>, d: Dir): [number, number, Dir] | null {
+    const [px, py] = f.to;
+    if (!f.face) return [px + DX[d], py + DY[d], d];
+    const to = this.at(px, py);
+    if (f.face !== OPPOSITE[d] || !to || to.kind !== 'portal' || !to.face) return null;
+    return [px + DX[to.face], py + DY[to.face], to.face];
   }
 
   /**
@@ -440,12 +465,10 @@ export class Gimmicks {
     const n = this.step(x, y, d);
     if (!n) return null;
     const [nx, ny] = n;
+    if (this.floorEdge(x, y, nx, ny)) return null;
     const f = this.at(nx, ny);
     if (!f) return [nx, ny, d];
-    if (f.kind === 'portal') {
-      const [px, py] = f.to;
-      return [px + DX[d], py + DY[d], d];
-    }
+    if (f.kind === 'portal') return this.throughPortal(f, d);
     if (f.kind === 'bend') return this.throughBends(nx, ny, d);
     if (f.kind === 'flower') {
       // In through the mouth, out of the partner's mouth.
@@ -568,13 +591,15 @@ export class Gimmicks {
       }
       return 'blocked';
     }
+    if (this.floorEdge(bomb.tx, bomb.ty, nx, ny)) return 'blocked';
     const f = this.at(nx, ny);
     if (f?.kind === 'portal') {
-      const [px, py] = f.to;
-      const ox = px + DX[d];
-      const oy = py + DY[d];
+      const out = this.throughPortal(f, d);
+      if (!out) return 'blocked';
+      const [ox, oy, nd] = out;
       if (w.bombCanEnter(ox, oy, bomb)) {
         w.moveBomb(bomb, ox, oy);
+        bomb.slide = nd;
         return 'moved';
       }
       return 'blocked';
@@ -632,10 +657,11 @@ export class Gimmicks {
         }
       }
     } else if (f.kind === 'trampoline') {
-      // Paired trampolines lead to the other floor; lone ones throw you somewhere.
-      const target = f.to ? this.landingNear(f.to[0], f.to[1]) : this.randomLanding(b.tx, b.ty, 4);
+      // A bounce high into the air, down somewhere else (on two-floor stages, the other floor).
+      const floor = this.arena.cloud ? 1 - this.floorOf(b.tx, b.ty) : null;
+      const target = this.randomLanding(b.tx, b.ty, 4, floor);
       if (target) {
-        this.lock.set(b.id, f.to ? this.idx(target[0], target[1]) : i);
+        this.lock.set(b.id, i);
         w.jump(b, target[0], target[1], 70, 64);
         w.emit({ type: 'jump', tx: b.tx, ty: b.ty });
       }
@@ -715,8 +741,8 @@ export class Gimmicks {
     }
   }
 
-  /** A random empty floor tile at least `minDist` away. */
-  randomLanding(fromX: number, fromY: number, minDist: number): [number, number] | null {
+  /** A random empty floor tile at least `minDist` away (on `floor`, if given). */
+  randomLanding(fromX: number, fromY: number, minDist: number, floor: number | null = null): [number, number] | null {
     const w = this.w;
     const cands: [number, number][] = [];
     for (let y = 1; y < w.grid.h - 1; y++) {
@@ -725,6 +751,7 @@ export class Gimmicks {
         const f = this.at(x, y);
         if (f && (f.kind === 'trampoline' || f.kind === 'warp' || f.kind === 'seesaw' || f.kind === 'rail')) continue;
         if (Math.abs(x - fromX) + Math.abs(y - fromY) < minDist) continue;
+        if (floor !== null && this.floorOf(x, y) !== floor) continue;
         cands.push([x, y]);
       }
     }
@@ -746,10 +773,32 @@ export class Gimmicks {
     w.emit({ type: 'block', tx: x, ty: y });
   }
 
-  /** A blast went off inside a hut: the roof is blown off for a while. */
+  /** A blast went off inside a hut: the whole roof is blown off for a while. */
   onBlastAt(tx: number, ty: number): void {
+    const hut = (x: number, y: number): Extract<Feature, { kind: 'cover' }> | null => {
+      const f = this.at(x, y);
+      return f && f.kind === 'cover' && f.style === 'hut' ? f : null;
+    };
+    if (!hut(tx, ty)) return;
+    const seen = new Set([this.idx(tx, ty)]);
+    const queue: [number, number][] = [[tx, ty]];
+    while (queue.length) {
+      const [x, y] = queue.pop()!;
+      hut(x, y)!.open = HUT_OPEN_TICKS;
+      for (const d of ALL_DIRS) {
+        const [nx, ny] = [x + DX[d], y + DY[d]];
+        if (hut(nx, ny) && !seen.has(this.idx(nx, ny))) {
+          seen.add(this.idx(nx, ny));
+          queue.push([nx, ny]);
+        }
+      }
+    }
+  }
+
+  /** Fire on a tile: cracked ice gives way (the manual: blow it up and it becomes a hole). */
+  onFlame(tx: number, ty: number): void {
     const f = this.at(tx, ty);
-    if (f && f.kind === 'cover' && f.style === 'hut') f.open = HUT_OPEN_TICKS;
+    if (f && f.kind === 'ice') this.breakIce(this.idx(tx, ty));
   }
 
   // ------------------------------------------------------------------ trolleys

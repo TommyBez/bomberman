@@ -59,12 +59,14 @@ export interface ArenaDef {
   items?: Partial<Record<BattleItem, number>>;
   /** Bend pipes ('J'): "x,y" → incoming direction → outgoing direction. */
   bends?: Record<string, Partial<Record<Dir, Dir>>>;
-  /** Linked pipe mouths ('p'). */
+  /** Linked pipe mouths or flowers ('p'). */
   portalPairs?: [[number, number], [number, number]][];
-  /** Trampolines ('T') that bounce you onto each other (two-floor stages). */
-  trampolinePairs?: [[number, number], [number, number]][];
-  /** Rows (inclusive) drawn as the lower, cloud floor. */
-  lowerFloor?: [number, number];
+  /**
+   * Head in the Clouds: the cloud floor (inclusive tile rectangles). The rest is the sky
+   * floor; nobody walks, and nothing slides or burns, from one floor to the other, and the
+   * trampolines ('T') bounce you across.
+   */
+  cloud?: [number, number, number, number][];
   /** Rails: stop stations (tiles where the trolley pauses). */
   stations?: [number, number][];
   /**
@@ -73,8 +75,11 @@ export interface ArenaDef {
    */
   railLayouts?: string[][];
   altRailLayouts?: string[][];
-  /** Round and Round: which way each flower's mouth faces at the start ("x,y"). */
-  flowerFaces?: Record<string, Dir>;
+  /**
+   * Which way each flower (Round and Round) or pipe mouth (Every Which Way) opens ("x,y"):
+   * blasts only get in from that side, and come out of the partner's opening.
+   */
+  faces?: Record<string, Dir>;
   /** Area spared by the sudden-death blocks (inclusive tile rectangle). */
   refuge?: [number, number, number, number];
   /** Players start with maximum fire. */
@@ -109,20 +114,24 @@ const STD = [
   '###############',
 ];
 
+/** The standard arena with the fifth start left to `spawns`. */
+const STD_NO5 = STD.map((row) => row.replace('5', '.'));
+
 /** Rail layouts are drawn from this tile (x and y). */
 export const RAIL_ORIGIN = 3;
 
 /**
  * Switcheroo's rail layouts (x 3–11, y 3–9): three on the stage, three more on its
- * alternate. Every layout runs down columns 3 and 11 so both stations stay on the rails.
+ * alternate. The first is the layout seen in the original; every one runs over the wooden
+ * junction at (7, 9) and keeps off the starts.
  */
 const SWITCHEROO_RAILS: string[][] = [
-  ['=========', '=...=...=', '=...=...=', '=...=...=', '=...=...=', '=...=...=', '========='],
-  ['=========', '=.......=', '=.......=', '=.......=', '=========', '=.......=', '========='],
-  ['=========', '=.......=', '=====...=', '=...=...=', '=...=====', '=.......=', '========='],
-  ['=========', '=.=.....=', '=.=.....=', '=.=.....=', '=.=======', '=.=.....=', '========='],
-  ['=========', '=...=...=', '=...=...=', '=...=...=', '=========', '=.......=', '========='],
-  ['=====....', '=...=....', '=...=....', '=...=...=', '=========', '=.......=', '========='],
+  ['......===', '......=.=', '......=.=', '......=.=', '..=====.=', '..=.....=', '..======='],
+  ['===......', '=.=......', '=.=......', '=.=......', '=.=====..', '=.....=..', '=======..'],
+  ['=========', '=.......=', '=.......=', '=.......=', '=.......=', '=.......=', '========='],
+  ['..=====..', '..=...=..', '..=...=..', '..=...=..', '..=====..', '....=....', '========='],
+  ['=========', '=.=...=.=', '=.=...=.=', '=.=...=.=', '===...===', '=.......=', '========='],
+  ['=========', '=.......=', '===...===', '=.......=', '===...===', '=.......=', '========='],
 ];
 
 /**
@@ -138,24 +147,6 @@ const MYSTERY_RAILS: string[][] = [
   ['=========', '..=...=..', '..W...W..', '.........', '..W...W..', '..=...=..', '========='],
   ['=========', '=.=...=.=', '=.W...W.=', '=.......=', '=.W...W.=', '=.=...=.=', '=.=====.='],
 ];
-
-/**
- * Keep the tiles the stage's rail layouts use free of soft blocks. (The alternate's extra
- * layouts may run under blocks: the trolley smashes them.)
- */
-function reserveRails(map: string[], layouts: string[][]): string[] {
-  const rows = map.map((r) => [...r]);
-  for (const layout of layouts) {
-    layout.forEach((row, dy) =>
-      [...row].forEach((ch, dx) => {
-        const y = RAIL_ORIGIN + dy;
-        const x = RAIL_ORIGIN + dx;
-        if (ch !== '.' && rows[y][x] === '.') rows[y][x] = '_';
-      }),
-    );
-  }
-  return rows.map((r) => r.join(''));
-}
 
 export const ARENAS: ArenaDef[] = [
   // ------------------------------------------------------------------ BEGINNER
@@ -316,19 +307,20 @@ export const ARENAS: ArenaDef[] = [
   },
   // ------------------------------------------------------------------ NORMAL
   {
-    id: 'n1', name: 'ALL TOGETHER NOW', jpName: 'USHIRO NO SHOUMEN', level: 'normal', gimmick: 'center', theme: 'battle', density: 0.65,
+    id: 'n1', name: 'ALL TOGETHER NOW', jpName: 'USHIRO NO SHOUMEN', level: 'normal', gimmick: 'center', theme: 'battle', density: 0.8,
     blurb: 'EVERYONE STARTS TOGETHER IN THE MIDDLE!',
-    spawns: [[5, 5], [9, 7], [9, 5], [5, 7], [7, 6]],
+    // Blocks all round, the middle clear: five starts packed round the centre.
+    spawns: [[5, 5], [9, 7], [9, 5], [5, 7], [7, 5]],
     map: [
       '###############',
       '#.............#',
       '#.#.#.#.#.#.#.#',
       '#.............#',
-      '#.#.#.#.#.#.#.#',
-      '#....1_._3....#',
-      '#.#.#_#5#_#.#.#',
-      '#....4_._2....#',
-      '#.#.#.#.#.#.#.#',
+      '#.#.#_#_#_#.#.#',
+      '#..._1_5_3_...#',
+      '#.#.#_#_#_#.#.#',
+      '#..._4___2_...#',
+      '#.#.#_#_#_#.#.#',
       '#.............#',
       '#.#.#.#.#.#.#.#',
       '#.............#',
@@ -338,17 +330,18 @@ export const ARENAS: ArenaDef[] = [
   {
     id: 'n2', name: 'SEESAW LAND', jpName: 'SEESAW LAND', level: 'normal', gimmick: 'seesawLinked', theme: 'seesawland', density: 0.5,
     blurb: 'ALL THE SEESAWS ARE LINKED AND MOVE TOGETHER.',
+    // SeeSaw Park's four long seesaws, all tipping at once.
     map: [
       '###############',
       '#1_........._3#',
       '#_#.#.#.#.#.#_#',
-      '#..SS.....SS..#',
+      '#..S_S...S_S..#',
       '#.#.#.#.#.#.#.#',
-      '#......SS.....#',
+      '#.............#',
       '#.#.#.#5#.#.#.#',
-      '#.....SS......#',
+      '#.............#',
       '#.#.#.#.#.#.#.#',
-      '#..SS.....SS..#',
+      '#..S_S...S_S..#',
       '#_#.#.#.#.#.#_#',
       '#4_........._2#',
       '###############',
@@ -356,93 +349,79 @@ export const ARENAS: ArenaDef[] = [
   },
   {
     id: 'n3', name: 'HEAD IN THE CLOUDS', jpName: 'FUWAFUWA BON', level: 'normal', gimmick: 'clouds', theme: 'sky', density: 0.5,
-    blurb: 'TWO FLOORS: THE SKY ABOVE, THE CLOUDS BELOW. TRAMPOLINES TAKE YOU BETWEEN THEM.',
-    lowerFloor: [7, 11],
-    trampolinePairs: [
-      [[7, 1], [7, 9]],
-      [[4, 5], [4, 7]],
-      [[10, 5], [10, 7]],
-    ],
+    blurb: 'TWO FLOORS: A CLOUD IN THE MIDDLE, THE SKY ROUND IT. TRAMPOLINES BOUNCE YOU ACROSS.',
+    // A cloud bank between the middle pillars; eight trampolines, half on each floor.
+    cloud: [[4, 4, 10, 8]],
     map: [
       '###############',
-      '#1_....T...._3#',
+      '#1_......T.._3#',
       '#_#.#.#.#.#.#_#',
-      '#......5......#',
+      '#......T......#',
       '#.#.#.#.#.#.#.#',
-      '#...T.....T...#',
-      '###############',
-      '#...T.....T...#',
+      '#....T.....T..#',
+      '#.#.#.#5#.#.#.#',
+      '#..T.....T....#',
       '#.#.#.#.#.#.#.#',
       '#......T......#',
       '#_#.#.#.#.#.#_#',
-      '#4_........._2#',
+      '#4_..T......_2#',
       '###############',
     ],
   },
   {
     id: 'n4', name: 'SWITCHEROO', jpName: 'KARAKURI TROCCO', level: 'normal', gimmick: 'switcheroo', theme: 'yard', density: 0.55,
     blurb: 'THE RAILS ARE RELAID AT RANDOM. WATCH WHERE THE TROLLEY GOES!',
-    spawns: [[1, 1], [13, 11], [13, 1], [1, 11], [9, 5]],
-    stations: [[3, 6], [11, 6]],
-    trolley: { x: 3, y: 3, dir: 'right' },
+    // Every layout runs over the wooden junction at (7, 9), where the trolley stops.
+    spawns: [[1, 1], [13, 11], [13, 1], [1, 11], [7, 5]],
+    stations: [[7, 9]],
+    trolley: { x: 9, y: 4, dir: 'up' },
     railLayouts: SWITCHEROO_RAILS.slice(0, 3),
     altRailLayouts: SWITCHEROO_RAILS.slice(3),
     altPattern: 4, // the rails leave little room: a denser pattern
-    map: reserveRails(
-      [
-        '###############',
-        '#1_........._3#',
-        '#_#.#.#.#.#.#_#',
-        '#.............#',
-        '#.#.#.#.#.#.#.#',
-        '#........5....#',
-        '#.#.#.#.#.#.#.#',
-        '#.............#',
-        '#.#.#.#.#.#.#.#',
-        '#.............#',
-        '#_#.#.#.#.#.#_#',
-        '#4_........._2#',
-        '###############',
-      ],
-      SWITCHEROO_RAILS.slice(0, 3),
-    ),
+    map: STD_NO5,
   },
   {
     id: 'n5', name: 'BLOCK WORLD', jpName: 'BLOCK WORLD', level: 'normal', gimmick: 'blockworld', theme: 'toy', density: 0.55,
     blurb: 'SOME ARROWS SPIN, SENDING KICKED BOMBS EVERYWHERE.',
     items: { kick: 4 },
+    // Six fixed arrows (blocks may hide them) and two spinning ones.
     map: [
       '###############',
-      '#1_........._3#',
+      '#1_R.......D_3#',
       '#_#.#.#.#.#.#_#',
-      '#..R...D...D..#',
+      '#..@...L......#',
       '#.#.#.#.#.#.#.#',
-      '#..@.......@..#',
+      '#.............#',
       '#.#.#.#5#.#.#.#',
-      '#..@.......@..#',
+      '#.............#',
       '#.#.#.#.#.#.#.#',
-      '#..U...U...L..#',
+      '#......R...@..#',
       '#_#.#.#.#.#.#_#',
-      '#4_........._2#',
+      '#4_U.......L_2#',
       '###############',
     ],
   },
   {
     id: 'n6', name: 'EVERY WHICH WAY', jpName: 'KARAKURI DOKAN', level: 'normal', gimmick: 'portals', theme: 'frost', density: 0.55,
-    blurb: 'A BLAST ENTERING ONE PIPE COMES OUT OF ITS PARTNER.',
-    portalPairs: [[[7, 2], [7, 10]], [[1, 6], [13, 6]]],
+    blurb: 'A BLAST INTO A PIPE\'S MOUTH COMES OUT OF ITS PARTNER.',
+    // Eight pipes between pillars, each opening one way.
+    portalPairs: [[[5, 4], [2, 5]], [[9, 8], [12, 7]], [[9, 2], [10, 5]], [[5, 10], [4, 7]]],
+    faces: {
+      '9,2': 'down', '5,4': 'up', '2,5': 'right', '10,5': 'right',
+      '4,7': 'left', '12,7': 'left', '9,8': 'down', '5,10': 'up',
+    },
     map: [
       '###############',
       '#1_........._3#',
-      '#_#.#.#p#.#.#_#',
+      '#_#.#.#.#p#.#_#',
       '#.............#',
-      '#.#.#.#.#.#.#.#',
+      '#.#.#p#.#.#.#.#',
+      '#.p.......p...#',
+      '#.#.#.#5#.#.#.#',
+      '#...p.......p.#',
+      '#.#.#.#.#p#.#.#',
       '#.............#',
-      '#p#.#.#5#.#.#p#',
-      '#.............#',
-      '#.#.#.#.#.#.#.#',
-      '#.............#',
-      '#_#.#.#p#.#.#_#',
+      '#_#.#p#.#.#.#_#',
       '#4_........._2#',
       '###############',
     ],
@@ -450,17 +429,18 @@ export const ARENAS: ArenaDef[] = [
   {
     id: 'n7', name: 'COMING AND GOING', jpName: 'SWITCH BELCON', level: 'normal', gimmick: 'switchbelt', theme: 'pinkplant', density: 0.5,
     blurb: 'HIT THE BLUE SWITCH TO REVERSE THE BELTS.',
+    // Two belt rings either side of a clear middle lane, the switch at its top.
     map: [
       '###############',
       '#1_........._3#',
-      '#_#.#.#.#.#.#_#',
-      '#.>>>>>>>>>>>.#',
-      '#.#.#.#.#.#.#.#',
-      '#......s......#',
-      '#.#.#.#5#.#.#.#',
-      '#......s......#',
-      '#.#.#.#.#.#.#.#',
-      '#.<<<<<<<<<<<.#',
+      '#_#.#.#_#.#.#_#',
+      '#..>>v.s.>>v..#',
+      '#.#^#v#_#^#v#.#',
+      '#..^.v._.^.v..#',
+      '#.#^#v#5#^#v#.#',
+      '#..^.v._.^.v..#',
+      '#.#^#v#_#^#v#.#',
+      '#..^<<._.^<<..#',
       '#_#.#.#.#.#.#_#',
       '#4_........._2#',
       '###############',
@@ -468,19 +448,20 @@ export const ARENAS: ArenaDef[] = [
   },
   {
     id: 'n8', name: 'WINTER WONDERLAND', jpName: 'TSURUTSURU BON', level: 'normal', gimmick: 'winter', theme: 'snow', density: 0.5,
-    blurb: 'HIDE IN THE HUTS. THIN ICE BREAKS AFTER TWO CROSSINGS.',
+    blurb: 'HIDE IN THE SNOW HUTS. CRACKED ICE GIVES WAY UNDERFOOT OR IN A BLAST.',
+    // Three big snow huts stand where pillars would; cracked ice inward of each corner.
     map: [
       '###############',
       '#1_........._3#',
-      '#_#.#.#.#.#.#_#',
-      '#..H..i.i..H..#',
-      '#.#.#.#.#.#.#.#',
-      '#....i...i....#',
-      '#.#.#H#5#H#.#.#',
-      '#....i...i....#',
-      '#.#.#.#.#.#.#.#',
-      '#..H..i.i..H..#',
-      '#_#.#.#.#.#.#_#',
+      '#_#.HHH.#.#.#_#',
+      '#..iHHH....i..#',
+      '#.#.HHH.#.HHH.#',
+      '#.........HHH.#',
+      '#.#.#.#5#.HHH.#',
+      '#.............#',
+      '#.#.#.HHH.#.#.#',
+      '#..i..HHH..i..#',
+      '#_#.#.HHH.#.#_#',
       '#4_........._2#',
       '###############',
     ],
@@ -534,7 +515,7 @@ export const ARENAS: ArenaDef[] = [
     blurb: 'PUSH A FLOWER TO TURN IT. A BLAST INTO ITS MOUTH BURSTS OUT OF ITS PARTNER.',
     // Four bushes stand in for pillars, each with a pair of flowers either side of it.
     portalPairs: [[[3, 4], [5, 4]], [[10, 3], [10, 5]], [[4, 7], [4, 9]], [[9, 8], [11, 8]]],
-    flowerFaces: {
+    faces: {
       '3,4': 'up', '5,4': 'down', '10,3': 'right', '10,5': 'left',
       '4,7': 'right', '4,9': 'left', '9,8': 'up', '11,8': 'down',
     },

@@ -167,16 +167,34 @@ export class BattleRenderer {
     };
   }
 
-  /** Two-floor stages: the lower rows are cloud tops. */
+  /** Head in the Clouds: the cloud floor, with a soft shadow where it drops to the sky. */
   private drawLowerFloor(g: Gfx, v: View): void {
     const w = this.w;
-    const rows = w.arena.lowerFloor;
-    if (!rows) return;
+    if (!w.arena.cloud) return;
     const clouds = gimmickSprites().cloud;
-    for (let ty = rows[0]; ty <= rows[1]; ty++) {
+    const gim = w.gim;
+    for (let ty = 1; ty < w.grid.h - 1; ty++) {
       for (let tx = 1; tx < w.grid.w - 1; tx++) {
-        if (w.grid.get(tx, ty) !== Cell.Floor) continue;
-        g.image(clouds[(tx * 3 + ty * 5) % clouds.length], v.ox + tx * TILE, v.oy + ty * TILE);
+        const x = v.ox + tx * TILE;
+        const y = v.oy + ty * TILE;
+        if (gim.floorOf(tx, ty) === 1) {
+          // The cloud bank under everything on it, rimmed in white where it drops away.
+          const c = w.grid.get(tx, ty);
+          if (c === Cell.Void) continue;
+          g.image(clouds[(tx * 3 + ty * 5) % clouds.length], x, y);
+          if (gim.floorOf(tx, ty - 1) === 0) g.rect(x, y, TILE, 2, '#ffffff');
+          if (gim.floorOf(tx - 1, ty) === 0) g.rect(x, y, 2, TILE, '#ffffff');
+          if (gim.floorOf(tx + 1, ty) === 0) g.rect(x + TILE - 1, y, 1, TILE, '#90b0d8');
+          if (gim.floorOf(tx, ty + 1) === 0) g.rect(x, y + TILE - 2, TILE, 2, '#90b0d8');
+          if (c === Cell.Hard) g.image(tileSet(w.arena.theme).hard, x, y);
+          else if (c === Cell.Soft) this.field.drawSoft(g, w, tx, ty, x, y);
+          continue;
+        }
+        // Sky just below or right of the cloud bank lies in its shadow.
+        g.ctx.globalAlpha = 0.28;
+        if (gim.floorOf(tx, ty - 1) === 1) g.rect(x, y, TILE, 5, '#0c2060');
+        if (gim.floorOf(tx - 1, ty) === 1) g.rect(x, y, 4, TILE, '#0c2060');
+        g.ctx.globalAlpha = 1;
       }
     }
   }
@@ -265,10 +283,12 @@ export class BattleRenderer {
           g.image(horiz ? gs.bridgeH : gs.bridgeV, x, y);
           break;
         }
-        case 'portal':
+        case 'portal': {
           this.floor(g, tx, ty, x, y);
-          g.image(pipeSprites(THEMES[w.arena.theme]?.pipe).mouth, x, y);
+          const pipes = pipeSprites(THEMES[w.arena.theme]?.pipe);
+          g.image(f.face ? pipes.faced[f.face] : pipes.mouth, x, y);
           break;
+        }
         case 'flower':
           this.floor(g, tx, ty, x, y);
           g.image(gs.flower[f.face][f.turn > 0 ? 1 : 0], x, y);
@@ -307,16 +327,24 @@ export class BattleRenderer {
       const f = gim.at(tx, ty);
       return !!f && f.kind === 'cover' && f.style === style;
     };
-    // Leafy tiles in a plus round a centre are one tree: a single canopy covers them.
+    // Leafy tiles in a plus round a centre are one tree: a single canopy covers them. A
+    // 3×3 block of hut tiles is one big igloo.
     const canopied = new Set<number>();
     const trees: [number, number][] = [];
+    const huts: [number, number][] = [];
     for (let i = 0; i < gim.features.length; i++) {
       const tx = i % w.grid.w;
       const ty = Math.floor(i / w.grid.w);
-      if (!same(tx, ty, 'foliage') || !ALL.every((d) => same(tx + DX[d], ty + DY[d], 'foliage'))) continue;
-      trees.push([tx, ty]);
-      canopied.add(i);
-      for (const d of ALL) canopied.add(gim.idx(tx + DX[d], ty + DY[d]));
+      if (same(tx, ty, 'foliage') && ALL.every((d) => same(tx + DX[d], ty + DY[d], 'foliage'))) {
+        trees.push([tx, ty]);
+        canopied.add(i);
+        for (const d of ALL) canopied.add(gim.idx(tx + DX[d], ty + DY[d]));
+      }
+      const block = [-1, 0, 1].flatMap((dy) => [-1, 0, 1].map((dx) => [tx + dx, ty + dy] as const));
+      if (block.every(([x, y]) => same(x, y, 'hut'))) {
+        huts.push([tx, ty]);
+        for (const [x, y] of block) canopied.add(gim.idx(x, y));
+      }
     }
     for (let i = 0; i < gim.features.length; i++) {
       const f = gim.features[i];
@@ -333,12 +361,19 @@ export class BattleRenderer {
         else if (links.length === 1) img = pipes.end[OPP[links[0]]];
         else if (links.includes('left') || links.includes('right')) img = pipes.h;
         g.image(img, x, y);
+      } else if (canopied.has(i)) {
+        continue;
       } else if (f.style === 'hut') {
         // Roof blown off: the inside shows until it is rebuilt (blinking just before).
         if (!f.open || (f.open < 40 && Math.floor(f.open / 4) % 2 === 0)) g.image(gs.hut, x, y);
-      } else if (!canopied.has(i)) g.image(gs.foliage[(tx + ty) % 3], x, y);
+      } else g.image(gs.foliage[(tx + ty) % 3], x, y);
     }
     for (const [tx, ty] of trees) g.image(gs.canopy, v.ox + (tx - 1) * TILE - 2, v.oy + (ty - 1) * TILE - 8);
+    for (const [tx, ty] of huts) {
+      const f = gim.at(tx, ty);
+      const open = !!f && f.kind === 'cover' && !!f.open && (f.open >= 40 || Math.floor(f.open / 4) % 2 === 1);
+      g.image(gs.igloo[open ? 1 : 0], v.ox + (tx - 1) * TILE - 2, v.oy + (ty - 1) * TILE - 8);
+    }
   }
 
   /** Robo Bomber's giant, high above everything on its four legs. */

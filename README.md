@@ -96,7 +96,8 @@ letters directly.
   battle passwords open them level by level: `56565656`, `16161616` and `49894989`,
   typed on the password screen.
   Gimmicks include see-saws, trolleys and switches, arrows, pipes, conveyor belts,
-  warps, a two-floor sky stage and snow huts. The Advanced stages add a four-legged
+  warps, a two-floor stage split between a cloud and the sky, pipes that pass blasts on,
+  and big snow huts. The Advanced stages add a four-legged
   giant robot, turning flowers, jungle tunnels, L-shaped pipes, belts that run through
   the walls, the Super Power arena and the Seven Seas.
 - **Items:**
@@ -143,10 +144,9 @@ letters directly.
 - Timings follow the originals: 60 Hz fixed step, a 159-frame fuse, and player and
   monster speeds in px/frame. The stage tables (rosters, items, bonus stages and panel
   stages) follow the NES and PS1 data. `docs/SPEC.md` lists the sources and values.
-- The Beginner and Advanced battle stages were read tile by tile from the stage
-  screenshots in the Japanese manual. The other stages were rebuilt from manuals and
-  descriptions. The alternate layouts use fixed block patterns because the originals'
-  placements aren't documented.
+- All 24 battle stages were read tile by tile from the stage screenshots in the Japanese
+  manual, checked against the stages' background art. The alternate layouts use fixed
+  block patterns because the originals' placements aren't documented.
 - All music, Show Time skits, dialogue and artwork are new, written for this remake.
 
 ## Development

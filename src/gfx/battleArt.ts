@@ -27,7 +27,7 @@ export const BATTLE_THEMES: Record<string, Theme> = {
   // Warp Desert: sand, pyramids, skulls.
   desert: { name: 'desert', backdrop: '#201408', floor: '#f0d060', floorAlt: '#e0c050', floorStyle: 'sand', hard: '#b87838', hardStyle: 'pyramid', wall: '#a06a40', wallStyle: 'stone', soft: '#f4f0e0', softStyle: 'skull', hud: ['#a06a40', '#502c10'], shadow: 0.3 },
   // Head in the Clouds: sky floor, cloud puffs, orange lanterns.
-  sky: { name: 'sky', backdrop: '#3060c0', floor: '#e8f0ff', floorAlt: '#d0e0ff', floorStyle: 'plain', hard: '#f8fbff', hardStyle: 'boulder', wall: '#5080e0', wallStyle: 'bevel', soft: '#f08830', softAlt: '#ffd070', softStyle: 'buoy', hud: ['#4070d0', '#183070'], shadow: 0.18 },
+  sky: { name: 'sky', backdrop: '#3060c0', floor: '#2c6ad8', floorAlt: '#5a92ec', floorStyle: 'sky', hard: '#f8fbff', hardStyle: 'boulder', wall: '#5080e0', wallStyle: 'bevel', soft: '#f08830', softAlt: '#ffd070', softStyle: 'buoy', hud: ['#4070d0', '#183070'], shadow: 0.18 },
   // Block World: a harlequin floor with toy blocks.
   toy: { name: 'toy', backdrop: '#200820', floor: '#f0c030', floorAlt: '#8040c0', floorStyle: 'harlequin', hard: '#e05050', hardAlt: '#40a050', hardStyle: 'checker', wall: '#8040a0', wallStyle: 'bevel', soft: '#e04040', softAlt: '#40b050', softStyle: 'toy', hud: ['#8040a0', '#401850'], shadow: 0.3 },
   snow: { name: 'snow', backdrop: '#101828', floor: '#e8f0f8', floorAlt: '#d0e0f0', floorStyle: 'plain', hard: '#7aa8d8', hardStyle: 'crystal', wall: '#6890b8', wallStyle: 'stone', soft: '#ffffff', softStyle: 'snow', hud: ['#5078a8', '#203858'], shadow: 0.2 },
@@ -309,6 +309,39 @@ export interface PipeSprites {
   /** A pipe's open end, by the side it opens to. */
   end: Record<Dir, Sprite>;
   mouth: Sprite;
+  /** Pipe mouths turned to a side. */
+  faced: Record<Dir, Sprite>;
+}
+
+/**
+ * Every Which Way's pipe mouth: a stub of pipe out of the floor, its opening turned to
+ * `face` (blasts only get in from that side).
+ */
+export function mouthTile(pipe: string, face: Dir): Sprite {
+  const p = new PixelCanvas(16, 16);
+  const [outline, dark, light] = [mix(pipe, '#000000', 0.62), mix(pipe, '#000000', 0.3), mix(pipe, '#ffffff', 0.45)];
+  // Drawn opening upward in (u, v), then turned to face.
+  const at = (u: number, v: number): string | null => {
+    const e = ((u - 7.5) / 6.8) ** 2 + ((v - 4.5) / 3.8) ** 2;
+    const hole = ((u - 7.5) / 4.4) ** 2 + ((v - 4.5) / 1.9) ** 2;
+    if (hole <= 1) return '#100c08';
+    if (e <= 0.62) return light;
+    if (e <= 1) return outline;
+    if (v < 4.5 || u < 1 || u > 14) return null;
+    if (u < 2 || u > 13 || v > 14) return outline;
+    if (u < 4) return light;
+    if (u > 10) return dark;
+    return v > 12 ? dark : pipe;
+  };
+  for (let v = 0; v < 16; v++) {
+    for (let u = 0; u < 16; u++) {
+      const c = at(u, v);
+      if (!c) continue;
+      const [x, y] = face === 'up' ? [u, v] : face === 'down' ? [15 - u, 15 - v] : face === 'left' ? [v, 15 - u] : [15 - v, u];
+      p.px(x, y, c);
+    }
+  }
+  return p.canvas;
 }
 
 const pipeCache = new Map<string, PipeSprites>();
@@ -328,6 +361,7 @@ export function pipeSprites(color = '#30a040'): PipeSprites {
         right: pipeTile(['left', 'right'], 'right', color),
       },
       mouth: portalTile(color),
+      faced: { up: mouthTile(color, 'up'), down: mouthTile(color, 'down'), left: mouthTile(color, 'left'), right: mouthTile(color, 'right') },
     };
     pipeCache.set(color, set);
   }
@@ -596,6 +630,49 @@ export function propSprite(style: 'palm' | 'bush' | 'trunk' | 'gold', hard: Spri
       p.ctx.drawImage(hard, 0, 8);
       break;
   }
+  return p.canvas;
+}
+
+/**
+ * Winter Wonderland's big snow hut (52×56), drawn over a 3×3 block of tiles from 2 px left
+ * and 8 px above it: a dome of snow bricks with its doorway on the west side. `open`: the
+ * roof has been blown off and only the low wall is left.
+ */
+export function iglooSprite(open: boolean): Sprite {
+  const p = new PixelCanvas(52, 56);
+  const [outline, snow, shade, line] = ['#203858', '#f4faff', '#b8d4ec', '#9cc0e0'];
+  if (open) {
+    // The ring of wall left standing; inside, whoever hid there is in plain view.
+    p.ellipse(26, 34, 25, 21, outline);
+    p.ellipse(26, 34, 24, 20, snow);
+    p.ellipse(26, 35, 20, 16, outline);
+    for (let y = -15; y <= 15; y++) {
+      const half = Math.round(19 * Math.sqrt(Math.max(0, 1 - (y * y) / (15 * 15))));
+      p.ctx.clearRect(26 - half, 35 + y, half * 2, 1);
+    }
+    for (let a = 0; a < 16; a++) {
+      const t = (a / 16) * Math.PI * 2;
+      p.px(26 + Math.cos(t) * 22, 34 + Math.sin(t) * 18, line);
+    }
+  } else {
+    p.ellipse(26, 36, 26, 19, 'rgba(0,0,0,0.25)');
+    p.ellipse(26, 30, 25, 25, outline);
+    p.ellipse(26, 30, 24, 24, snow);
+    p.ellipse(30, 36, 18, 16, shade);
+    p.ellipse(24, 26, 19, 19, snow);
+    // Rows of snow bricks.
+    for (let y = 12; y < 52; y += 6) {
+      const half = Math.sqrt(Math.max(0, 24 * 24 - (y - 30) * (y - 30)));
+      p.rect(26 - half + 2, y, half * 2 - 4, 1, line);
+      for (let x = 26 - half + 6 + ((y / 6) % 2) * 4; x < 26 + half - 4; x += 8) p.rect(x, y - 5, 1, 5, line);
+    }
+    p.ellipse(18, 16, 6, 4, '#ffffff');
+  }
+  // The doorway, on the west side of the middle row.
+  p.ellipse(6, 30, 7, 7, outline);
+  p.ellipse(6, 30, 6, 6, snow);
+  p.ellipse(5, 31, 4, 5, '#0c1c30');
+  p.rect(1, 30, 8, 6, '#0c1c30');
   return p.canvas;
 }
 

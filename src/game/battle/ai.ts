@@ -8,8 +8,6 @@ import type { ComLevel } from './config';
 const INF = Number.POSITIVE_INFINITY;
 /** Spare fuse (ticks) required before walking over a bomb with Bomb Pass. */
 const BOMB_CROSS_MARGIN = 60;
-/** Time in the air on a trampoline bounce. */
-const TRAMPOLINE_TICKS = 70;
 
 interface Node {
   x: number;
@@ -53,6 +51,8 @@ export class CpuPlayer {
   private cartTarget = 0;
   /** Tiles where a bomb could not be placed safely → tick until which to avoid them. */
   private tabu = new Map<number, number>();
+  /** Two-floor stages: nobody left to fight on our floor, so a trampoline is worth taking. */
+  private seekFloor = false;
 
   constructor(
     private readonly w: BattleWorld,
@@ -224,7 +224,7 @@ export class CpuPlayer {
   private avoid(x: number, y: number): boolean {
     const f = this.w.gim.at(x, y);
     if (!f) return false;
-    return f.kind === 'warp' || (f.kind === 'trampoline' && !f.to) || (f.kind === 'seesaw' && f.end !== 2) || (f.kind === 'sign' && f.speed === 0);
+    return f.kind === 'warp' || (f.kind === 'trampoline' && !this.seekFloor) || (f.kind === 'seesaw' && f.end !== 2) || (f.kind === 'sign' && f.speed === 0);
   }
 
   /** Ticks to walk one tile in direction d, counting conveyor belts under both tiles. */
@@ -286,18 +286,8 @@ export class CpuPlayer {
           if (w.bombAt[i] && dt <= t + tt + BOMB_CROSS_MARGIN) continue;
           const node: Node = { x: nx, y: ny, t, first: n.first ?? d, prev: this.idx(n.x, n.y) };
           nodes.set(i, node);
-          // A paired trampoline carries us to the other floor.
-          const f = w.gim.at(nx, ny);
-          if (f && f.kind === 'trampoline' && f.to) {
-            const j = this.idx(f.to[0], f.to[1]);
-            const tj = t + TRAMPOLINE_TICKS;
-            if (!nodes.has(j) && this.walkable(f.to[0], f.to[1]) && !(danger[j] < INF && danger[j] <= tj + tt && danger[j] + w.rules.flameTicks + tt >= tj)) {
-              const dest: Node = { x: f.to[0], y: f.to[1], t: tj, first: node.first, prev: i };
-              nodes.set(j, dest);
-              next.push(dest);
-            }
-            continue;
-          }
+          // A trampoline throws us somewhere unknown: plan no further than it.
+          if (w.gim.at(nx, ny)?.kind === 'trampoline') continue;
           next.push(node);
         }
       }
@@ -323,6 +313,8 @@ export class CpuPlayer {
     const me = this.me;
     const rng = w.rng;
     this.path = [];
+    const floor = w.gim.floorOf(me.tx, me.ty);
+    this.seekFloor = !!w.arena.cloud && !w.alive().some((b) => b !== me && b.team !== me.team && w.gim.floorOf(b.tx, b.ty) === floor);
     const nodes = this.search(this.danger);
     const hereIdx = this.idx(me.tx, me.ty);
     const inDanger = this.danger[hereIdx] < INF;
@@ -391,7 +383,8 @@ export class CpuPlayer {
         if (dist <= this.diff.attackRange) score += (this.pers.aggression * 3) / (1 + dist);
       }
       const f = w.gim.at(n.x, n.y);
-      if (f && (f.kind === 'trampoline' || f.kind === 'warp' || f.kind === 'seesaw')) score -= 1.5;
+      if (f && f.kind === 'trampoline' && this.seekFloor) score += 6;
+      else if (f && (f.kind === 'trampoline' || f.kind === 'warp' || f.kind === 'seesaw')) score -= 1.5;
       if (f && f.kind === 'rail') score -= 1;
       if (f && f.kind === 'conveyor') score -= 1.5;
       if (f && f.kind === 'ice' && f.cracks > 0) score -= 2;

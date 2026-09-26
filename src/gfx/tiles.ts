@@ -9,7 +9,7 @@ export interface Theme {
   backdrop: string;
   floor: string;
   floorAlt: string;
-  floorStyle: 'grass' | 'checker' | 'plain' | 'tiles' | 'carpet' | 'sand' | 'ice' | 'metal' | 'nes' | 'wood' | 'water' | 'stars' | 'dots' | 'harlequin';
+  floorStyle: 'grass' | 'checker' | 'plain' | 'tiles' | 'carpet' | 'sand' | 'ice' | 'metal' | 'nes' | 'wood' | 'water' | 'stars' | 'dots' | 'harlequin' | 'sky';
   hard: string;
   hardAlt?: string;
   hardStyle: 'bevel' | 'metal' | 'gem' | 'checker' | 'goldArrow' | 'candy' | 'nes' | 'stone' | 'crystal' | 'pillar' | 'boulder' | 'orb' | 'capsule' | 'drum' | 'pyramid' | 'roof' | 'hedgeBlock';
@@ -190,6 +190,14 @@ function floorTile(t: Theme, shadow: boolean): HTMLCanvasElement {
       p.rect(10, 4, 4, 1, mix(t.floor, '#ffffff', 0.6));
       p.rect(0, 15, 16, 1, t.floorAlt);
       p.rect(15, 0, 1, 16, t.floorAlt);
+      break;
+    case 'sky':
+      // Open sky far below: thin streaks of haze drifting across the blue.
+      for (let i = 0; i < 3; i++) {
+        const y = 2 + Math.floor(hash(i, 41) * 12);
+        const x = Math.floor(hash(i, 42) * 10);
+        p.rect(x, y, 4 + Math.floor(hash(i, 43) * 5), 1, t.floorAlt);
+      }
       break;
     case 'water':
       for (let y = 2; y < 16; y += 5) {

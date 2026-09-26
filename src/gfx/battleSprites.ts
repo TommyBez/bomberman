@@ -14,6 +14,7 @@ import {
   fishSprite,
   holeTile,
   iceTile,
+  iglooSprite,
   cloudTile,
   partnerSprite,
   pressureBlock,
@@ -80,6 +81,8 @@ export interface GimmickSprites {
   bridgeV: Sprite;
   flower: Record<Dir, Sprite[]>; // [still, turning]
   hut: Sprite;
+  /** 3×3 snow huts: roofed, and with the roof blown off. */
+  igloo: Sprite[];
   foliage: Sprite[];
   canopy: Sprite;
   trolley: Record<Dir, Sprite[]>;
@@ -128,6 +131,7 @@ export function gimmickSprites(): GimmickSprites {
     bridgeV: bridgeTile(false),
     flower: rec((d) => [flowerTile(d, false), flowerTile(d, true)]),
     hut: coverSprite('hut', 0),
+    igloo: [iglooSprite(false), iglooSprite(true)],
     foliage: [0, 1, 2].map((v) => coverSprite('foliage', v)),
     canopy: canopySprite(),
     trolley: rec((d) => [0, 1].map((f) => trolleySprite(d, f))),
