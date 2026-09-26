@@ -15,7 +15,7 @@ export interface Theme {
   hardStyle: 'bevel' | 'metal' | 'gem' | 'checker' | 'goldArrow' | 'candy' | 'nes' | 'stone' | 'crystal' | 'pillar' | 'boulder' | 'orb' | 'capsule' | 'drum' | 'pyramid' | 'roof' | 'hedgeBlock';
   wall: string;
   wallAlt?: string;
-  wallStyle: 'bevel' | 'metal' | 'balloon' | 'candy' | 'stone' | 'brick' | 'nes' | 'hedge';
+  wallStyle: 'bevel' | 'metal' | 'balloon' | 'candy' | 'stone' | 'brick' | 'nes' | 'hedge' | 'panel';
   soft: string;
   softAlt?: string;
   softStyle: 'brick' | 'crate' | 'toy' | 'rock' | 'bush' | 'ice' | 'nes' | 'barrel' | 'snow' | 'gear' | 'mushroom' | 'leaf' | 'star' | 'buoy' | 'ball' | 'skull' | 'hazard';
@@ -69,8 +69,8 @@ export const THEMES: Record<string, Theme> = {
     name: 'm5', backdrop: '#180c18',
     floor: '#4a78e0', floorAlt: '#3c66cc', floorStyle: 'checker',
     hard: '#f278b8', hardStyle: 'candy',
-    wall: '#ffffff', wallAlt: '#f04890', wallStyle: 'candy',
-    soft: '#f8e0f0', softAlt: '#e070b0', softStyle: 'crate',
+    wall: '#f070b0', wallStyle: 'panel',
+    soft: '#f4c438', softAlt: '#d09018', softStyle: 'crate',
     hud: ['#c03880', '#681848'], shadow: 0.3,
   },
   // Retro: the 1985 look.
@@ -443,6 +443,16 @@ function wallTile(t: Theme, variant: number): HTMLCanvasElement {
         p.px(x + 1, y + 1, light);
       }
       break;
+    case 'panel': {
+      // Bright riveted panels in a few colours.
+      const c = ['#f070b0', '#f8c830', '#e84848', '#f09838'][variant % 4];
+      bevel(p, c);
+      for (const [x, y] of [[3, 3], [11, 3], [3, 11], [11, 11]]) {
+        p.px(x, y, mix(c, '#000000', 0.45));
+        p.px(x + 1, y + 1, mix(c, '#ffffff', 0.6));
+      }
+      break;
+    }
     case 'balloon': {
       p.rect(0, 0, 16, 16, base);
       const cols = ['#ff5070', '#ffd040', '#50c0ff', '#70e070'];
