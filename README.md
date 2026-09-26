@@ -130,7 +130,7 @@ letters directly.
 npm run typecheck    # tsc --noEmit
 npm test             # Vitest unit tests (simulation, stages, battle rules, AI, audio)
 npm run build        # typecheck + production build
-npm run test:e2e     # Playwright smoke tests against the production build
+npm run test:e2e     # Playwright smoke tests against the production build (build first)
 ```
 
 The simulation (`src/game`) is deterministic and never touches the DOM or audio. Scenes
