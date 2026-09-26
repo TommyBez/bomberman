@@ -356,9 +356,8 @@ export class BattleWorld extends World {
     }
   }
 
-  protected override onExplode(bomb: Bomb, blast: Blast): void {
+  protected override onExplode(bomb: Bomb, _blast: Blast): void {
     this.gim.onBlastAt(bomb.tx, bomb.ty);
-    void blast;
     // A cart bomb is done: the cart may throw again.
     for (const c of this.carts) if (c.bomb === bomb) c.bomb = null;
   }

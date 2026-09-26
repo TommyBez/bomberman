@@ -373,7 +373,7 @@ export class CpuPlayer {
         continue;
       }
       if (me.tx === wx && me.ty === wy) return this.toCenter();
-      return [stepDir(me.tx, me.ty, wx, wy, this.w.grid.w, this.w.grid.h)];
+      return [stepDir(me.tx, me.ty, wx, wy)];
     }
     return this.toCenter();
   }
@@ -522,13 +522,12 @@ export class CpuPlayer {
   }
 }
 
-function stepDir(ax: number, ay: number, bx: number, by: number, w: number, h: number): Dir {
+/** Direction from one tile to a neighbouring one (a jump of more than one tile wrapped around the arena). */
+function stepDir(ax: number, ay: number, bx: number, by: number): Dir {
   let dx = bx - ax;
   let dy = by - ay;
-  if (Math.abs(dx) > 1) dx = -Math.sign(dx); // wrapped
+  if (Math.abs(dx) > 1) dx = -Math.sign(dx);
   if (Math.abs(dy) > 1) dy = -Math.sign(dy);
-  void w;
-  void h;
   if (dx > 0) return 'right';
   if (dx < 0) return 'left';
   if (dy > 0) return 'down';

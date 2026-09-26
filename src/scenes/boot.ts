@@ -14,7 +14,11 @@ import { buildTiles, THEMES } from '../gfx/tiles';
 import { drawEnemy, ENEMY_ANIM_FRAMES } from '../gfx/enemyArt';
 import { ENEMY_ORDER } from '../game/campaign/enemies';
 
-/** Temporary scene used while the rest of the game is assembled (sprite preview). */
+/**
+ * First scene: routes to the title screen, or to a debug shortcut from the URL hash
+ * (#play=N, #play=Nr, #battle=<stage>, #demo=<stage>, and the #sprites / #arena /
+ * #enemies art previews).
+ */
 export class BootScene implements Scene {
   private bombs = [0, 1, 2].map((i) => drawBomb(i));
   private flames: HTMLCanvasElement[][] = [];
