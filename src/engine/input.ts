@@ -141,6 +141,7 @@ export class Input {
   textEntry = false;
   /** Gamepad vibration (Option → Controller). */
   vibration = true;
+  private focusLost = false;
 
   attach(win: Window): void {
     win.addEventListener('keydown', (e) => {
@@ -153,7 +154,10 @@ export class Input {
     win.addEventListener('keyup', (e) => {
       this.keys.delete(e.code);
     });
-    win.addEventListener('blur', () => this.keys.clear());
+    win.addEventListener('blur', () => {
+      this.keys.clear();
+      this.focusLost = true;
+    });
     win.addEventListener('pointerdown', () => this.gesture());
     win.addEventListener('gamepadconnected', () => this.gesture());
   }
@@ -265,6 +269,13 @@ export class Input {
     for (const c of this.players) c.update(this);
     this.tapped.clear();
     this.touchTapped.clear();
+  }
+
+  /** True once after the window lost focus (games pause themselves). */
+  takeFocusLoss(): boolean {
+    const lost = this.focusLost;
+    this.focusLost = false;
+    return lost;
   }
 
   /** START/ESC pressed on any device this tick (battle pause). */

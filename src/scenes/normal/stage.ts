@@ -52,6 +52,7 @@ export class StageScene implements Scene {
 
   enter(): void {
     this.app.input.players[0].devices = [...ALL_DEVICES];
+    this.app.input.takeFocusLoss();
     this.phase = 'card';
     this.timer = 0;
     this.app.audio.music(this.retro ? 'stageStartRetro' : 'stageStart', { restart: true });
@@ -87,7 +88,8 @@ export class StageScene implements Scene {
       this.updatePause();
       return;
     }
-    if (this.phase === 'play' && pad.pressed('start')) {
+    const focusLost = this.app.input.takeFocusLoss();
+    if (this.phase === 'play' && (pad.pressed('start') || focusLost)) {
       this.paused = true;
       this.pauseSel = 0;
       this.app.audio.sfx('pause');

@@ -65,6 +65,7 @@ export class BattleRoundScene implements Scene {
   enter(): void {
     this.app.audio.music('battle', { restart: true });
     for (const c of this.app.input.players) c.swallow();
+    this.app.input.takeFocusLoss();
   }
 
   update(): void {
@@ -87,7 +88,8 @@ export class BattleRoundScene implements Scene {
       this.updatePause();
       return;
     }
-    if (this.phase === 'play' && !this.match.demo && input.systemPausePressed()) {
+    const focusLost = input.takeFocusLoss() && this.cpus.size < this.world.bombers.length;
+    if (this.phase === 'play' && !this.match.demo && (input.systemPausePressed() || focusLost)) {
       this.paused = true;
       this.pauseSel = 0;
       this.app.audio.sfx('pause');
