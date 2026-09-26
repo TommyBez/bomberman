@@ -149,7 +149,7 @@ class ResultsScene implements Scene {
       this.renderReport(g);
       return;
     }
-    drawMenuBackdrop(g, this.app.frame, '#301048', '#3a1858');
+    drawMenuBackdrop(g, this.app.frame);
     drawTitleBar(g, this.draw ? 'DRAW' : 'BATTLE RESULTS', this.app.frame);
     const cfg = this.match.cfg;
     g.text(`${cfg.rules.wins} POINT MATCH`, g.width / 2, 34, { align: 'center', color: '#ffe040', outline: '#000000' });
@@ -177,7 +177,7 @@ class ResultsScene implements Scene {
   }
 
   private renderReport(g: Gfx): void {
-    drawMenuBackdrop(g, this.app.frame, '#301048', '#3a1858');
+    drawMenuBackdrop(g, this.app.frame);
     drawTitleBar(g, 'BATTLE REPORT', this.app.frame);
     const cfg = this.match.cfg;
     const slots = cfg.players.map((p, i) => ({ p, i })).filter(({ p }) => p.type !== 'off');
@@ -302,7 +302,7 @@ class HyperBomberScene implements Scene {
   }
 
   render(g: Gfx): void {
-    drawMenuBackdrop(g, this.app.frame, '#403000', '#4a3808');
+    drawMenuBackdrop(g, this.app.frame);
     drawTitleBar(g, 'HYPER BOMBER', this.app.frame);
     const p = this.match.cfg.players[this.slot];
     const sp = characterSprites(p.character, this.slot, this.hit !== null);

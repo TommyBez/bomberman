@@ -62,7 +62,7 @@ export class MemoryCardScene implements Scene {
   }
 
   render(g: Gfx): void {
-    drawMenuBackdrop(g, this.app.frame, '#202020', '#2a2a2a');
+    drawMenuBackdrop(g, this.app.frame);
     drawTitleBar(g, this.mode === 'save' ? 'SAVE' : 'LOAD', this.app.frame);
     g.text('MEMORY CARD SLOT 1', g.width / 2, 36, { align: 'center', color: '#c0c0c0', outline: '#000000' });
     for (let i = 0; i < 3; i++) {

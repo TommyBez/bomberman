@@ -45,7 +45,7 @@ class MenuScene implements Scene {
   }
 
   render(g: Gfx): void {
-    drawMenuBackdrop(g, this.app.frame, '#0c3a2a', '#11473a');
+    drawMenuBackdrop(g, this.app.frame);
     drawTitleBar(g, this.title, this.app.frame);
     const o = this.opts;
     const lh = o.lineH ?? 18;
@@ -257,7 +257,7 @@ class PlayersScene implements Scene {
   }
 
   render(g: Gfx): void {
-    drawMenuBackdrop(g, this.app.frame, '#0c3a2a', '#11473a');
+    drawMenuBackdrop(g, this.app.frame);
     drawTitleBar(g, 'HOW MANY PLAYERS?', this.app.frame);
     drawPanel(g, 12, 34, 232, 150, '#28a068', '#0c4028');
     const players = this.setup.cfg.players;
@@ -348,7 +348,7 @@ class CharacterScene implements Scene {
   }
 
   render(g: Gfx): void {
-    drawMenuBackdrop(g, this.app.frame, '#0c3a2a', '#11473a');
+    drawMenuBackdrop(g, this.app.frame);
     drawTitleBar(g, 'SELECT CHARACTER', this.app.frame);
     const roster = charactersFor(this.setup.cfg.level);
     const sel = roster[this.cursor[this.player]];
@@ -408,7 +408,7 @@ class TeamScene implements Scene {
   }
 
   render(g: Gfx): void {
-    drawMenuBackdrop(g, this.app.frame, '#0c3a2a', '#11473a');
+    drawMenuBackdrop(g, this.app.frame);
     drawTitleBar(g, 'SELECT TEAM MEMBERS', this.app.frame);
     drawPanel(g, 12, 36, 232, 70, '#c04040', '#401010');
     drawPanel(g, 12, 112, 232, 70, '#4060d0', '#101850');
@@ -481,7 +481,7 @@ class StageSelectScene implements Scene {
   }
 
   render(g: Gfx): void {
-    drawMenuBackdrop(g, this.app.frame, '#0c3a2a', '#11473a');
+    drawMenuBackdrop(g, this.app.frame);
     drawTitleBar(g, 'SELECT STAGE', this.app.frame);
     const a = this.arena;
     const ox = 53 + this.slide;
@@ -530,7 +530,7 @@ class CustomScene implements Scene {
   }
 
   render(g: Gfx): void {
-    drawMenuBackdrop(g, this.app.frame, '#0c3a2a', '#11473a');
+    drawMenuBackdrop(g, this.app.frame);
     drawTitleBar(g, 'CUSTOM SETTING', this.app.frame);
     drawPanel(g, 48, 70, 160, 72, '#28a068', '#0c4028');
     this.menu.draw(g, 128, 84, { center: true, lineH: 18, width: 120 });
@@ -600,7 +600,7 @@ class ItemSetScene implements Scene {
   }
 
   render(g: Gfx): void {
-    drawMenuBackdrop(g, this.app.frame, '#0c3a2a', '#11473a');
+    drawMenuBackdrop(g, this.app.frame);
     drawTitleBar(g, 'SET ITEM', this.app.frame);
     drawPanel(g, 16, 30, 224, 156, '#28a068', '#0c4028');
     const items = this.setup.cfg.customItems!;
@@ -646,7 +646,7 @@ class HitPointScene implements Scene {
   }
 
   render(g: Gfx): void {
-    drawMenuBackdrop(g, this.app.frame, '#0c3a2a', '#11473a');
+    drawMenuBackdrop(g, this.app.frame);
     drawTitleBar(g, 'SET HIT POINTS', this.app.frame);
     drawPanel(g, 28, 48, 200, 130, '#28a068', '#0c4028');
     this.menu.draw(g, 44, 62, { lineH: 18, valueX: 170 });

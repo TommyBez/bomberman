@@ -7,15 +7,18 @@ import { unlockAlt } from '../../game/battle/unlocks';
 import { CLASSIC_CODES, decodePassword, PASSWORD_ALPHABET, PASSWORD_LENGTH } from '../../game/campaign/password';
 import { CampaignSession } from '../../game/campaign/session';
 import { STAGES } from '../../game/campaign/stages';
+import { PixelCanvas } from '../../gfx/pixel';
+import { sprites } from '../../gfx/sprites';
 import { drawMenuBackdrop, drawPanel, drawTitleBar } from '../../render/ui';
 import { startNormalGame } from './flow';
 
-const COLS = 8;
-const KEYS = [...PASSWORD_ALPHABET, '←', 'END'];
-
-/** Password entry: pick characters from a grid (or type them on a keyboard). */
+/**
+ * Password entry as on the original: eight characters that start as "00000000"; up and
+ * down turn the one under the hand, left and right move the hand. Typing on a keyboard
+ * works too.
+ */
 export class PasswordScene implements Scene {
-  private chars: string[] = [];
+  private chars: string[] = Array.from({ length: PASSWORD_LENGTH }, () => PASSWORD_ALPHABET[0]);
   private cursor = 0;
   private error = 0;
   private notice = '';
@@ -40,51 +43,49 @@ export class PasswordScene implements Scene {
   private onKey = (e: KeyboardEvent): void => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === 'Backspace') {
-      if (this.chars.pop()) this.app.audio.sfx('menuBack');
+      if (this.cursor > 0) this.cursor--;
+      this.app.audio.sfx('menuBack');
       return;
     }
     const k = e.key.toUpperCase();
-    if (k.length === 1 && PASSWORD_ALPHABET.includes(k) && this.chars.length < PASSWORD_LENGTH) {
-      this.chars.push(k);
+    if (k.length === 1 && PASSWORD_ALPHABET.includes(k)) {
+      this.chars[this.cursor] = k;
+      this.cursor = Math.min(PASSWORD_LENGTH - 1, this.cursor + 1);
       this.app.audio.sfx('select');
-      if (this.chars.length === PASSWORD_LENGTH) this.cursor = KEYS.length - 1;
     }
   };
+
+  private turn(step: 1 | -1): void {
+    const n = PASSWORD_ALPHABET.length;
+    const i = PASSWORD_ALPHABET.indexOf(this.chars[this.cursor]);
+    this.chars[this.cursor] = PASSWORD_ALPHABET[(i + step + n) % n];
+    this.app.audio.sfx('menuMove');
+  }
 
   update(): void {
     const pad = this.app.input.menu;
     if (this.error > 0) this.error--;
     if (this.noticeT > 0) this.noticeT--;
-    const rows = Math.ceil(KEYS.length / COLS);
-    const col = this.cursor % COLS;
-    const row = Math.floor(this.cursor / COLS);
-    const move = (c: number, r: number): void => {
-      let idx = ((r + rows) % rows) * COLS + ((c + COLS) % COLS);
-      if (idx >= KEYS.length) idx = KEYS.length - 1;
-      this.cursor = idx;
+    if (pad.repeat('up')) this.turn(1);
+    else if (pad.repeat('down')) this.turn(-1);
+    else if (pad.repeat('left')) {
+      this.cursor = (this.cursor + PASSWORD_LENGTH - 1) % PASSWORD_LENGTH;
       this.app.audio.sfx('menuMove');
-    };
-    if (pad.repeat('left')) move(col - 1, row);
-    else if (pad.repeat('right')) move(col + 1, row);
-    else if (pad.repeat('up')) move(col, row - 1);
-    else if (pad.repeat('down')) move(col, row + 1);
-    else if (pad.pressed('a')) {
-      const k = KEYS[this.cursor];
-      if (k === '←') this.chars.pop();
-      else if (k === 'END') this.submit();
-      else if (this.chars.length < PASSWORD_LENGTH) this.chars.push(k);
-      this.app.audio.sfx('select');
-      if (this.chars.length === PASSWORD_LENGTH && k !== 'END' && k !== '←') this.cursor = KEYS.length - 1;
+    } else if (pad.repeat('right')) {
+      this.cursor = (this.cursor + 1) % PASSWORD_LENGTH;
+      this.app.audio.sfx('menuMove');
+    } else if (pad.pressed('a')) {
+      // A moves on; on the last character it enters the password.
+      if (this.cursor < PASSWORD_LENGTH - 1) {
+        this.cursor++;
+        this.app.audio.sfx('select');
+      } else this.submit();
     } else if (pad.pressed('start')) {
       this.submit();
     } else if (pad.pressed('b')) {
-      if (this.chars.length) {
-        this.chars.pop();
-        this.app.audio.sfx('menuBack');
-      } else {
-        this.app.audio.sfx('menuBack');
-        this.back();
-      }
+      this.app.audio.sfx('menuBack');
+      if (this.cursor > 0) this.cursor--;
+      else this.back();
     } else if (pad.pressed('select')) {
       this.back();
     }
@@ -98,7 +99,7 @@ export class PasswordScene implements Scene {
       unlockAlt(level);
       this.notice = `${LEVEL_NAMES[level]} ALTERNATE STAGES!`;
       this.noticeT = 150;
-      this.chars = [];
+      this.chars = this.chars.map(() => PASSWORD_ALPHABET[0]);
       this.cursor = 0;
       this.app.audio.sfx('bigItem');
       return;
@@ -129,26 +130,56 @@ export class PasswordScene implements Scene {
 
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
+    drawPanel(g, 12, 44, 232, 104, '#403070', '#201040');
     drawTitleBar(g, 'PASSWORD', this.app.frame);
-    drawPanel(g, 40, 38, 176, 34);
+    // The characters in their own inner frame, with the hand over the one being set.
+    drawPanel(g, 58, 66, 140, 60, '#303880', '#101848');
+    const x0 = 128 - (PASSWORD_LENGTH * 16) / 2;
     for (let i = 0; i < PASSWORD_LENGTH; i++) {
-      const x = 60 + i * 18;
-      const ch = this.chars[i] ?? '';
-      g.rect(x - 2, 62, 12, 1, i === this.chars.length ? '#ffe040' : '#8090c0');
-      if (ch) g.text(ch, x + 4, 46, { align: 'center', scale: 2, color: '#ffffff', outline: '#000000' });
+      const x = x0 + i * 16 + 8;
+      g.text(this.chars[i], x, 98, { align: 'center', scale: 2, gradient: ['#ffffff', '#88c8ff'], outline: '#102050' });
     }
-    drawPanel(g, 32, 80, 192, 108, '#283070', '#0c1238');
-    KEYS.forEach((k, i) => {
-      const x = 52 + (i % COLS) * 22;
-      const y = 90 + Math.floor(i / COLS) * 18;
-      const sel = i === this.cursor;
-      if (sel) g.rect(x - 7, y - 4, k.length > 1 ? 28 : 16, 15, '#ffe040');
-      g.text(k, x + (k.length > 1 ? 6 : 1), y, { align: 'center', color: sel ? '#000000' : '#ffffff' });
-    });
-    if (this.noticeT > 0) g.text(this.notice, g.width / 2, 196, { align: 'center', color: '#ffe040', outline: '#000000' });
-    else if (this.error > 0) g.text('INVALID PASSWORD', g.width / 2, 196, { align: 'center', color: '#ff6060', outline: '#000000' });
-    else g.text('A: ENTER  B: DELETE  START: OK', g.width / 2, 196, { align: 'center', color: '#c8d0ff', outline: '#000000' });
+    const hx = x0 + this.cursor * 16 + 3;
+    const bob = Math.floor(this.app.frame / 10) % 2;
+    g.image(handSprite(), hx, 76 + bob);
+    // Bomberman and a rival stand either side.
+    const s = sprites();
+    const wave = Math.floor(this.app.frame / 20) % 2;
+    g.image(s.bombers[0].walk.down[wave], 24, 88);
+    g.image(s.bombers[2].walk.down[wave ? 0 : 1], 216, 88);
+    if (this.noticeT > 0) g.text(this.notice, g.width / 2, 162, { align: 'center', color: '#ffe040', outline: '#000000' });
+    else if (this.error > 0) g.text('INVALID PASSWORD', g.width / 2, 162, { align: 'center', color: '#ff6060', outline: '#000000' });
+    g.text('\u2191\u2193: CHANGE  \u2190\u2192: MOVE', g.width / 2, 184, { align: 'center', color: '#ffffff', outline: '#401030' });
+    g.text('A: NEXT  B: BACK  START: OK', g.width / 2, 198, { align: 'center', color: '#ffffff', outline: '#401030' });
   }
+}
+
+let hand: HTMLCanvasElement | null = null;
+
+/** A white glove pointing down at the character being set. */
+function handSprite(): HTMLCanvasElement {
+  if (hand) return hand;
+  const p = new PixelCanvas(10, 14);
+  p.rows(
+    [
+      '..kkkkk...',
+      '.kwwwwwk..',
+      'kwwkwkwwk.',
+      'kwwkwkwwkk',
+      'kwwwwwwwwk',
+      'kwwwwwwwwk',
+      '.kwwwwwwk.',
+      '..kwwwwk..',
+      '...kwwk...',
+      '...kwwk...',
+      '...kwwk...',
+      '...kwwk...',
+      '....kk....',
+    ],
+    { k: '#200818', w: '#ffffff' },
+  );
+  hand = p.canvas;
+  return hand;
 }
 
 /** Bomb and fire power-ups a player would have picked up in every stage before this one. */

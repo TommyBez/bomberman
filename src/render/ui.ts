@@ -1,6 +1,7 @@
 import type { App } from '../app';
 import { mix, textWidth, type Gfx } from '../engine/gfx';
 import type { Controller } from '../engine/input';
+import { PixelCanvas } from '../gfx/pixel';
 
 /** Big outlined banner text across the screen ("READY", "PAUSE!", "HURRY!"…). */
 export function drawBanner(g: Gfx, text: string, y: number, color = '#ffe040', scale = 2): void {
@@ -13,7 +14,6 @@ export function drawBanner(g: Gfx, text: string, y: number, color = '#ffe040', s
   g.text(text, g.width / 2, y - (7 * scale) / 2, { align: 'center', scale, gradient: ['#ffffff', color], outline: '#000000' });
 }
 
-/** A PlayStation-style menu window: bevelled frame with a vertical gradient. */
 /** Greedy word wrap for the fixed-width font. */
 export function wrapText(text: string, maxChars: number): string[] {
   const lines: string[] = [];
@@ -28,36 +28,88 @@ export function wrapText(text: string, maxChars: number): string[] {
   return lines;
 }
 
+/**
+ * A menu window: the wallpaper shows through darkened (tinted by `top`/`bottom`) inside a
+ * magenta double frame.
+ */
 export function drawPanel(g: Gfx, x: number, y: number, w: number, h: number, top = '#3050c8', bottom = '#101868'): void {
-  g.rect(x + 2, y + 2, w, h, 'rgba(0,0,0,0.45)');
-  g.rect(x, y, w, h, '#000000');
-  for (let i = 1; i < h - 1; i++) g.rect(x + 1, y + i, w - 2, 1, mix(top, bottom, i / h));
-  g.frame(x + 1, y + 1, w - 2, h - 2, mix(top, '#ffffff', 0.55));
-  g.rect(x + 2, y + h - 2, w - 4, 1, mix(bottom, '#000000', 0.4));
+  const ctx = g.ctx;
+  g.rect(x + 3, y + 3, w, h, 'rgba(40,0,40,0.35)');
+  ctx.globalAlpha = 0.62;
+  g.rect(x, y, w, h, '#1a0828');
+  ctx.globalAlpha = 0.5;
+  for (let i = 0; i < h; i++) g.rect(x, y + i, w, 1, mix(top, bottom, i / h));
+  ctx.globalAlpha = 1;
+  // Frame: dark edge, magenta band with a light inner line, dark inner edge.
+  g.frame(x - 3, y - 3, w + 6, h + 6, '#300028');
+  g.frame(x - 2, y - 2, w + 4, h + 4, '#e050c8');
+  g.frame(x - 1, y - 1, w + 2, h + 2, '#ffb8f0');
+  g.frame(x, y, w, h, '#700060');
 }
 
-/** Title bar used at the top of menu screens. */
-export function drawTitleBar(g: Gfx, text: string, frame: number): void {
-  for (let y = 0; y < 26; y++) g.rect(0, y, g.width, 1, mix('#f8c020', '#d05010', y / 25));
-  g.rect(0, 26, g.width, 2, '#000000');
-  const wobble = Math.round(Math.sin(frame / 20));
-  g.text(text, g.width / 2, 8 + wobble, { align: 'center', scale: 2, color: '#ffffff', outline: '#401000' });
+/** Title plate at the top of menu screens. */
+export function drawTitleBar(g: Gfx, text: string, _frame: number): void {
+  const tw = textWidth(text, 2);
+  const w = Math.min(g.width - 8, tw + 28);
+  const x = Math.round((g.width - w) / 2);
+  const y = 3;
+  const h = 22;
+  g.rect(x + 2, y + 2, w, h, 'rgba(40,0,40,0.4)');
+  g.rect(x - 2, y - 2, w + 4, h + 4, '#300028');
+  g.rect(x - 1, y - 1, w + 2, h + 2, '#e050c8');
+  for (let i = 0; i < h; i++) g.rect(x, y + i, w, 1, mix('#fff6b0', '#f4c040', i / (h - 1)));
+  g.rect(x, y, w, 1, '#ffffff');
+  g.rect(x, y + h - 1, w, 1, '#c08020');
+  // Notched ends, like a ribbon label.
+  g.rect(x - 2, y + h / 2 - 3, 3, 6, '#e050c8');
+  g.rect(x + w - 1, y + h / 2 - 3, 3, 6, '#e050c8');
+  g.text(text, g.width / 2, y + 4, { align: 'center', scale: 2, gradient: ['#ffffff', '#a8d8ff'], outline: '#182060' });
 }
 
-/** Animated diagonal-stripe background behind menus. */
-export function drawMenuBackdrop(g: Gfx, frame: number, a = '#1a2a88', b = '#223398'): void {
-  g.clear(a);
-  const off = (frame >> 1) % 32;
-  g.ctx.fillStyle = b;
-  for (let x = -g.height - 32; x < g.width + 32; x += 32) {
-    g.ctx.beginPath();
-    g.ctx.moveTo(x + off, 0);
-    g.ctx.lineTo(x + off + 16, 0);
-    g.ctx.lineTo(x + off + 16 + g.height, g.height);
-    g.ctx.lineTo(x + off + g.height, g.height);
-    g.ctx.closePath();
-    g.ctx.fill();
-  }
+let wallpaper: HTMLCanvasElement | null = null;
+
+/** The menu wallpaper: pink and yellow tiles with a bomb or a Bomberman helmet on each. */
+function wallpaperTile(): HTMLCanvasElement {
+  if (wallpaper) return wallpaper;
+  const p = new PixelCanvas(64, 64);
+  const tile = (ox: number, oy: number, yellow: boolean): void => {
+    const [base, shade, light] = yellow ? ['#f8cc60', '#eeb440', '#fde08c'] : ['#f8c4d4', '#eea8c0', '#ffdce8'];
+    p.rect(ox, oy, 32, 32, base);
+    p.rect(ox, oy, 32, 1, light);
+    p.rect(ox, oy, 1, 32, light);
+    p.rect(ox, oy + 31, 32, 1, shade);
+    p.rect(ox + 31, oy, 1, 32, shade);
+    if (yellow) {
+      // A bomb with its fuse, a shade darker than the tile.
+      p.circle(ox + 15, oy + 18, 8, '#eeb848');
+      p.circle(ox + 12, oy + 15, 2.2, '#fbd67a');
+      p.rect(ox + 19, oy + 8, 3, 3, '#eeb848');
+      p.rect(ox + 21, oy + 5, 2, 4, '#eeb848');
+      p.rect(ox + 23, oy + 3, 2, 2, '#fde08c');
+    } else {
+      // A Bomberman helmet with its antenna ball, a shade lighter than the tile.
+      const hi = '#fde2ec';
+      p.circle(ox + 16, oy + 5, 2.5, hi);
+      p.rect(ox + 15, oy + 7, 2, 3, hi);
+      p.roundRect(ox + 7, oy + 10, 18, 16, hi, 5);
+      p.roundRect(ox + 10, oy + 14, 12, 8, '#f0b4c8', 2);
+      p.rect(ox + 13, oy + 15, 2, 5, hi);
+      p.rect(ox + 18, oy + 15, 2, 5, hi);
+    }
+  };
+  tile(0, 0, true);
+  tile(32, 0, false);
+  tile(0, 32, false);
+  tile(32, 32, true);
+  wallpaper = p.canvas;
+  return wallpaper;
+}
+
+/** Menu background: the tiled wallpaper, drifting slowly down and to the right. */
+export function drawMenuBackdrop(g: Gfx, frame: number): void {
+  const tile = wallpaperTile();
+  const off = (frame >> 2) % 64;
+  for (let y = off - 64; y < g.height; y += 64) for (let x = off - 64; x < g.width; x += 64) g.image(tile, x, y);
 }
 
 export interface MenuItem {
