@@ -1,0 +1,101 @@
+import type { App } from '../app';
+import { flipX, pixelSprite, type Gfx } from '../engine/gfx';
+import type { Scene } from '../engine/scene';
+import { BOMBER_FRAMES, BOMBER_PALETTE } from '../gfx/art/bomberArt';
+import { BOMB_FRAMES, drawBomb, drawFlame, drawPuff, FLAME_PHASES } from '../gfx/fx';
+import { FLAME_CENTER, FLAME_DOWN, FLAME_LEFT, FLAME_RIGHT, FLAME_UP } from '../game/core/types';
+import { buildTiles, THEMES } from '../gfx/tiles';
+
+/** Temporary scene used while the rest of the game is assembled (sprite preview). */
+export class BootScene implements Scene {
+  private bombs = [0, 1, 2].map((i) => drawBomb(i));
+  private flames: HTMLCanvasElement[][] = [];
+  private puffs = [0, 1, 2, 3].map((i) => drawPuff(i));
+  private bomber = Object.fromEntries(Object.entries(BOMBER_FRAMES).map(([k, v]) => [k, pixelSprite(v, BOMBER_PALETTE)]));
+
+  constructor(private readonly app: App) {
+    const shapes = [
+      FLAME_CENTER | FLAME_LEFT | FLAME_RIGHT | FLAME_UP | FLAME_DOWN,
+      FLAME_LEFT | FLAME_RIGHT,
+      FLAME_UP | FLAME_DOWN,
+      FLAME_LEFT,
+      FLAME_RIGHT,
+      FLAME_UP,
+      FLAME_DOWN,
+      FLAME_CENTER,
+    ];
+    for (let ph = 0; ph < FLAME_PHASES; ph++) this.flames.push(shapes.map((b) => drawFlame(b, ph)));
+  }
+
+  update(): void {}
+
+  private tiles = buildTiles(THEMES.classic);
+
+  render(g: Gfx): void {
+    if (location.hash === '#arena') return this.renderArena(g);
+    g.clear('#207830');
+    const t = this.app.frame;
+    g.text('SPRITE PREVIEW', 4, 4, { color: '#ffffff', shadow: '#000000' });
+    for (let i = 0; i < BOMB_FRAMES; i++) g.image(this.bombs[i], 8 + i * 20, 20);
+    g.image(this.bombs[Math.floor(t / 10) % 3], 72, 20);
+    this.flames.forEach((row, ph) => row.forEach((c, i) => g.image(c, 8 + i * 18, 44 + ph * 18)));
+    // assembled cross explosion
+    const ph = [0, 1, 2, 3, 4, 3, 2, 1][Math.floor(t / 6) % 8];
+    const row = this.flames[ph];
+    const ox = 200;
+    const oy = 60;
+    g.image(row[0], ox, oy);
+    g.image(row[1], ox - 16, oy);
+    g.image(row[3], ox - 32, oy);
+    g.image(row[1], ox + 16, oy);
+    g.image(row[4], ox + 32, oy);
+    g.image(row[2], ox, oy - 16);
+    g.image(row[5], ox, oy - 32);
+    g.image(row[2], ox, oy + 16);
+    g.image(row[6], ox, oy + 32);
+    this.puffs.forEach((c, i) => g.image(c, 8 + i * 18, 140));
+    const keys = Object.keys(this.bomber);
+    keys.forEach((k, i) => g.image(this.bomber[k], 8 + i * 18, 170));
+    g.image(flipX(this.bomber.left1), 8 + keys.length * 18, 170);
+    const walk = ['down0', 'down1', 'down0', 'down2'][Math.floor(t / 8) % 4];
+    g.image(this.bomber[walk], 280, 170);
+  }
+
+  private renderArena(g: Gfx): void {
+    g.clear('#000000');
+    const W = 15;
+    const H = 13;
+    const ox = 40;
+    const oy = 24;
+    const cell = (x: number, y: number): number => {
+      if (x === 0 || y === 0 || x === W - 1 || y === H - 1) return 3;
+      if (x % 2 === 0 && y % 2 === 0) return 1;
+      if (x + y < 4 || x + y > W + H - 6) return 0;
+      return (x * 7 + y * 13) % 5 < 3 ? 2 : 0;
+    };
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const c = cell(x, y);
+        const img =
+          c === 3 ? this.tiles.wall : c === 1 ? this.tiles.hard : c === 2 ? this.tiles.soft : cell(x, y - 1) ? this.tiles.floorShadow : this.tiles.floor;
+        g.image(img, ox + x * 16, oy + y * 16);
+      }
+    }
+    const t = this.app.frame;
+    g.image(this.tiles.burn[Math.floor(t / 8) % this.tiles.burn.length], ox + 16 * 5, oy + 16 * 3);
+    g.image(this.bombs[Math.floor(t / 10) % 3], ox + 16 * 3, oy + 16 * 1);
+    const ph = [0, 1, 2, 3, 4, 3, 2, 1][Math.floor(t / 6) % 8];
+    const row = this.flames[ph];
+    g.image(row[0], ox + 16 * 7, oy + 16 * 7);
+    g.image(row[1], ox + 16 * 6, oy + 16 * 7);
+    g.image(row[4], ox + 16 * 5, oy + 16 * 7);
+    g.image(row[1], ox + 16 * 8, oy + 16 * 7);
+    g.image(row[3], ox + 16 * 9, oy + 16 * 7);
+    g.image(row[6], ox + 16 * 7, oy + 16 * 6);
+    g.image(row[5], ox + 16 * 7, oy + 16 * 8);
+    g.image(this.bomber.down0, ox + 16 * 1, oy + 16 * 1 - 8);
+    g.image(this.bomber.left1, ox + 16 * 11, oy + 16 * 9 - 8);
+    g.rect(0, 0, g.width, 22, '#000000');
+    g.text('TIME 3:00', 8, 8, { color: '#ffffff' });
+  }
+}
