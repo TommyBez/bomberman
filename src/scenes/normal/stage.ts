@@ -261,6 +261,10 @@ export class StageScene implements Scene {
   }
 
   private renderHud(g: Gfx): void {
+    if (this.retro) {
+      this.renderRetroHud(g);
+      return;
+    }
     const w = this.world;
     const icons = hudIcons();
     const y = 12;
@@ -282,8 +286,25 @@ export class StageScene implements Scene {
     g.text(`×${w.player.stats.fire}`, 218, y, txt);
   }
 
+  /** The 1985 status bar: TIME, score and LEFT in black on the grey strip. */
+  private renderRetroHud(g: Gfx): void {
+    const w = this.world;
+    const y = 12;
+    const txt = { color: '#000000' };
+    const secs = Math.max(0, Math.ceil(w.timeLeft / 60));
+    const hurry = !this.bonus && secs <= 30 && Math.floor(this.app.frame / 15) % 2 === 0;
+    g.text(this.bonus ? 'BONUS' : 'TIME', 8, y, txt);
+    g.text(String(secs).padStart(3, ' '), 44, y, { color: hurry ? '#d82800' : '#000000' });
+    g.text(String(this.session.score + w.score), 164, y, { ...txt, align: 'right' });
+    g.text(`LEFT ${Math.max(0, this.session.lives)}`, 200, y, txt);
+  }
+
   private renderCard(g: Gfx): void {
     g.clear('#000000');
+    if (this.bonus && this.retro) {
+      g.text('BONUS STAGE', g.width / 2, g.height / 2 - 4, { align: 'center', color: '#fcfcfc' });
+      return;
+    }
     if (this.bonus) {
       g.text('BONUS STAGE', g.width / 2, g.height / 2 - 20, { align: 'center', scale: 2, gradient: ['#fff8a0', '#ff9020'], outline: '#401000' });
       g.text('DEFEAT AS MANY MONSTERS', g.width / 2, g.height / 2 + 10, { align: 'center', color: '#ffffff' });
@@ -291,6 +312,11 @@ export class StageScene implements Scene {
       return;
     }
     const n = this.session.stageNumber;
+    if (this.retro) {
+      // Plain white on black, like 1985.
+      g.text(`STAGE ${String(n).padStart(2, ' ')}`, g.width / 2, g.height / 2 - 4, { align: 'center', color: '#fcfcfc' });
+      return;
+    }
     g.text(`STAGE ${n}`, g.width / 2, g.height / 2 - 12, { align: 'center', scale: 2, gradient: ['#ffffff', '#a0c8ff'], outline: '#102040' });
     const icons = hudIcons();
     g.image(icons.heads[0], g.width / 2 - 20, g.height / 2 + 14);

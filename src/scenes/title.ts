@@ -1,5 +1,5 @@
 import type { App } from '../app';
-import { mix, type Gfx } from '../engine/gfx';
+import type { Gfx } from '../engine/gfx';
 import type { Scene } from '../engine/scene';
 import { CampaignSession } from '../game/campaign/session';
 import { sprites } from '../gfx/sprites';
@@ -33,6 +33,50 @@ export class TitleScene implements Scene {
     if (this.idle === DEMO_IDLE_TICKS) startDemo(this.app);
   }
 
+  /** Chunky 3D logo: letters drop in one by one, the "O" is a lit bomb. */
+  private drawLogo(g: Gfx, cx: number, top: number): void {
+    const word = 'BOMBERMAN';
+    const s = 4;
+    const adv = 6 * s;
+    const x0 = Math.round(cx - (word.length * adv - s) / 2);
+    const pos = [...word].map((ch, i) => {
+      const k = Math.max(0, Math.min(1, (this.t - i * 4) / 16));
+      const fall = Math.round((1 - k * k) * -70);
+      const wave = this.t > 80 ? Math.round(Math.sin((this.t + i * 9) / 18) * 1.5) : 0;
+      return { ch, x: x0 + i * adv, y: top + fall + wave };
+    });
+    for (const p of pos) if (p.ch !== 'O') for (let d = 4; d >= 1; d--) g.text(p.ch, p.x + d, p.y + d, { scale: s, color: '#0a1034' });
+    for (const p of pos) if (p.ch !== 'O') g.text(p.ch, p.x, p.y, { scale: s, color: '#102060', outline: '#102060' });
+    for (const p of pos) {
+      if (p.ch === 'O') this.drawBombLetter(g, p.x + 10, p.y + 15);
+      else g.text(p.ch, p.x, p.y, { scale: s, gradient: ['#ffffff', '#40a0ff'] });
+    }
+  }
+
+  private drawBombLetter(g: Gfx, cx: number, cy: number): void {
+    const disc = (x: number, y: number, r: number, color: string): void => {
+      for (let dy = -r; dy <= r; dy++) {
+        const w = Math.floor(Math.sqrt(r * r - dy * dy + r * 0.8));
+        g.rect(x - w, y + dy, w * 2 + 1, 1, color);
+      }
+    };
+    for (let d = 4; d >= 1; d--) disc(cx + d, cy + d, 13, '#0a1034');
+    disc(cx, cy, 13, '#102060');
+    disc(cx, cy, 10, '#202848');
+    disc(cx - 1, cy - 1, 8, '#343c64');
+    disc(cx - 4, cy - 4, 3, '#8890c0');
+    g.rect(cx - 5, cy - 5, 2, 2, '#ffffff');
+    // Cap and fuse with a flickering spark.
+    g.rect(cx + 5, cy - 14, 6, 4, '#102060');
+    g.rect(cx + 6, cy - 13, 4, 2, '#a0a8c8');
+    g.rect(cx + 9, cy - 18, 2, 5, '#c08040');
+    g.rect(cx + 10, cy - 20, 2, 3, '#c08040');
+    const f = Math.floor(this.t / 3) % 3;
+    const spark = ['#ffffff', '#ffe040', '#ff8020'][f];
+    g.rect(cx + 10 - f, cy - 23 - f, 3 + f * 2, 3 + f * 2, '#ff6010');
+    g.rect(cx + 11 - f / 2, cy - 22 - f / 2, 1 + f, 1 + f, spark);
+  }
+
   render(g: Gfx): void {
     // Diagonally scrolling tiles of little bombs.
     g.clear('#f8a820');
@@ -60,12 +104,7 @@ export class TitleScene implements Scene {
     g.ctx.imageSmoothingEnabled = false;
     g.ctx.drawImage(frame, g.width / 2 - 32, 64 + bob, 64, 96);
 
-    // Logo
-    const drop = Math.min(1, this.t / 30);
-    const ly = 10 + Math.round((1 - drop) * -50);
-    g.text('BOMBERMAN', g.width / 2 + 3, ly + 3, { align: 'center', scale: 4, color: '#401000' });
-    g.text('BOMBERMAN', g.width / 2, ly, { align: 'center', scale: 4, gradient: ['#ffffff', '#40a0ff'], outline: '#102060' });
-    g.rect(g.width / 2 - 70, ly + 32, 140, 2, mix('#102060', '#ffffff', 0.3));
+    this.drawLogo(g, g.width / 2, 12);
 
     if (Math.floor(this.t / 30) % 2 === 0 || this.t < 30) {
       g.text('PRESS START BUTTON', g.width / 2, 172, { align: 'center', color: '#ffffff', outline: '#401000' });
