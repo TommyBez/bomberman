@@ -431,6 +431,20 @@ describe('battle world', () => {
     }
   });
 
+  it('Sudden Death: Off drops blocks round the edge, On and Random fill the arena', () => {
+    const order = (mode: 'off' | 'on' | 'random', seed = 3): [number, number][] => {
+      const cfg = config('normal', 2);
+      cfg.rules.suddenDeath = mode;
+      return new BattleWorld({ cfg, arena: ARENAS.find((a) => a.id === 'n5')!, seed })['pressureOrder'];
+    };
+    const off = order('off');
+    expect(off.every(([x, y]) => x <= 2 || y <= 2 || x >= 12 || y >= 10)).toBe(true);
+    const full = order('on').length;
+    expect(full).toBeGreaterThan(off.length);
+    expect(order('random', 1).length).toBe(full);
+    expect(order('random', 2).length).toBe(full);
+  });
+
   it('spirals the pressure blocks from the outer ring inward', () => {
     const order = spiralOrder(15, 13);
     expect(order[0]).toEqual([1, 1]);
