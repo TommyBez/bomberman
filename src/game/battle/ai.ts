@@ -6,6 +6,8 @@ import { CHARACTERS, type Personality } from './characters';
 import type { ComLevel } from './config';
 
 const INF = Number.POSITIVE_INFINITY;
+/** Spare fuse (ticks) required before walking over a bomb with Bomb Pass. */
+const BOMB_CROSS_MARGIN = 60;
 /** Time in the air on a trampoline bounce. */
 const TRAMPOLINE_TICKS = 70;
 
@@ -258,6 +260,8 @@ export class CpuPlayer {
           // Would we be standing in fire while passing through? We are inside the tile
           // from half a step before reaching its centre until half a step after.
           if (dt < INF && dt <= t + tt && dt + w.rules.flameTicks + tt / 2 + 3 >= t) continue;
+          // With Bomb Pass, only cross a bomb with plenty of fuse left.
+          if (w.bombAt[i] && dt <= t + tt + BOMB_CROSS_MARGIN) continue;
           const node: Node = { x: nx, y: ny, t, first: n.first ?? d, prev: this.idx(n.x, n.y) };
           nodes.set(i, node);
           // A paired trampoline carries us to the other floor.
