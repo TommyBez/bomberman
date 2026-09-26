@@ -114,6 +114,41 @@ test('Normal Game: a password restores stage and power-ups', async ({ page }) =>
   expect(errors).toEqual([]);
 });
 
+test('Battle Game: the setup menus start a round with you and three CPUs', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.addInitScript(() => localStorage.clear());
+  await page.goto('/');
+  await waitFor(page, 's && s.idle !== undefined');
+  await page.waitForTimeout(500);
+  await press(page, 'Enter'); // PRESS START
+  await waitFor(page, 's && s.menu');
+  await page.waitForTimeout(400);
+  await press(page, 'ArrowDown');
+  await press(page, 'Enter'); // BATTLE GAME
+  // BATTLE ROYAL → BEGINNER → SINGLE MATCH
+  for (let i = 0; i < 3; i++) {
+    await page.waitForTimeout(500);
+    await press(page, 'Enter');
+  }
+  await page.waitForTimeout(500);
+  await press(page, 'ArrowUp'); // wrap to OK on the rules screen
+  await press(page, 'Enter');
+  await page.waitForTimeout(500);
+  await press(page, 'Enter'); // players: P1 human, P2-P4 computer
+  await page.waitForTimeout(500);
+  await press(page, 'Enter'); // stage 1
+  await waitFor(page, 's && s.world && s.phase === "play"', 20_000);
+  expect((await scene(page)).bombers).toBe(4);
+  // P1 answers the keyboard (WASD + Space).
+  const x0 = await page.evaluate(() => (window as any).__bomberman.scenes.scene.world.bombers[0].x);
+  await page.keyboard.down('KeyD');
+  await page.waitForTimeout(300);
+  await page.keyboard.up('KeyD');
+  const x1 = await page.evaluate(() => (window as any).__bomberman.scenes.scene.world.bombers[0].x);
+  expect(x1).toBeGreaterThan(x0);
+  expect(errors).toEqual([]);
+});
+
 test('Battle Game: five computer players fight a round', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto('/#demo=n4');
