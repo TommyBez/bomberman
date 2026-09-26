@@ -7,7 +7,8 @@ import { drawPanel, wrapText } from '../../render/ui';
 
 /**
  * "Bomberman Show Time": a short comedy skit between White and Black Bomberman shown
- * after every tenth stage of the Modern Normal Game. The four skits are original.
+ * after every tenth stage of the Modern Normal Game. The first is a jump through a ring
+ * of fire, as on the PlayStation; the scripts and jokes are this remake's own.
  */
 
 interface Actor {
@@ -46,17 +47,20 @@ const walkTo = (who: Actor, x0: number, x1: number, k: number): void => {
 
 function skits(): Beat[][] {
   return [
-    // 1. The race
+    // 1. The ring of fire (stage 10's show on the PlayStation is a jump through one)
     [
-      { len: 60, act: (s, k) => walkTo(s.a[1], 280, 170, k) },
-      { len: 110, say: [1, "HEY WHITE! BET I'M FASTER THAN YOU!"], act: (s) => (s.a[1].facing = 'left') },
-      { len: 90, say: [0, 'OK... READY, SET...'], act: (s) => (s.a[0].facing = 'right') },
-      { len: 30, act: (s) => ((s.bomb = { x: 150, y: 150, visible: true, size: 1 }), (s.a[1].facing = 'right')) },
-      { len: 70, say: [1, 'GO!!'], act: (s, k) => walkTo(s.a[1], 170, 120, k) },
-      { len: 40, act: (s, k) => ((s.a[1].hop = Math.sin(k * Math.PI) * 10), (s.a[1].moving = false)) },
-      { len: 50, say: [1, 'UH OH...'], act: (s) => (s.a[1].facing = 'down') },
-      { len: 60, act: (s, k) => { if (k === 0 || !s.boom) s.boom = { x: 150, y: 150, t: 0 }; s.bomb = null; s.a[1].burnt = true; } },
-      { len: 110, say: [0, 'I THINK I WIN.'], act: (s) => (s.a[0].facing = 'down') },
+      { len: 30, act: (s) => ((s.prop = 'ring'), (s.propX = 150), (s.propY = 150), (s.a[1].x = 200), (s.a[1].facing = 'left')) },
+      { len: 110, say: [1, 'LADIES AND GENTLEBOMBS... THE RING OF FIRE!'], act: (s) => (s.a[1].facing = 'down') },
+      { len: 90, say: [0, 'YOU WANT ME TO JUMP THROUGH THAT?'], act: (s) => (s.a[0].facing = 'right') },
+      { len: 90, say: [1, "DON'T WORRY. IT'S PERFECTLY SAFE."], act: (s) => (s.a[1].facing = 'left') },
+      { len: 40, act: (s, k) => walkTo(s.a[0], 80, 112, k) },
+      { len: 40, act: (s, k) => ((s.a[0].x = 112 + 60 * k), (s.a[0].hop = Math.sin(k * Math.PI) * 22), (s.a[0].moving = true), (s.a[0].facing = 'right')) },
+      { len: 80, say: [0, 'TA-DA!'], act: (s) => ((s.a[0].hop = 0), (s.a[0].facing = 'down')) },
+      { len: 90, say: [1, 'PFF. ANYONE CAN DO THAT. WATCH!'], act: (s, k) => ((s.a[1].x = 200 + 30 * k), (s.a[1].facing = 'right'), (s.a[1].moving = k < 1)) },
+      { len: 40, act: (s, k) => walkTo(s.a[1], 230, 188, k) },
+      { len: 36, act: (s, k) => ((s.a[1].x = 188 - 38 * k), (s.a[1].hop = Math.sin(k * Math.PI) * 6), (s.a[1].moving = true), (s.a[1].facing = 'left')) },
+      { len: 60, act: (s, k) => { if (k === 0 || !s.boom) s.boom = { x: 150, y: 150, t: 0 }; s.a[1].hop = 0; s.a[1].moving = false; s.a[1].burnt = true; if (k > 0.5) s.prop = null; } },
+      { len: 110, say: [0, 'PERFECTLY SAFE, HUH?'], act: (s) => (s.a[0].facing = 'left') },
     ],
     // 2. Hide and seek
     [
@@ -189,6 +193,23 @@ export class ShowTimeScene implements Scene {
       g.rect(s.propX - 7, s.propY - 2, 14, 10, '#000000');
       g.rect(s.propX - 10, s.propY + 7, 20, 3, '#000000');
       g.rect(s.propX - 6, s.propY, 12, 2, '#c02030');
+    }
+    if (s.prop === 'ring') {
+      // A burning hoop on a stand.
+      g.rect(s.propX - 1, s.propY - 6, 3, 14, '#6a3a1a');
+      g.rect(s.propX - 6, s.propY + 6, 13, 3, '#6a3a1a');
+      g.ctx.lineWidth = 3;
+      g.ctx.strokeStyle = '#c04010';
+      g.ctx.beginPath();
+      g.ctx.ellipse(s.propX + 0.5, s.propY - 18, 6, 12, 0, 0, Math.PI * 2);
+      g.ctx.stroke();
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2 + this.app.frame / 10;
+        const fx = s.propX + Math.cos(a) * 6;
+        const fy = s.propY - 18 + Math.sin(a) * 12;
+        const flick = (this.app.frame + k * 3) % 6 < 3;
+        g.rect(fx - 1, fy - (flick ? 3 : 2), 3, flick ? 4 : 3, k % 2 ? '#ffd040' : '#ff7010');
+      }
     }
     if (s.prop === 'cake') {
       g.rect(s.propX - 14, s.propY - 4, 28, 14, '#000000');
