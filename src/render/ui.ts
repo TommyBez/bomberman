@@ -69,7 +69,7 @@ export interface MenuItem {
   action?: () => void;
   disabled?: () => boolean;
   /** Short help line shown under the menu. */
-  help?: string;
+  help?: string | (() => string);
 }
 
 /** Vertical menu with a blinking cursor; handles its own input and sounds. */
@@ -148,7 +148,8 @@ export class Menu {
         g.text(arrows ? `← ${v} →` : v, vx, yy, { color: disabled ? '#707090' : sel ? '#ffffff' : '#a8c0ff', outline: '#000000', align: 'center' });
       }
     });
-    const help = this.items[this.index]?.help;
+    const h = this.items[this.index]?.help;
+    const help = typeof h === 'function' ? h() : h;
     if (help) g.text(help, g.width / 2, g.height - 14, { align: 'center', color: '#c8d0ff', outline: '#000000' });
   }
 }

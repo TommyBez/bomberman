@@ -3,6 +3,8 @@ import type { DeviceId } from '../../engine/input';
 export type Level = 'beginner' | 'normal' | 'advanced';
 export type ComLevel = 'weak' | 'normal' | 'strong';
 export type CartRule = 'off' | 'on' | 'super';
+/** Off / On / Random (Random decides anew for every game). */
+export type Tristate = 'off' | 'on' | 'random';
 export type SlotType = 'human' | 'com' | 'off';
 
 /** Every item that can appear in the Battle Game. */
@@ -71,8 +73,10 @@ export interface Rules {
   wins: number;
   /** Minutes per game (1–5), 0 = unlimited. */
   time: number;
-  suddenDeath: boolean;
-  randomPosition: boolean;
+  /** Pressure blocks: off = outer rings only, on = whole arena, random = a random fall pattern. */
+  suddenDeath: Tristate;
+  /** Shuffle the starting spots. */
+  randomPosition: Tristate;
   /** Skull items can be burnt by blasts. */
   skullBomb: boolean;
   hyperBomber: boolean;
@@ -83,8 +87,8 @@ export const DEFAULT_RULES: Rules = {
   com: 'weak',
   wins: 3,
   time: 3,
-  suddenDeath: false,
-  randomPosition: false,
+  suddenDeath: 'off',
+  randomPosition: 'off',
   skullBomb: false,
   hyperBomber: true,
   cart: 'off',

@@ -70,6 +70,65 @@ export function spiralOrder(w: number, h: number): [number, number][] {
   return out;
 }
 
+/** Number of pressure-block fall patterns Sudden Death "Random" picks from. */
+export const PRESSURE_PATTERNS = 6;
+
+/**
+ * Order in which pressure blocks fill the playable interior:
+ * 0 clockwise spiral from the top-left, 1 anticlockwise spiral, 2 clockwise spiral from
+ * the bottom-right, 3 rows snaking down, 4 columns snaking across, 5 both ends of the
+ * spiral at once.
+ */
+export function pressureOrder(w: number, h: number, pattern: number): [number, number][] {
+  const spiral = spiralOrder(w, h);
+  switch (pattern) {
+    case 1:
+      return anticlockwise(w, h);
+    case 2:
+      return spiral.map(([x, y]) => [w - 1 - x, h - 1 - y] as [number, number]);
+    case 3: {
+      const out: [number, number][] = [];
+      for (let y = 1; y < h - 1; y++) for (let k = 1; k < w - 1; k++) out.push([y % 2 ? k : w - 1 - k, y]);
+      return out;
+    }
+    case 4: {
+      const out: [number, number][] = [];
+      for (let x = 1; x < w - 1; x++) for (let k = 1; k < h - 1; k++) out.push([x, x % 2 ? k : h - 1 - k]);
+      return out;
+    }
+    case 5: {
+      const out: [number, number][] = [];
+      for (let i = 0, j = spiral.length - 1; i <= j; i++, j--) {
+        out.push(spiral[i]);
+        if (j !== i) out.push(spiral[j]);
+      }
+      return out;
+    }
+    default:
+      return spiral;
+  }
+}
+
+/** Anticlockwise spiral from the top-left (down the left side first). */
+function anticlockwise(w: number, h: number): [number, number][] {
+  const out: [number, number][] = [];
+  let x0 = 1;
+  let y0 = 1;
+  let x1 = w - 2;
+  let y1 = h - 2;
+  while (x0 <= x1 && y0 <= y1) {
+    for (let y = y0; y <= y1; y++) out.push([x0, y]);
+    for (let x = x0 + 1; x <= x1; x++) out.push([x, y1]);
+    if (x1 > x0) for (let y = y1 - 1; y >= y0; y--) out.push([x1, y]);
+    if (y1 > y0) for (let x = x1 - 1; x > x0; x--) out.push([x, y0]);
+    x0++;
+    y0++;
+    x1--;
+    y1--;
+  }
+  return out;
+}
+
 export interface RoundSetup {
   cfg: BattleConfig;
   arena: ArenaDef;
@@ -152,7 +211,8 @@ export class BattleWorld extends World {
     // Bombers.
     let spawns = mapSpawns(arena).slice();
     const active = cfg.players.map((p, i) => ({ p, i })).filter(({ p }) => p.type !== 'off');
-    if (cfg.rules.randomPosition && cfg.level !== 'beginner') spawns = this.rng.shuffle(spawns.slice(0, 5));
+    const shuffle = cfg.rules.randomPosition === 'random' ? this.rng.chance(0.5) : cfg.rules.randomPosition === 'on';
+    if (shuffle && cfg.level !== 'beginner') spawns = this.rng.shuffle(spawns.slice(0, 5));
     const reserved = new Set<string>();
     for (const { p, i } of active) {
       const [sx, sy] = spawns[i];
@@ -193,12 +253,15 @@ export class BattleWorld extends World {
       if (b && prize) this.giveItem(b, prize, false);
     });
 
-    // Sudden death plan.
+    // Sudden death plan: off = the outer rings only, on = the whole arena in a clockwise
+    // spiral, random = the whole arena in one of several fall patterns.
     const refuge = arena.refuge;
-    this.pressureOrder = spiralOrder(BATTLE_W, BATTLE_H).filter(([x, y]) => {
+    const sudden = cfg.level === 'beginner' ? 'off' : cfg.rules.suddenDeath;
+    const pattern = sudden === 'random' ? this.rng.int(PRESSURE_PATTERNS) : 0;
+    this.pressureOrder = pressureOrder(BATTLE_W, BATTLE_H, pattern).filter(([x, y]) => {
       if (grid.get(x, y) === Cell.Hard) return false;
       if (refuge && x >= refuge[0] && x <= refuge[2] && y >= refuge[1] && y <= refuge[3]) return false;
-      if (!cfg.rules.suddenDeath) return x <= 2 || y <= 2 || x >= BATTLE_W - 3 || y >= BATTLE_H - 3;
+      if (sudden === 'off') return x <= 2 || y <= 2 || x >= BATTLE_W - 3 || y >= BATTLE_H - 3;
       return true;
     });
     this.pressureInterval = Math.max(6, Math.floor((HURRY_TICKS - 8 * 60) / Math.max(1, this.pressureOrder.length)));

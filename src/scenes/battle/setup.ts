@@ -140,21 +140,26 @@ export class BattleSetup {
     const onOff = (v: boolean): string => (v ? 'ON' : 'OFF');
     const coms = ['weak', 'normal', 'strong'] as const;
     const carts = ['off', 'on', 'super'] as const;
+    const tri = ['off', 'on', 'random'] as const;
+    const suddenHelp = (): string =>
+      ({ off: 'BLOCKS FALL AROUND THE EDGE', on: 'BLOCKS FILL THE WHOLE ARENA', random: 'BLOCKS FALL IN A RANDOM PATTERN' })[r.suddenDeath];
+    const shuffleHelp = (): string =>
+      ({ off: 'FIXED STARTING SPOTS', on: 'SHUFFLE THE STARTING SPOTS', random: 'SHUFFLE OR NOT, EACH GAME' })[r.randomPosition];
     const cycle = <T,>(list: readonly T[], v: T, d: number): T => list[(list.indexOf(v) + d + list.length) % list.length];
     const items: MenuItem[] = [
       { label: 'COMPUTER', value: () => r.com.toUpperCase(), change: (d) => (r.com = cycle(coms, r.com, d)), help: 'CPU PLAYER STRENGTH' },
       { label: 'GAMES PER MATCH', value: () => String(r.wins), change: (d) => (r.wins = Math.max(1, Math.min(5, r.wins + d))), help: 'WINS NEEDED FOR THE SET' },
       { label: "TIME'S UP!", value: () => (r.time === 0 ? '∞' : `${r.time}:00`), change: (d) => (r.time = (r.time + d + 6) % 6), help: 'TIME LIMIT PER GAME' },
-      { label: 'SUDDEN DEATH', value: () => onOff(r.suddenDeath), change: () => (r.suddenDeath = !r.suddenDeath), disabled: () => beginner, help: 'BLOCKS FILL THE WHOLE ARENA' },
-      { label: 'RANDOM POSITION', value: () => onOff(r.randomPosition), change: () => (r.randomPosition = !r.randomPosition), disabled: () => beginner, help: 'SHUFFLE THE STARTING SPOTS' },
+      { label: 'SUDDEN DEATH', value: () => r.suddenDeath.toUpperCase(), change: (d) => (r.suddenDeath = cycle(tri, r.suddenDeath, d)), disabled: () => beginner, help: suddenHelp },
+      { label: 'RANDOM POSITION', value: () => r.randomPosition.toUpperCase(), change: (d) => (r.randomPosition = cycle(tri, r.randomPosition, d)), disabled: () => beginner, help: shuffleHelp },
       { label: 'SKULL BOMB', value: () => onOff(r.skullBomb), change: () => (r.skullBomb = !r.skullBomb), disabled: () => beginner, help: 'SKULLS CAN BE BURNT BY BLASTS' },
       { label: 'HYPER BOMBER', value: () => onOff(r.hyperBomber), change: () => (r.hyperBomber = !r.hyperBomber), disabled: () => this.cfg.tag, help: 'WINNER PLAYS FOR A BONUS ITEM' },
       { label: 'BOMBER CART', value: () => r.cart.toUpperCase(), change: (d) => (r.cart = cycle(carts, r.cart, d)), help: 'KNOCKED-OUT PLAYERS FIGHT ON' },
       { label: 'OK', action: () => (this.persist(), this.players()) },
     ];
     if (beginner) {
-      r.suddenDeath = false;
-      r.randomPosition = false;
+      r.suddenDeath = 'off';
+      r.randomPosition = 'off';
       r.skullBomb = false;
     }
     const menu = new Menu(this.app, items, () => this.singleTag());
@@ -619,10 +624,14 @@ function restoreConfig(saved: Partial<BattleConfig> | null): BattleConfig {
   if (typeof saved.tag === 'boolean') cfg.tag = saved.tag;
   if (Number.isInteger(saved.stage) && saved.stage! >= 0 && saved.stage! < 8) cfg.stage = saved.stage!;
   if (saved.rules && typeof saved.rules === 'object') {
+    const rules = { ...saved.rules } as Record<string, unknown>;
+    // Older saves stored these two as booleans.
+    for (const k of ['suddenDeath', 'randomPosition']) if (typeof rules[k] === 'boolean') rules[k] = rules[k] ? 'on' : 'off';
     for (const k of Object.keys(cfg.rules) as (keyof typeof cfg.rules)[]) {
-      const v = saved.rules[k];
+      const v = rules[k];
       if (typeof v === typeof cfg.rules[k]) (cfg.rules as unknown as Record<string, unknown>)[k] = v;
     }
+    for (const k of ['suddenDeath', 'randomPosition'] as const) if (!['off', 'on', 'random'].includes(cfg.rules[k])) cfg.rules[k] = 'off';
   }
   if (Array.isArray(saved.players)) {
     cfg.players.forEach((p, i) => {

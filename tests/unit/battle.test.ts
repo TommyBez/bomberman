@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../../src/engine/rng';
 import { ARENAS } from '../../src/game/battle/arenas';
-import { BATTLE_MAX_FIRE, BattleWorld, customCounts, HURRY_TICKS, perimeterPath, spiralOrder, stageItems } from '../../src/game/battle/battleWorld';
+import { BATTLE_MAX_FIRE, BattleWorld, customCounts, HURRY_TICKS, perimeterPath, PRESSURE_PATTERNS, pressureOrder, spiralOrder, stageItems } from '../../src/game/battle/battleWorld';
 import { defaultConfig, type BattleConfig } from '../../src/game/battle/config';
 import { NO_INTENT } from '../../src/game/core/bomber';
 import { ALL_DIRS, Cell, tileCenter } from '../../src/game/core/types';
@@ -12,7 +12,7 @@ function config(level: BattleConfig['level'], players = 5): BattleConfig {
   cfg.level = level;
   cfg.players.forEach((p, i) => (p.type = i < players ? 'com' : 'off'));
   cfg.rules.cart = 'on';
-  cfg.rules.suddenDeath = true;
+  cfg.rules.suddenDeath = 'on';
   return cfg;
 }
 
@@ -164,7 +164,7 @@ describe('battle world', () => {
 
   it('pressure blocks start at 1:00 and crush bombers', () => {
     const cfg = config('beginner', 2);
-    cfg.rules.suddenDeath = true;
+    cfg.rules.suddenDeath = 'on';
     const w = new BattleWorld({ cfg, arena: ARENAS[0], seed: 7 });
     w.timeLeft = HURRY_TICKS + 1;
     const [a] = w.bombers;
@@ -276,6 +276,15 @@ describe('battle world', () => {
     const t = w.cartTile(c);
     expect(t.tx === 0 || t.ty === 0 || t.tx === 14 || t.ty === 12).toBe(true);
     expect(perimeterPath(15, 13)).toHaveLength(2 * 13 + 2 * 11);
+  });
+
+  it('every Sudden Death fall pattern covers the arena exactly once', () => {
+    for (let p = 0; p < PRESSURE_PATTERNS; p++) {
+      const order = pressureOrder(15, 13, p);
+      expect(order).toHaveLength(13 * 11);
+      expect(new Set(order.map(([x, y]) => `${x},${y}`)).size).toBe(13 * 11);
+      for (const [x, y] of order) expect(x >= 1 && x <= 13 && y >= 1 && y <= 11).toBe(true);
+    }
   });
 
   it('spirals the pressure blocks from the outer ring inward', () => {

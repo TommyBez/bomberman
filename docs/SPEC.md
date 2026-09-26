@@ -85,7 +85,8 @@ The stage table (enemies and item for all 50 stages) lives in `src/game/campaign
 - Levels: **Beginner / Normal / Advanced**, eight stages each.
 - **Single** or **Tag** (two teams).
 - Rules: Computer (Weak/Normal/Strong), Games per match 1–5 (3), Time 1–5 min or ∞ (3:00),
-  Sudden Death (Off), Random Position (Off), Skull Bomb (Off), Hyper Bomber (On),
+  Sudden Death Off/On/Random (Off; Random = one of several fall patterns), Random Position
+  Off/On/Random (Off), Skull Bomb (Off), Hyper Bomber (On),
   Bomber Cart Off/On/Super (Off). Beginner locks Sudden Death, Random Position and Skull.
 - Arena 15×13 (13×11 playable), whole arena on screen. Starts: P1 white top-left,
   P2 black bottom-right, P3 red top-right, P4 blue bottom-left, P5 green centre.
