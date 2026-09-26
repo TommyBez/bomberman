@@ -343,6 +343,33 @@ describe('battle world', () => {
     expect(w.grid.get(2, 5)).toBe(Cell.Soft);
   });
 
+  it('a trapped CPU on Pink Roo jumps over the blocks to safety', () => {
+    const { w, a } = advanced();
+    a.partner = 'louiePink';
+    a.character = 'bomberman';
+    w.grid.set(3, 4, Cell.Soft);
+    w.grid.set(3, 6, Cell.Soft);
+    w.grid.set(3, 3, Cell.Floor);
+    w.grid.set(3, 7, Cell.Floor);
+    a.stats.bombs = 3;
+    for (const x of [2, 4]) {
+      const bomb = w.placeBomb(a, x, 5)!;
+      bomb.range = 1;
+      bomb.fuse = 60;
+    }
+    a.x = tileCenter(3);
+    a.y = tileCenter(5);
+    const cpu = new CpuPlayer(w, a, 'strong');
+    let jumped = false;
+    for (let t = 0; t < 30 && !jumped; t++) {
+      a.intent = cpu.think();
+      for (const o of w.bombers) if (o !== a) o.intent = NO_INTENT;
+      w.update();
+      jumped = a.airborne > 0;
+    }
+    expect(jumped).toBe(true);
+  });
+
   it('a stocked egg brings back the same partner', () => {
     const { w, a } = advanced();
     a.partner = 'drakko';

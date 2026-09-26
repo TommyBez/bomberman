@@ -91,8 +91,9 @@ export class CpuPlayer {
       this.plan();
     }
     let dirs = this.followPath();
-    if (this.wantSpecial && this.specialDir) {
-      dirs = [this.specialDir];
+    if (this.wantSpecial) {
+      // A character special needs its direction; a partner ability needs none.
+      dirs = this.specialDir ? [this.specialDir] : [];
       this.specialDir = null;
     }
     const intent: Intent = { dirs, bomb: this.wantBomb, special: this.wantSpecial, specialHeld: false, bombHeld: false, action: this.wantAction };
@@ -317,10 +318,15 @@ export class CpuPlayer {
           bestLeast = n;
         }
       }
+      // No way out on foot: a jumping partner can hop over whatever is in the way.
+      if (!best && this.partnerJump(false)) return;
       const target = best ?? bestLeast;
       if (target) this.setPath(nodes, target);
       return;
     }
+
+    // Drake: hip-attack an opponent standing two tiles away.
+    if (me.partner === 'drakko' && this.partnerJump(true)) return;
 
     // Remote bombs: detonate when an opponent is inside one of our blasts.
     if (me.stats.remote && this.remoteWorthIt()) {
@@ -470,6 +476,30 @@ export class CpuPlayer {
     // or when no opponent is close enough to cut the corridor off.
     if (nearest <= this.diff.shortExit * this.tileTime + 2) return true;
     return !w.alive().some((e) => e !== me && e.team !== me.team && Math.abs(e.tx - me.tx) + Math.abs(e.ty - me.ty) <= this.diff.threat);
+  }
+
+  /**
+   * Pink Roo / Drake jump two tiles. `attack`: only onto an opponent (Drake's stomp);
+   * otherwise any safe landing (an escape). Returns true if a jump was ordered.
+   */
+  private partnerJump(attack: boolean): boolean {
+    const w = this.w;
+    const me = this.me;
+    if (me.partner !== 'louiePink' && me.partner !== 'drakko') return false;
+    for (const d of w.rng.shuffle([...ALL_DIRS])) {
+      const [x, y] = w.gim.wrapTile(me.tx + DX[d] * 2, me.ty + DY[d] * 2);
+      if (!w.grid.inside(x, y) || w.grid.get(x, y) !== Cell.Floor || w.bombAt[this.idx(x, y)]) continue;
+      if (this.danger[this.idx(x, y)] < INF) continue;
+      if (attack && !w.alive().some((o) => o !== me && o.team !== me.team && o.tx === x && o.ty === y)) continue;
+      if (attack && !w.rng.chance(0.3 + this.pers.aggression * 0.4)) return false;
+      // Face that way and press × without a direction (so it isn't a character special).
+      me.facing = d;
+      this.path = [];
+      this.wantSpecial = true;
+      this.specialDir = null;
+      return true;
+    }
+    return false;
   }
 
   private enemyAhead(range: number): boolean {
