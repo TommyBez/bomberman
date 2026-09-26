@@ -56,8 +56,11 @@ describe('alternate battle stages', () => {
       expect(alt.alternate).toBe(true);
       expect(arenaFor(def.level, arenasFor(def.level).indexOf(def), true)).toBe(alt);
       expect(alt.map).toHaveLength(13);
-      // Only '.' tiles change.
-      alt.map.forEach((row, y) => [...row].forEach((ch, x) => (def.map[y][x] === '.' ? expect('x_').toContain(ch) : expect(ch).toBe(def.map[y][x]))));
+      // Only '.' tiles of the alternate's own layout change.
+      const base = def.alt?.map ?? def.map;
+      expect(base).toHaveLength(13);
+      alt.map.forEach((row, y) => [...row].forEach((ch, x) => (base[y][x] === '.' ? expect('x_').toContain(ch) : expect(ch).toBe(base[y][x]))));
+      for (const row of base) for (const ch of row) expect(VALID.has(ch), `bad tile "${ch}"`).toBe(true);
       const cfg = defaultConfig();
       cfg.level = def.level;
       cfg.players.forEach((p) => (p.type = 'com'));

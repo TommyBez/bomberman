@@ -94,6 +94,11 @@ export interface ArenaDef {
   noSoft?: [number, number][];
   /** The alternate ("ura") version of a stage. */
   alternate?: boolean;
+  /**
+   * The alternate's own layout, where it differs from the stage's: its map (pillars and
+   * gimmicks; '.' tiles get the alternate's fixed blocks) and anything else that moves.
+   */
+  alt?: Partial<Omit<ArenaDef, 'alt' | 'id' | 'level' | 'alternate'>>;
   /** Which fixed block pattern the alternate uses (by default it follows the stage order). */
   altPattern?: number;
 }
@@ -698,12 +703,13 @@ export function alternateArena(def: ArenaDef): ArenaDef {
   const cached = altCache.get(def.id);
   if (cached) return cached;
   const index = arenasFor(def.level).indexOf(def);
-  const pattern = def.altPattern ?? (index + LEVEL_OFFSET[def.level]) % ALT_PATTERNS.length;
-  const h = def.map.length;
-  const w = def.map[0].length;
-  const spawns: [number, number][] = def.spawns ? [...def.spawns] : [];
-  def.map.forEach((row, y) => [...row].forEach((ch, x) => ch >= '1' && ch <= '5' && spawns.push([x, y])));
-  const map = def.map.map((row, y) =>
+  const base: ArenaDef = { ...def, ...def.alt };
+  const pattern = base.altPattern ?? (index + LEVEL_OFFSET[def.level]) % ALT_PATTERNS.length;
+  const h = base.map.length;
+  const w = base.map[0].length;
+  const spawns: [number, number][] = base.spawns ? [...base.spawns] : [];
+  base.map.forEach((row, y) => [...row].forEach((ch, x) => ch >= '1' && ch <= '5' && spawns.push([x, y])));
+  const map = base.map.map((row, y) =>
     [...row]
       .map((ch, x) => {
         if (ch !== '.') return ch;
@@ -714,7 +720,7 @@ export function alternateArena(def: ArenaDef): ArenaDef {
       .join(''),
   );
   const items = { ...ALT_ITEMS[def.level], ...(WALLPASS_PATTERNS.has(pattern) ? { wallpass: 1 } : {}) };
-  const alt: ArenaDef = { ...def, id: `${def.id}x`, map, density: 0, items, alternate: true };
+  const alt: ArenaDef = { ...base, id: `${def.id}x`, map, density: 0, items, alternate: true, alt: undefined };
   altCache.set(def.id, alt);
   return alt;
 }
