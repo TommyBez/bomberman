@@ -34,11 +34,24 @@ export function flamePhase(timer: number, total: number): number {
 
 export class FieldRenderer {
   readonly s: Sprites = sprites();
+  /** A picture painted on the floor, covering tiles from (tx, ty). */
+  decal: { img: HTMLCanvasElement; tx: number; ty: number } | null = null;
 
   constructor(
     public theme: string,
     public retro = false,
   ) {}
+
+  /** The floor tile, with its part of the floor picture if there is one. */
+  private floorAt(g: Gfx, img: CanvasImageSource, tx: number, ty: number, x: number, y: number): void {
+    g.image(img, x, y);
+    const d = this.decal;
+    if (!d) return;
+    const sx = (tx - d.tx) * TILE;
+    const sy = (ty - d.ty) * TILE;
+    if (sx < 0 || sy < 0 || sx >= d.img.width || sy >= d.img.height) return;
+    g.ctx.drawImage(d.img, sx, sy, TILE, TILE, x, y, TILE, TILE);
+  }
 
   /** Floor, blocks, burning blocks. */
   drawTiles(g: Gfx, world: World, v: View, skipTopRow = false): void {
@@ -53,11 +66,13 @@ export class FieldRenderer {
         const c = grid.get(tx, ty);
         if (c === Cell.Hard) {
           const border = tx === 0 || ty === 0 || tx === grid.w - 1 || ty === grid.h - 1;
+          // Round pillars stand on the floor.
+          if (!border) this.floorAt(g, ts.floor, tx, ty, x, y);
           g.image(border ? ts.walls[(tx * 7 + ty * 3) % ts.walls.length] : ts.hard, x, y);
           continue;
         }
         const above = grid.get(tx, ty - 1);
-        g.image(above === Cell.Hard || above === Cell.Soft ? ts.floorShadow : ts.floor, x, y);
+        this.floorAt(g, above === Cell.Hard || above === Cell.Soft ? ts.floorShadow : ts.floor, tx, ty, x, y);
         if (c === Cell.Soft) {
           const bt = world.burnTimer[world.idx(tx, ty)];
           if (bt > 0) {

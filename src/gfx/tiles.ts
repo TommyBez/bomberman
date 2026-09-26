@@ -9,16 +9,16 @@ export interface Theme {
   backdrop: string;
   floor: string;
   floorAlt: string;
-  floorStyle: 'grass' | 'checker' | 'plain' | 'tiles' | 'carpet' | 'sand' | 'ice' | 'metal' | 'nes' | 'wood' | 'water';
+  floorStyle: 'grass' | 'checker' | 'plain' | 'tiles' | 'carpet' | 'sand' | 'ice' | 'metal' | 'nes' | 'wood' | 'water' | 'stars';
   hard: string;
   hardAlt?: string;
-  hardStyle: 'bevel' | 'metal' | 'gem' | 'checker' | 'goldArrow' | 'candy' | 'nes' | 'stone' | 'crystal' | 'pillar';
+  hardStyle: 'bevel' | 'metal' | 'gem' | 'checker' | 'goldArrow' | 'candy' | 'nes' | 'stone' | 'crystal' | 'pillar' | 'boulder' | 'orb' | 'capsule' | 'drum';
   wall: string;
   wallAlt?: string;
   wallStyle: 'bevel' | 'metal' | 'balloon' | 'candy' | 'stone' | 'brick' | 'nes' | 'hedge';
   soft: string;
   softAlt?: string;
-  softStyle: 'brick' | 'crate' | 'toy' | 'rock' | 'bush' | 'ice' | 'nes' | 'barrel' | 'snow';
+  softStyle: 'brick' | 'crate' | 'toy' | 'rock' | 'bush' | 'ice' | 'nes' | 'barrel' | 'snow' | 'gear' | 'mushroom' | 'leaf' | 'star' | 'buoy';
   /** HUD strip colours (the tall top wall). */
   hud: [string, string];
   /** Floor shadow strength (0 = none, as on the NES). */
@@ -199,6 +199,19 @@ function floorTile(t: Theme, shadow: boolean): HTMLCanvasElement {
       p.rect(0, 15, 16, 1, mix(t.floor, '#000000', 0.35));
       for (const [x, y] of [[2, 2], [13, 2], [2, 13], [13, 13]]) p.px(x, y, t.floorAlt);
       break;
+    case 'stars':
+      // Deep space: specks, and now and then a little twinkling star.
+      for (let i = 0; i < 7; i++) p.px(Math.floor(hash(i, 21) * 16), Math.floor(hash(i, 22) * 16), mix(t.floor, '#ffffff', 0.35));
+      if (hash(3, 23) > 0.2) {
+        const sx = 3 + Math.floor(hash(4, 24) * 10);
+        const sy = 3 + Math.floor(hash(5, 25) * 10);
+        p.px(sx, sy, '#ffffff');
+        p.px(sx - 1, sy, t.floorAlt);
+        p.px(sx + 1, sy, t.floorAlt);
+        p.px(sx, sy - 1, t.floorAlt);
+        p.px(sx, sy + 1, t.floorAlt);
+      }
+      break;
     case 'nes':
       break;
   }
@@ -302,6 +315,46 @@ function hardTile(t: Theme): HTMLCanvasElement {
       p.rect(1, 1, 14, 14, base);
       for (let i = 0; i < 7; i++) p.hline(1 + i, 14 - i, 1 + i, i % 2 ? light : lighter);
       for (let i = 0; i < 6; i++) p.hline(2 + i, 13 - i, 14 - i, dark);
+      break;
+    case 'boulder':
+      p.ellipse(7.5, 13.5, 7, 2.5, 'rgba(0,0,0,0.3)');
+      p.ellipse(7.5, 8.5, 7.5, 7, darker);
+      p.ellipse(7.5, 8, 6.6, 6.2, base);
+      p.ellipse(5.5, 5.5, 3.5, 2.6, light);
+      p.ellipse(4.5, 4.8, 1.6, 1.1, lighter);
+      p.rect(9, 9, 3, 1, dark);
+      p.rect(8, 10, 2, 1, dark);
+      break;
+    case 'orb':
+      p.ellipse(7.5, 14, 6, 2, 'rgba(0,0,0,0.3)');
+      p.circle(7.5, 7.5, 7.4, darker);
+      p.circle(7.5, 7.5, 6.5, base);
+      p.ellipse(8.5, 10, 4.5, 3, dark);
+      p.circle(7.5, 7.5, 4.8, base);
+      p.circle(5.5, 5, 2.4, light);
+      p.circle(5, 4.4, 1, '#ffffff');
+      break;
+    case 'capsule': {
+      const band = t.hardAlt ?? '#4a7ae0';
+      p.rect(2, 14, 12, 2, 'rgba(0,0,0,0.3)');
+      p.roundRect(1, 1, 14, 14, darker, 5);
+      p.roundRect(2, 2, 12, 12, base, 4);
+      p.rect(2, 7, 12, 3, band);
+      p.rect(2, 7, 12, 1, mix(band, '#ffffff', 0.4));
+      p.rect(4, 3, 4, 2, '#ffffff');
+      break;
+    }
+    case 'drum':
+      p.ellipse(8, 14.5, 7, 1.6, 'rgba(0,0,0,0.3)');
+      p.rect(1, 4, 14, 10, darker);
+      p.rect(2, 4, 12, 9, base);
+      p.rect(3, 4, 2, 9, light);
+      p.rect(11, 4, 2, 9, dark);
+      p.rect(2, 8, 12, 1, dark);
+      p.ellipse(7.5, 13, 6, 1.5, base);
+      p.ellipse(7.5, 4, 7, 3, darker);
+      p.ellipse(7.5, 4, 6, 2.2, light);
+      p.ellipse(7.5, 4, 3, 1, dark);
       break;
     case 'pillar':
       p.rect(0, 0, 16, 16, darker);
@@ -483,6 +536,83 @@ function softTile(t: Theme): HTMLCanvasElement {
         }
       }
       break;
+    case 'gear':
+      // A cog: eight teeth round a wheel with a hub.
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2;
+        p.circle(7.5 + Math.cos(a) * 6, 7.5 + Math.sin(a) * 6, 1.8, dark);
+      }
+      p.circle(7.5, 7.5, 6, dark);
+      p.circle(7.5, 7.5, 5.2, base);
+      p.circle(6.5, 6.5, 2.6, light);
+      p.circle(7.5, 7.5, 2.6, mix(base, '#000000', 0.2));
+      p.circle(7.5, 7.5, 1.4, mix(base, '#000000', 0.55));
+      break;
+    case 'mushroom':
+      p.rect(5, 9, 6, 6, '#6a4a2a');
+      p.rect(6, 9, 4, 6, '#f4e2c0');
+      p.rect(6, 14, 4, 1, '#c8a878');
+      p.ellipse(7.5, 7, 7.5, 5.5, dark);
+      p.ellipse(7.5, 6.5, 6.6, 4.8, base);
+      p.ellipse(5.5, 4.5, 2.6, 1.4, light);
+      p.circle(4, 7, 1.2, '#ffffff');
+      p.circle(10.5, 5, 1.3, '#ffffff');
+      p.circle(8, 8.5, 0.9, '#ffffff');
+      break;
+    case 'leaf': {
+      // A lily pad with a notch and veins.
+      p.ellipse(7.5, 8.5, 7.5, 6.5, dark);
+      p.ellipse(7.5, 8, 6.8, 5.8, base);
+      p.ellipse(6, 6, 3, 2, light);
+      for (let i = 0; i < 6; i++) p.px(7 + i, 8 - (i >> 1), mix(base, '#000000', 0.25));
+      for (let i = 0; i < 5; i++) p.px(7 - i, 9 + (i >> 1), mix(base, '#000000', 0.25));
+      // The notch shows the water underneath.
+      for (let dy = -1; dy <= 1; dy++) for (let dx = 0; dx < 5; dx++) if (Math.abs(dy) * 2 <= dx) p.px(9 + dx, 8 + dy - (dx >> 2), t.floor);
+      break;
+    }
+    case 'star': {
+      // A five-pointed star.
+      const pts: [number, number][] = [];
+      for (let k = 0; k < 10; k++) {
+        const r = k % 2 ? 3.1 : 7.4;
+        const a = -Math.PI / 2 + (k * Math.PI) / 5;
+        pts.push([7.5 + Math.cos(a) * r, 8.2 + Math.sin(a) * r]);
+      }
+      const inside = (x: number, y: number): boolean => {
+        let c = false;
+        for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+          const [xi, yi] = pts[i];
+          const [xj, yj] = pts[j];
+          if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c;
+        }
+        return c;
+      };
+      for (let y = 0; y < 16; y++) {
+        for (let x = 0; x < 16; x++) {
+          if (inside(x + 0.5, y + 0.5)) p.px(x, y, y < 8 && x < 8 ? light : base);
+          else if (inside(x + 1.5, y + 0.5) || inside(x - 0.5, y + 0.5) || inside(x + 0.5, y + 1.5) || inside(x + 0.5, y - 0.5)) p.px(x, y, dark);
+        }
+      }
+      break;
+    }
+    case 'buoy': {
+      // Red and white segments, like a striped float.
+      const alt = t.softAlt ?? '#ffffff';
+      p.circle(7.5, 8, 7.4, dark);
+      for (let y = 0; y < 16; y++) {
+        for (let x = 0; x < 16; x++) {
+          const dx = x + 0.5 - 7.5;
+          const dy = y + 0.5 - 8;
+          if (dx * dx + dy * dy > 6.4 * 6.4) continue;
+          const seg = Math.floor(((Math.atan2(dy, dx) + Math.PI) / (Math.PI * 2)) * 8) % 2;
+          p.px(x, y, seg ? base : alt);
+        }
+      }
+      p.circle(7.5, 8, 2.2, dark);
+      p.circle(7.5, 8, 1.4, alt);
+      p.ellipse(5, 5, 1.8, 1, 'rgba(255,255,255,0.7)');
+      break;
+    }
     case 'brick':
     default: {
       p.rect(0, 0, 16, 16, mortar);

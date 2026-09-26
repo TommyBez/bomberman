@@ -1,4 +1,4 @@
-import type { Gfx } from '../engine/gfx';
+import { mix, type Gfx } from '../engine/gfx';
 import type { BattleWorld } from '../game/battle/battleWorld';
 import type { Bomber } from '../game/core/bomber';
 import { Cell, DX, DY, TILE, toTile, type Dir } from '../game/core/types';
@@ -15,6 +15,8 @@ export class BattleRenderer {
 
   constructor(private readonly w: BattleWorld) {
     this.field = new FieldRenderer(w.arena.theme);
+    // Super Power's big emblem, painted across the middle of the floor.
+    if (w.arena.decal === 'emblem') this.field.decal = { img: emblemDecal(), tx: 4, ty: 3 };
   }
 
   draw(g: Gfx, v: View, frame: number, hudStripDrawn: boolean): void {
@@ -358,4 +360,46 @@ function drawShot(g: Gfx, x: number, y: number, kind: 'rocket' | 'wave', dir: Di
   for (const [px, py] of pts) g.rect(px - 2, py - 2, 4, 4, '#103080');
   for (const [px, py] of pts) g.rect(px - 1, py - 1, 2, 2, '#50b0ff');
   for (const [px, py] of pts.slice(2, -2)) g.rect(px - 1, py - 1, 1, 1, c);
+}
+
+let emblem: HTMLCanvasElement | null = null;
+
+/** A pink checkered sphere in a ring, seven tiles across. */
+function emblemDecal(): HTMLCanvasElement {
+  if (emblem) return emblem;
+  const c = document.createElement('canvas');
+  c.width = 112;
+  c.height = 112;
+  const ctx = c.getContext('2d')!;
+  const cx = 56;
+  const cy = 56;
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = '#a01858';
+  ctx.beginPath();
+  ctx.arc(cx, cy, 54, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#ffe8f4';
+  ctx.beginPath();
+  ctx.arc(cx, cy, 50, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 46, 0, Math.PI * 2);
+  ctx.clip();
+  for (let y = 0; y < 112; y += 12) {
+    for (let x = 0; x < 112; x += 12) {
+      const dark = ((x + y) / 12) % 2 === 0;
+      const shade = Math.hypot(x + 6 - cx + 12, y + 6 - cy + 12) / 70;
+      ctx.fillStyle = dark ? mix('#e04898', '#801040', shade) : mix('#ffd0e8', '#e080b0', shade);
+      ctx.fillRect(x, y, 12, 12);
+    }
+  }
+  ctx.globalAlpha = 0.45;
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.ellipse(cx - 16, cy - 18, 16, 10, -0.6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  emblem = c;
+  return c;
 }

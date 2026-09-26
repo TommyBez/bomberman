@@ -15,10 +15,23 @@ export const BATTLE_THEMES: Record<string, Theme> = {
   sky: { name: 'sky', backdrop: '#3060c0', floor: '#e8f0ff', floorAlt: '#d0e0ff', floorStyle: 'plain', hard: '#80b0ff', hardStyle: 'crystal', wall: '#5080e0', wallStyle: 'bevel', soft: '#ffffff', softStyle: 'crate', hud: ['#4070d0', '#183070'], shadow: 0.18 },
   toy: { name: 'toy', backdrop: '#200820', floor: '#f0d0a0', floorAlt: '#e8c090', floorStyle: 'wood', hard: '#e05050', hardAlt: '#4060e0', hardStyle: 'checker', wall: '#8040a0', wallStyle: 'bevel', soft: '#50b0f0', softAlt: '#f0e040', softStyle: 'toy', hud: ['#8040a0', '#401850'], shadow: 0.3 },
   snow: { name: 'snow', backdrop: '#101828', floor: '#e8f0f8', floorAlt: '#d0e0f0', floorStyle: 'plain', hard: '#7aa8d8', hardStyle: 'crystal', wall: '#6890b8', wallStyle: 'stone', soft: '#ffffff', softStyle: 'snow', hud: ['#5078a8', '#203858'], shadow: 0.2 },
-  volcano: { name: 'volcano', backdrop: '#200800', floor: '#503028', floorAlt: '#603830', floorStyle: 'sand', hard: '#302020', hardStyle: 'stone', wall: '#401810', wallStyle: 'stone', soft: '#a04020', softStyle: 'rock', hud: ['#802010', '#300800'], shadow: 0.4 },
   garden: { name: 'garden', backdrop: '#102010', floor: '#70c060', floorAlt: '#80d070', floorStyle: 'grass', hard: '#e0a0c0', hardStyle: 'candy', wall: '#408040', wallStyle: 'hedge', soft: '#f0e080', softStyle: 'bush', hud: ['#408040', '#183818'], shadow: 0.3 },
-  jungle: { name: 'jungle', backdrop: '#081408', floor: '#3a7030', floorAlt: '#468040', floorStyle: 'grass', hard: '#806040', hardStyle: 'pillar', wall: '#304820', wallStyle: 'hedge', soft: '#60a030', softStyle: 'bush', hud: ['#305020', '#102008'], shadow: 0.4 },
-  sea: { name: 'sea', backdrop: '#081830', floor: '#b08050', floorAlt: '#a07040', floorStyle: 'wood', hard: '#704828', hardStyle: 'pillar', wall: '#503018', wallStyle: 'stone', soft: '#c09060', softStyle: 'barrel', hud: ['#2050a0', '#0c2050'], shadow: 0.3 },
+  // King of the Jungle: orange dirt, tree stumps, red mushrooms.
+  jungle: { name: 'jungle', backdrop: '#081408', floor: '#d8a448', floorAlt: '#c89034', floorStyle: 'sand', hard: '#9a6430', hardStyle: 'drum', wall: '#2c7a24', wallStyle: 'hedge', soft: '#e03a30', softStyle: 'mushroom', hud: ['#3a8a2c', '#185010'], shadow: 0.3 },
+  // The Seven Seas: wooden decks, golden barrels, red-and-white floats.
+  sea: { name: 'sea', backdrop: '#081830', floor: '#b08050', floorAlt: '#a07040', floorStyle: 'wood', hard: '#e8b830', hardStyle: 'drum', wall: '#503018', wallStyle: 'stone', soft: '#e03030', softAlt: '#fff4f0', softStyle: 'buoy', hud: ['#2050a0', '#0c2050'], shadow: 0.3 },
+  // Super Power: the standard green arena (with the big emblem in the middle).
+  superpower: { name: 'superpower', backdrop: '#101820', floor: '#3c9a3a', floorAlt: '#48aa44', floorStyle: 'grass', hard: '#a4aabc', hardStyle: 'bevel', wall: '#b0b6c4', wallStyle: 'bevel', soft: '#dde1ec', softAlt: '#8894b4', softStyle: 'brick', hud: ['#c8ccd8', '#9ca2b4'], shadow: 0.38 },
+  // Robo Bomber: city pavement, orange blocks, red soft blocks, skyscraper walls.
+  robocity: { name: 'robocity', backdrop: '#100c20', floor: '#6a7282', floorAlt: '#76808e', floorStyle: 'tiles', hard: '#e89840', hardStyle: 'bevel', wall: '#5a4a90', wallStyle: 'brick', soft: '#d83a34', softStyle: 'brick', hud: ['#5a4a90', '#281c50'], shadow: 0.32 },
+  // Round and Round: a blue pond, grey boulders, lily pads.
+  pond: { name: 'pond', backdrop: '#081810', floor: '#5a84d8', floorAlt: '#78a0ea', floorStyle: 'water', hard: '#9aa0aa', hardStyle: 'boulder', wall: '#3a8a30', wallStyle: 'hedge', soft: '#58b840', softStyle: 'leaf', hud: ['#3a8a30', '#185010'], shadow: 0.25 },
+  // Destination Unknown: a starry purple floor, white capsules, yellow stars.
+  space: { name: 'space', backdrop: '#0c0820', floor: '#5a3ca8', floorAlt: '#ffe060', floorStyle: 'stars', hard: '#eef2ff', hardAlt: '#4a7ae0', hardStyle: 'capsule', wall: '#b8c0d0', wallStyle: 'metal', soft: '#ffd030', softStyle: 'star', hud: ['#8890b0', '#404868'], shadow: 0.3 },
+  // Incoming!: purple tiles, orange orbs, pale crystal blocks, brass pipes.
+  incoming: { name: 'incoming', backdrop: '#100818', floor: '#9a7ac8', floorAlt: '#a888d4', floorStyle: 'tiles', hard: '#e88838', hardStyle: 'orb', wall: '#c89838', wallStyle: 'metal', soft: '#dce6ff', softStyle: 'ice', hud: ['#b08030', '#584010'], shadow: 0.3 },
+  // The Fast Lane: green floor, grey drums, pink cogs, a brass frame.
+  fastlane: { name: 'fastlane', backdrop: '#101008', floor: '#5aa83a', floorAlt: '#68b448', floorStyle: 'grass', hard: '#a8acb8', hardStyle: 'drum', wall: '#d8a838', wallStyle: 'metal', soft: '#f09080', softStyle: 'gear', hud: ['#c89830', '#604810'], shadow: 0.32 },
 };
 
 // ------------------------------------------------------------------ floor gimmicks
@@ -274,17 +287,18 @@ export function portalTile(): Sprite {
 }
 
 export function bendTile(turn: Partial<Record<Dir, Dir>>): Sprite {
+  // Orange pipe work, as on Incoming!
   const p = new PixelCanvas(16, 16);
-  p.rect(0, 0, 16, 16, '#205828');
-  p.rect(1, 1, 14, 14, '#30a040');
-  p.rect(2, 2, 12, 1, '#80e080');
+  p.rect(0, 0, 16, 16, '#703008');
+  p.rect(1, 1, 14, 14, '#e07a28');
+  p.rect(2, 2, 12, 1, '#ffc070');
   // Show which sides are open.
   const open = new Set<Dir>();
   for (const [from, to] of Object.entries(turn) as [Dir, Dir][]) {
     open.add(OPP[from]);
     open.add(to);
   }
-  const hole = '#0c200c';
+  const hole = '#2a0c00';
   if (open.has('up')) p.rect(5, 0, 6, 6, hole);
   if (open.has('down')) p.rect(5, 10, 6, 6, hole);
   if (open.has('left')) p.rect(0, 5, 6, 6, hole);

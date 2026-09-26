@@ -76,6 +76,8 @@ export interface ArenaDef {
   refuge?: [number, number, number, number];
   /** Players start with maximum fire. */
   maxFire?: boolean;
+  /** A picture painted on the floor (Super Power's emblem). */
+  decal?: 'emblem';
   /** Trolley starts here heading this way. */
   trolley?: { x: number; y: number; dir: Dir; warps?: boolean };
   spawns?: [number, number][];
@@ -471,18 +473,19 @@ export const ARENAS: ArenaDef[] = [
   },
   // ------------------------------------------------------------------ ADVANCED
   {
-    id: 'a1', name: 'SUPER POWER', jpName: 'GINGIN POWER', level: 'advanced', gimmick: 'superpower', theme: 'volcano', density: 0.7,
+    id: 'a1', name: 'SUPER POWER', jpName: 'GINGIN POWER', level: 'advanced', gimmick: 'superpower', theme: 'superpower', density: 0.7,
     blurb: 'EVERYONE STARTS WITH MAXIMUM FIRE!',
     maxFire: true,
+    decal: 'emblem',
     map: STD,
   },
   {
-    id: 'a2', name: 'ROBO BOMBER', jpName: 'BOMBER ROBO', level: 'advanced', gimmick: 'robot', theme: 'factory', density: 0.55,
+    id: 'a2', name: 'ROBO BOMBER', jpName: 'BOMBER ROBO', level: 'advanced', gimmick: 'robot', theme: 'robocity', density: 0.55,
     blurb: 'A GIANT ROBOT STOMPS AROUND. IT LEAVES AT 1:00.',
     map: STD,
   },
   {
-    id: 'a3', name: 'ROUND AND ROUND', jpName: 'KURUKURU DOKAN', level: 'advanced', gimmick: 'flowers', theme: 'garden', density: 0.5,
+    id: 'a3', name: 'ROUND AND ROUND', jpName: 'KURUKURU DOKAN', level: 'advanced', gimmick: 'flowers', theme: 'pond', density: 0.5,
     blurb: 'PUSH A FLOWER TO TURN IT. A BLAST INTO ITS MOUTH BURSTS OUT OF ITS PARTNER.',
     portalPairs: [[[7, 4], [7, 8]], [[3, 6], [11, 6]], [[3, 3], [11, 9]], [[11, 3], [3, 9]]],
     flowerFaces: {
@@ -506,7 +509,7 @@ export const ARENAS: ArenaDef[] = [
     ],
   },
   {
-    id: 'a4', name: 'DESTINATION UNKNOWN', jpName: 'FUSHIGI NA TROCCO', level: 'advanced', gimmick: 'mystery', theme: 'mine', density: 0.55,
+    id: 'a4', name: 'DESTINATION UNKNOWN', jpName: 'FUSHIGI NA TROCCO', level: 'advanced', gimmick: 'mystery', theme: 'space', density: 0.55,
     blurb: 'THE TROLLEY WARPS BETWEEN HOLES. BOMBERS ON FOOT CAN\'T.',
     spawns: [[1, 1], [13, 11], [13, 1], [1, 11], [7, 7]],
     stations: [[3, 6], [11, 6]],
@@ -552,7 +555,7 @@ export const ARENAS: ArenaDef[] = [
     ],
   },
   {
-    id: 'a6', name: 'INCOMING!', jpName: 'MAGARE FIRE', level: 'advanced', gimmick: 'incoming', theme: 'city', density: 0.5,
+    id: 'a6', name: 'INCOMING!', jpName: 'MAGARE FIRE', level: 'advanced', gimmick: 'incoming', theme: 'incoming', density: 0.5,
     blurb: 'BENT PIPES TURN KICKED BOMBS AND BLASTS AROUND CORNERS.',
     bends: {
       '3,3': { left: 'down', up: 'right' },
@@ -577,7 +580,7 @@ export const ARENAS: ArenaDef[] = [
     ],
   },
   {
-    id: 'a7', name: 'THE FAST LANE', jpName: 'KARAKURI BELCON', level: 'advanced', gimmick: 'fastlane', theme: 'factory', density: 0.45,
+    id: 'a7', name: 'THE FAST LANE', jpName: 'KARAKURI BELCON', level: 'advanced', gimmick: 'fastlane', theme: 'fastlane', density: 0.45,
     blurb: 'BLUE SWITCHES REVERSE THE BELTS, RED ONES CHANGE THEIR SPEED. EDGES WRAP.',
     map: [
       '#######w#######',
