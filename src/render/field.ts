@@ -43,7 +43,7 @@ export class FieldRenderer {
   ) {}
 
   /** The floor tile, with its part of the floor picture if there is one. */
-  private floorAt(g: Gfx, img: CanvasImageSource, tx: number, ty: number, x: number, y: number): void {
+  floorAt(g: Gfx, img: CanvasImageSource, tx: number, ty: number, x: number, y: number): void {
     g.image(img, x, y);
     const d = this.decal;
     if (!d) return;
@@ -73,16 +73,20 @@ export class FieldRenderer {
         }
         const above = grid.get(tx, ty - 1);
         this.floorAt(g, above === Cell.Hard || above === Cell.Soft ? ts.floorShadow : ts.floor, tx, ty, x, y);
-        if (c === Cell.Soft) {
-          const bt = world.burnTimer[world.idx(tx, ty)];
-          if (bt > 0) {
-            const f = Math.min(BURN_FRAME_COUNT - 1, Math.floor((1 - bt / world.rules.burnTicks) * BURN_FRAME_COUNT));
-            g.image(ts.burn[f], x, y);
-          } else {
-            g.image(ts.soft, x, y);
-          }
-        }
+        if (c === Cell.Soft) this.drawSoft(g, world, tx, ty, x, y);
       }
+    }
+  }
+
+  /** A soft block (or one burning away) on a tile. */
+  drawSoft(g: Gfx, world: World, tx: number, ty: number, x: number, y: number): void {
+    const ts = tileSet(this.theme);
+    const bt = world.burnTimer[world.idx(tx, ty)];
+    if (bt > 0) {
+      const f = Math.min(BURN_FRAME_COUNT - 1, Math.floor((1 - bt / world.rules.burnTicks) * BURN_FRAME_COUNT));
+      g.image(ts.burn[f], x, y);
+    } else {
+      g.image(ts.soft, x, y);
     }
   }
 

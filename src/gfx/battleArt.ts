@@ -301,36 +301,158 @@ export function portalTile(pipe = '#30a040'): Sprite {
   return p.canvas;
 }
 
-const pipeCache = new Map<string, { h: Sprite; v: Sprite; mouth: Sprite }>();
+export interface PipeSprites {
+  h: Sprite;
+  v: Sprite;
+  /** Where four pipes meet. */
+  cross: Sprite;
+  /** A pipe's open end, by the side it opens to. */
+  end: Record<Dir, Sprite>;
+  mouth: Sprite;
+}
+
+const pipeCache = new Map<string, PipeSprites>();
 
 /** Pipe covers and mouths in a stage's pipe colour. */
-export function pipeSprites(color = '#30a040'): { h: Sprite; v: Sprite; mouth: Sprite } {
+export function pipeSprites(color = '#30a040'): PipeSprites {
   let set = pipeCache.get(color);
   if (!set) {
-    set = { h: coverSprite('pipe', 0, color), v: coverSprite('pipe', 1, color), mouth: portalTile(color) };
+    set = {
+      h: pipeTile(['left', 'right'], null, color),
+      v: pipeTile(['up', 'down'], null, color),
+      cross: pipeTile(['up', 'right', 'down', 'left'], null, color),
+      end: {
+        up: pipeTile(['up', 'down'], 'up', color),
+        down: pipeTile(['up', 'down'], 'down', color),
+        left: pipeTile(['left', 'right'], 'left', color),
+        right: pipeTile(['left', 'right'], 'right', color),
+      },
+      mouth: portalTile(color),
+    };
     pipeCache.set(color, set);
   }
   return set;
 }
 
-export function bendTile(turn: Partial<Record<Dir, Dir>>): Sprite {
-  // Orange pipe work, as on Incoming!
+/**
+ * A pipe lying on the floor, seen from above: a tube to each of `sides`, with a collar
+ * round the open end (`open`) where bombers climb in.
+ */
+function pipeTile(sides: Dir[], open: Dir | null, pipe: string): Sprite {
   const p = new PixelCanvas(16, 16);
-  p.rect(0, 0, 16, 16, '#703008');
-  p.rect(1, 1, 14, 14, '#e07a28');
-  p.rect(2, 2, 12, 1, '#ffc070');
-  // Show which sides are open.
+  const [outline, dark, light] = [mix(pipe, '#000000', 0.62), mix(pipe, '#000000', 0.3), mix(pipe, '#ffffff', 0.45)];
+  const has = (d: Dir): boolean => sides.includes(d);
+  const band = (d: Dir, inset: number, color: string): void => {
+    const a = 2 + inset;
+    const len = 16 - a;
+    if (d === 'up') p.rect(a, 0, 12 - inset * 2, 8 + (has('down') ? 8 : 6 - inset), color);
+    if (d === 'down') p.rect(a, has('up') ? 0 : a, 12 - inset * 2, has('up') ? 16 : len, color);
+    if (d === 'left') p.rect(0, a, 8 + (has('right') ? 8 : 6 - inset), 12 - inset * 2, color);
+    if (d === 'right') p.rect(has('left') ? 0 : a, a, has('left') ? 16 : len, 12 - inset * 2, color);
+  };
+  for (const d of sides) band(d, 0, outline);
+  for (const d of sides) band(d, 1, pipe);
+  // Shading along each run: light on the upper / left flank, dark on the lower / right.
+  if (has('left') || has('right')) {
+    p.rect(has('left') ? 0 : 3, 4, has('left') && has('right') ? 16 : 13, 2, light);
+    p.rect(has('left') ? 0 : 3, 11, has('left') && has('right') ? 16 : 13, 1, dark);
+  }
+  if (has('up') || has('down')) {
+    p.rect(4, has('up') ? 0 : 3, 2, has('up') && has('down') ? 16 : 13, light);
+    p.rect(11, has('up') ? 0 : 3, 1, has('up') && has('down') ? 16 : 13, dark);
+  }
+  if (sides.length > 2) {
+    // A square coupling where the runs meet.
+    p.rect(2, 2, 12, 12, outline);
+    p.rect(3, 3, 10, 10, pipe);
+    p.rect(3, 3, 10, 2, light);
+    p.rect(3, 12, 10, 1, dark);
+    p.rect(6, 6, 4, 4, dark);
+  }
+  if (open) {
+    // The collar: a slightly wider ring just inside the open end.
+    const at = open === 'up' || open === 'left' ? 0 : 12;
+    if (open === 'up' || open === 'down') {
+      p.rect(1, at, 14, 4, outline);
+      p.rect(2, at + 1, 12, 2, light);
+    } else {
+      p.rect(at, 1, 4, 14, outline);
+      p.rect(at + 1, 2, 2, 12, light);
+    }
+  }
+  return p.canvas;
+}
+
+/** The sides a bent pipe tile opens to, from its turn table. */
+export function bendSides(turn: Partial<Record<Dir, Dir>>): Dir[] {
   const open = new Set<Dir>();
   for (const [from, to] of Object.entries(turn) as [Dir, Dir][]) {
     open.add(OPP[from]);
     open.add(to);
   }
-  const hole = '#2a0c00';
-  if (open.has('up')) p.rect(5, 0, 6, 6, hole);
-  if (open.has('down')) p.rect(5, 10, 6, 6, hole);
-  if (open.has('left')) p.rect(0, 5, 6, 6, hole);
-  if (open.has('right')) p.rect(10, 5, 6, 6, hole);
-  p.rect(5, 5, 6, 6, hole);
+  return [...open];
+}
+
+/**
+ * Incoming!'s thick orange pipe work: a tube to each open side of the tile, rounded at an
+ * elbow, with a dark mouth on the sides in `mouths` (the ends blasts and bombs go in by).
+ */
+export function bendTile(turn: Partial<Record<Dir, Dir>>, mouths: Dir[] = []): Sprite {
+  const p = new PixelCanvas(16, 16);
+  const sides = bendSides(turn);
+  const [outline, base, light, dark] = ['#5a2404', '#e07a28', '#ffc070', '#a04c10'];
+  const has = (d: Dir): boolean => sides.includes(d);
+  if (!sides.length) {
+    p.roundRect(1, 1, 14, 14, outline, 3);
+    p.roundRect(2, 2, 12, 12, base, 3);
+    return p.canvas;
+  }
+  const run = (inset: number, color: string): void => {
+    const a = 1 + inset;
+    const w = 14 - inset * 2;
+    // Each side's half of the tube; the elbow's corner is rounded off below.
+    if (has('up')) p.rect(a, 0, w, 8 + (has('down') ? 8 : w / 2), color);
+    if (has('down')) p.rect(a, has('up') ? 0 : 8 - w / 2, w, has('up') ? 16 : 8 + w / 2, color);
+    if (has('left')) p.rect(0, a, 8 + (has('right') ? 8 : w / 2), w, color);
+    if (has('right')) p.rect(has('left') ? 0 : 8 - w / 2, a, has('left') ? 16 : 8 + w / 2, w, color);
+  };
+  run(0, outline);
+  run(1, base);
+  const horiz = has('left') || has('right');
+  const vert = has('up') || has('down');
+  if (horiz && !vert) {
+    p.rect(0, 3, 16, 3, light);
+    p.rect(0, 11, 16, 2, dark);
+  } else if (vert && !horiz) {
+    p.rect(3, 0, 3, 16, light);
+    p.rect(11, 0, 2, 16, dark);
+  } else {
+    // Elbow: a highlight sweeping round the bend.
+    for (let k = 0; k < 8; k++) {
+      const x = has('left') ? 8 - k : 7 + k;
+      const y = has('up') ? 8 - k : 7 + k;
+      p.px(Math.max(0, Math.min(15, x)), 4, light);
+      p.px(4, Math.max(0, Math.min(15, y)), light);
+    }
+    p.rect(5, 5, 6, 6, base);
+    p.px(5, 5, light);
+  }
+  for (const m of mouths) {
+    // The open end: a dark throat inside a bright rim.
+    if (m === 'up') {
+      p.ellipse(7.5, 2, 6, 2.4, light);
+      p.ellipse(7.5, 2, 4.6, 1.6, '#200800');
+    } else if (m === 'down') {
+      p.ellipse(7.5, 13.5, 6, 2.4, light);
+      p.ellipse(7.5, 13.5, 4.6, 1.6, '#200800');
+    } else if (m === 'left') {
+      p.ellipse(2, 7.5, 2.4, 6, light);
+      p.ellipse(2, 7.5, 1.6, 4.6, '#200800');
+    } else {
+      p.ellipse(13.5, 7.5, 2.4, 6, light);
+      p.ellipse(13.5, 7.5, 1.6, 4.6, '#200800');
+    }
+  }
   return p.canvas;
 }
 
@@ -365,22 +487,9 @@ export function flowerTile(face: Dir, turning: boolean): Sprite {
 const DXY: Record<Dir, [number, number]> = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
 /** Overlays that hide whoever stands under them. */
-export function coverSprite(style: 'pipe' | 'hut' | 'foliage', variant: number, pipe = '#30a040'): Sprite {
+export function coverSprite(style: 'hut' | 'foliage', variant: number): Sprite {
   const p = new PixelCanvas(16, 16);
-  if (style === 'pipe') {
-    const horiz = variant === 0;
-    const [dark, light] = [mix(pipe, '#000000', 0.5), mix(pipe, '#ffffff', 0.45)];
-    if (horiz) {
-      p.rect(0, 2, 16, 12, dark);
-      p.rect(0, 3, 16, 10, pipe);
-      p.rect(0, 4, 16, 3, light);
-      p.rect(0, 11, 16, 1, dark);
-    } else {
-      p.rect(2, 0, 12, 16, dark);
-      p.rect(3, 0, 10, 16, pipe);
-      p.rect(4, 0, 3, 16, light);
-    }
-  } else if (style === 'hut') {
+  if (style === 'hut') {
     p.ellipse(7.5, 10.5, 8.2, 7.6, '#203858');
     p.ellipse(7.5, 10, 7.4, 6.8, '#f4faff');
     for (let y = 5; y < 16; y += 3) p.rect(1, y, 14, 1, '#9cc0e0');
@@ -397,6 +506,126 @@ export function coverSprite(style: 'pipe' | 'hut' | 'foliage', variant: number, 
     p.px(10, 8, '#90e070');
   }
   return p.canvas;
+}
+
+/**
+ * SeeSaw Park's three-tile seesaw (48×16): a pale plank on a stand in the middle tile.
+ * `tilt` -1: the left end is down, 0: level, 1: the right end is down.
+ */
+export function seesawPlank(tilt: -1 | 0 | 1): Sprite {
+  const p = new PixelCanvas(48, 16);
+  // The stand under the pivot.
+  p.rect(19, 8, 10, 7, '#000000');
+  p.rect(20, 9, 8, 5, '#9aa84a');
+  p.rect(20, 9, 8, 1, '#d8e080');
+  p.ellipse(24, 14.5, 9, 1.5, 'rgba(0,0,0,0.3)');
+  const yAt = (x: number): number => 6 + tilt * ((23.5 - x) / 23.5) * -4;
+  for (let x = 0; x < 48; x++) {
+    const y = Math.round(yAt(x));
+    p.rect(x, y - 1, 1, 6, '#000000');
+  }
+  for (let x = 1; x < 47; x++) {
+    const y = Math.round(yAt(x));
+    p.rect(x, y, 1, 4, '#b8c0e0');
+    p.px(x, y, '#ffffff');
+    p.px(x, y + 3, '#7880a8');
+  }
+  // Shadow of the raised end on the floor.
+  p.ellipse(tilt < 0 ? 38 : tilt > 0 ? 10 : 24, 15, 7, 1, 'rgba(0,0,0,0.2)');
+  return p.canvas;
+}
+
+/**
+ * Scenery standing in for a pillar (16×24: it reaches into the tile above). `hard` is the
+ * stage's own pillar, for the gold boulders of Incoming!.
+ */
+export function propSprite(style: 'palm' | 'bush' | 'trunk' | 'gold', hard: Sprite): Sprite {
+  const p = new PixelCanvas(16, 24);
+  switch (style) {
+    case 'palm': {
+      p.ellipse(9, 21.5, 7, 2, 'rgba(0,0,0,0.3)');
+      // A leaning, ringed trunk.
+      for (let y = 8; y < 22; y++) {
+        const x = 6 + Math.round((22 - y) * 0.18);
+        p.rect(x - 1, y, 4, 1, '#000000');
+        p.rect(x, y, 2, 1, y % 3 ? '#b07838' : '#7a4a20');
+      }
+      // Fronds.
+      const leaf = (dx: number, dy: number): void => {
+        for (let k = 0; k <= 6; k++) {
+          const x = 9 + (dx * k) / 6;
+          const y = 7 + (dy * k) / 6 + (k * k) / 14;
+          p.rect(Math.round(x) - 1, Math.round(y) - 1, 3, 2, '#1a5010');
+        }
+        for (let k = 0; k <= 6; k++) {
+          const x = 9 + (dx * k) / 6;
+          const y = 7 + (dy * k) / 6 + (k * k) / 14;
+          p.px(Math.round(x), Math.round(y) - 1, '#58c040');
+          p.px(Math.round(x), Math.round(y), '#308a24');
+        }
+      };
+      leaf(-8, -3);
+      leaf(7, -4);
+      leaf(-7, 2);
+      leaf(7, 2);
+      leaf(0, -6);
+      p.circle(8, 8, 1.2, '#6a3a10');
+      p.circle(10, 8.5, 1.2, '#6a3a10');
+      break;
+    }
+    case 'bush':
+      p.ellipse(8, 21.5, 7, 2, 'rgba(0,0,0,0.3)');
+      p.circle(8, 14, 7.6, '#0c3a10');
+      p.circle(8, 14, 6.8, '#2a7a28');
+      for (const [x, y, r] of [[5, 11, 2.6], [10, 10, 2.4], [11, 15, 2.6], [5, 16, 2.4], [8, 13, 2.2]] as const) {
+        p.circle(x, y, r, '#3c9a34');
+        p.circle(x - 0.6, y - 0.8, r * 0.5, '#6cc850');
+      }
+      break;
+    case 'trunk':
+      p.ellipse(8, 22, 8, 2, 'rgba(0,0,0,0.3)');
+      // Roots spreading over the dirt.
+      p.rect(1, 19, 14, 3, '#2a1606');
+      p.rect(2, 19, 12, 2, '#6a4020');
+      p.rect(4, 0, 8, 21, '#2a1606');
+      p.rect(5, 0, 6, 21, '#8a5a2c');
+      p.rect(5, 0, 2, 21, '#b07a40');
+      for (let y = 3; y < 19; y += 5) p.rect(8, y, 2, 2, '#5a3616');
+      break;
+    case 'gold':
+      p.ctx.drawImage(hard, 0, 8);
+      break;
+  }
+  return p.canvas;
+}
+
+/**
+ * King of the Jungle's tree canopy (52×56), drawn over a 3×3 block of tiles from 2 px left
+ * and 8 px above it: it hides the plus of leafy tiles, and the trunks peek out below.
+ */
+export function canopySprite(): Sprite {
+  const p = new PixelCanvas(52, 56);
+  const blobs: [number, number, number][] = [
+    [26, 18, 16], [12, 16, 11], [40, 16, 11], [18, 8, 9], [34, 8, 9], [10, 28, 10], [42, 28, 10],
+    [26, 32, 13], [26, 44, 10], [18, 38, 8], [34, 38, 8],
+  ];
+  for (const [x, y, r] of blobs) p.circle(x, y + 1, r + 1, '#0c3208');
+  for (const [x, y, r] of blobs) p.circle(x, y, r, '#2a7a1c');
+  // Clumps of lit leaves.
+  const inside = (x: number, y: number): boolean => blobs.some(([bx, by, r]) => Math.hypot(x - bx, y - by) < r - 2.5);
+  for (let i = 0; i < 60; i++) {
+    const x = 4 + Math.floor(hashf(i, 3) * 44);
+    const y = 2 + Math.floor(hashf(i, 7) * 46);
+    if (!inside(x, y)) continue;
+    p.circle(x, y, 2.2, '#40982c');
+    p.px(x - 1, y - 1, '#78d050');
+  }
+  return p.canvas;
+}
+
+function hashf(i: number, salt: number): number {
+  const v = Math.sin(i * 127.1 + salt * 311.7) * 43758.5453;
+  return v - Math.floor(v);
 }
 
 // ------------------------------------------------------------------ entities

@@ -6,6 +6,7 @@ import {
   beltTile,
   bendTile,
   bridgeTile,
+  canopySprite,
   cartSprite,
   coverSprite,
   flowerTile,
@@ -18,6 +19,7 @@ import {
   pressureBlock,
   railTile,
   robotSprite,
+  seesawPlank,
   seesawTile,
   signTile,
   switchTile,
@@ -59,6 +61,8 @@ export interface GimmickSprites {
   warp: Sprite[];
   trampoline: Sprite[];
   seesaw: Sprite[][]; // [end][down]
+  /** Three-tile seesaws (48 wide): left end down, level, right end down. */
+  seesawPlank: Sprite[];
   sign: Sprite[]; // 0 = stop, 1..5
   tyre: Sprite;
   rail: Sprite[]; // by connection bits (0..15)
@@ -76,6 +80,7 @@ export interface GimmickSprites {
   flower: Record<Dir, Sprite[]>; // [still, turning]
   hut: Sprite;
   foliage: Sprite[];
+  canopy: Sprite;
   trolley: Record<Dir, Sprite[]>;
   robot: Sprite[];
   robotStomp: Sprite[];
@@ -105,6 +110,7 @@ export function gimmickSprites(): GimmickSprites {
     warp: [0, 1, 2, 3, 4, 5, 6, 7].map(warpTile),
     trampoline: [0, 1, 2].map(trampolineTile),
     seesaw: [0, 1].map((end) => [false, true].map((down) => seesawTile(end as 0 | 1, down))),
+    seesawPlank: ([-1, 0, 1] as const).map((t) => seesawPlank(t)),
     sign: [0, 1, 2, 3, 4, 5].map(signTile),
     tyre: tyreSprite(),
     rail: Array.from({ length: 16 }, (_, c) => railTile(c, false)),
@@ -122,6 +128,7 @@ export function gimmickSprites(): GimmickSprites {
     flower: rec((d) => [flowerTile(d, false), flowerTile(d, true)]),
     hut: coverSprite('hut', 0),
     foliage: [0, 1, 2].map((v) => coverSprite('foliage', v)),
+    canopy: canopySprite(),
     trolley: rec((d) => [0, 1].map((f) => trolleySprite(d, f))),
     robot: [0, 1, 2].map((f) => robotSprite(f, false, 0)),
     robotStomp: [0, 6, 12].map((lift) => robotSprite(0, true, lift)),

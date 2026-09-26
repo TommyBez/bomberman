@@ -3,12 +3,27 @@ import type { BattleWorld } from '../game/battle/battleWorld';
 import type { Bomber } from '../game/core/bomber';
 import { Cell, DX, DY, TILE, toTile, type Dir } from '../game/core/types';
 import { characterSprites, gimmickSprites } from '../gfx/battleSprites';
-import { bendTile, pipeSprites } from '../gfx/battleArt';
-import { THEMES } from '../gfx/tiles';
+import { bendSides, bendTile, pipeSprites, propSprite } from '../gfx/battleArt';
+import { hardTile, THEMES } from '../gfx/tiles';
 import { sprites, tileSet } from '../gfx/sprites';
+import type { PropStyle } from '../game/battle/gimmicks';
 import { FieldRenderer, type Actor, type View } from './field';
 
 const bendCache = new Map<string, HTMLCanvasElement>();
+const propCache = new Map<string, HTMLCanvasElement>();
+
+function propImage(style: PropStyle, theme: string): HTMLCanvasElement {
+  const key = `${style}:${theme}`;
+  let img = propCache.get(key);
+  if (!img) {
+    const t = THEMES[theme];
+    // Incoming!'s gold boulders are the stage's own pillars, gilded.
+    const hard = style === 'gold' && t ? hardTile({ ...t, hard: '#ffc830' }) : tileSet(theme).hard;
+    img = propSprite(style, hard);
+    propCache.set(key, img);
+  }
+  return img;
+}
 
 /** Draws a battle arena: tiles, gimmicks, bombs, flames, bombers, carts, pressure blocks. */
 export class BattleRenderer {
@@ -56,6 +71,14 @@ export class BattleRenderer {
       actors.push({ y: ey - 0.5, draw: (gg, ox, oy) => drawEgg(gg, ox + ex, oy + ey, frame) });
     }
     for (const s of w.shots) actors.push({ y: s.y + 4, draw: (gg, ox, oy) => drawShot(gg, ox + s.x, oy + s.y, s.kind, s.dir, frame) });
+    // Scenery standing in for pillars (palms, bushes, trunks) sorts with the bombers.
+    w.gim.features.forEach((f, i) => {
+      if (!f || f.kind !== 'prop') return;
+      const px = (i % w.grid.w) * TILE;
+      const py = Math.floor(i / w.grid.w) * TILE;
+      const img = propImage(f.style, w.arena.theme);
+      actors.push({ y: py + TILE - 1, draw: (gg, ox, oy) => gg.image(img, ox + px, oy + py - 8) });
+    });
     this.field.drawActors(g, actors, v);
     this.drawCovers(g, v);
     this.drawPressure(g, v);
@@ -163,6 +186,13 @@ export class BattleRenderer {
     }
   }
 
+  /** Plain floor on a tile (under scenery that replaces a pillar). */
+  private floor(g: Gfx, tx: number, ty: number, x: number, y: number): void {
+    const ts = tileSet(this.w.arena.theme);
+    const above = this.w.grid.get(tx, ty - 1);
+    this.field.floorAt(g, above === Cell.Hard || above === Cell.Soft ? ts.floorShadow : ts.floor, tx, ty, x, y);
+  }
+
   private drawFloorGimmicks(g: Gfx, v: View, frame: number): void {
     const w = this.w;
     const gs = gimmickSprites();
@@ -176,8 +206,7 @@ export class BattleRenderer {
       const y = v.oy + ty * TILE;
       switch (f.kind) {
         case 'conveyor': {
-          const d = gim.beltReverse ? ({ up: 'down', down: 'up', left: 'right', right: 'left' } as const)[f.dir] : f.dir;
-          g.image(gs.belt[d][Math.floor((frame * gim.beltSpeed) / 3) % 8], x, y);
+          g.image(gs.belt[gim.beltDir(f)][Math.floor((frame * gim.beltSpeed) / 3) % 8], x, y);
           break;
         }
         case 'arrow':
@@ -194,8 +223,13 @@ export class BattleRenderer {
         case 'seesaw': {
           const s = gim.seesaws[f.id];
           if (!s) break;
+          if (s.pivot) {
+            // A three-tile plank, drawn whole from its pivot (level for a moment as it tips).
+            if (f.end === 2) g.image(gs.seesawPlank[s.anim > 6 ? 1 : s.down === 0 ? 0 : 2], x - TILE, y);
+            break;
+          }
           const down = (s.down === 0 && f.end === 0) || (s.down === 1 && f.end === 1);
-          g.image(gs.seesaw[f.end][down ? 1 : 0], x, y);
+          g.image(gs.seesaw[f.end === 1 ? 1 : 0][down ? 1 : 0], x, y);
           break;
         }
         case 'sign':
@@ -237,24 +271,35 @@ export class BattleRenderer {
           break;
         }
         case 'portal':
+          this.floor(g, tx, ty, x, y);
           g.image(pipeSprites(THEMES[w.arena.theme]?.pipe).mouth, x, y);
           break;
         case 'flower':
+          this.floor(g, tx, ty, x, y);
           g.image(gs.flower[f.face][f.turn > 0 ? 1 : 0], x, y);
           break;
         case 'bend': {
-          const key = JSON.stringify(f.turn);
+          // A run of pipe: its open ends that meet no more pipe are mouths.
+          const mouths = bendSides(f.turn).filter((d) => gim.at(tx + DX[d], ty + DY[d])?.kind !== 'bend');
+          const key = `${JSON.stringify(f.turn)}|${mouths.join()}`;
           let img = bendCache.get(key);
           if (!img) {
-            img = bendTile(f.turn);
+            img = bendTile(f.turn, mouths);
             bendCache.set(key, img);
           }
+          this.floor(g, tx, ty, x, y);
           g.image(img, x, y);
           break;
         }
+        case 'prop':
+          // Drawn standing up with the actors; clear the pillar drawn here.
+          this.floor(g, tx, ty, x, y);
+          break;
         default:
           break;
       }
+      // Blocks lying on belts, rails and bridges sit on top of them.
+      if (w.grid.get(tx, ty) === Cell.Soft && f.kind !== 'tyre') this.field.drawSoft(g, w, tx, ty, x, y);
     }
   }
 
@@ -263,6 +308,21 @@ export class BattleRenderer {
     const w = this.w;
     const gs = gimmickSprites();
     const gim = w.gim;
+    const same = (tx: number, ty: number, style: string): boolean => {
+      const f = gim.at(tx, ty);
+      return !!f && f.kind === 'cover' && f.style === style;
+    };
+    // Leafy tiles in a plus round a centre are one tree: a single canopy covers them.
+    const canopied = new Set<number>();
+    const trees: [number, number][] = [];
+    for (let i = 0; i < gim.features.length; i++) {
+      const tx = i % w.grid.w;
+      const ty = Math.floor(i / w.grid.w);
+      if (!same(tx, ty, 'foliage') || !ALL.every((d) => same(tx + DX[d], ty + DY[d], 'foliage'))) continue;
+      trees.push([tx, ty]);
+      canopied.add(i);
+      for (const d of ALL) canopied.add(gim.idx(tx + DX[d], ty + DY[d]));
+    }
     for (let i = 0; i < gim.features.length; i++) {
       const f = gim.features[i];
       if (!f || f.kind !== 'cover') continue;
@@ -271,15 +331,19 @@ export class BattleRenderer {
       const x = v.ox + tx * TILE;
       const y = v.oy + ty * TILE;
       if (f.style === 'pipe') {
-        const horiz = gim.at(tx - 1, ty)?.kind === 'cover' || gim.at(tx + 1, ty)?.kind === 'cover';
         const pipes = pipeSprites(THEMES[w.arena.theme]?.pipe);
-        g.image(horiz ? pipes.h : pipes.v, x, y);
+        const links = ALL.filter((d) => same(tx + DX[d], ty + DY[d], 'pipe'));
+        let img = pipes.v;
+        if (links.length >= 3) img = pipes.cross;
+        else if (links.length === 1) img = pipes.end[OPP[links[0]]];
+        else if (links.includes('left') || links.includes('right')) img = pipes.h;
+        g.image(img, x, y);
       } else if (f.style === 'hut') {
         // Roof blown off: the inside shows until it is rebuilt (blinking just before).
         if (!f.open || (f.open < 40 && Math.floor(f.open / 4) % 2 === 0)) g.image(gs.hut, x, y);
-      }
-      else g.image(gs.foliage[(tx + ty) % 3], x, y);
+      } else if (!canopied.has(i)) g.image(gs.foliage[(tx + ty) % 3], x, y);
     }
+    for (const [tx, ty] of trees) g.image(gs.canopy, v.ox + (tx - 1) * TILE - 2, v.oy + (ty - 1) * TILE - 8);
   }
 
   private drawPressure(g: Gfx, v: View): void {
@@ -320,6 +384,9 @@ export class BattleRenderer {
     void DY;
   }
 }
+
+const ALL: Dir[] = ['up', 'right', 'down', 'left'];
+const OPP: Record<Dir, Dir> = { up: 'down', down: 'up', left: 'right', right: 'left' };
 
 /** A small spotted egg (7×9) standing on (x, y). */
 function drawEgg(g: Gfx, x: number, y: number, frame: number): void {

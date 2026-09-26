@@ -32,27 +32,30 @@ describe('changing rails (Switcheroo, Destination Unknown)', () => {
         const key = new Set(tiles.map(([x, y]) => `${x},${y}`));
         for (const [x, y] of tiles) {
           expect(x % 2 === 0 && y % 2 === 0, `rail on a pillar at ${x},${y}`).toBe(false);
-          // The stage's own layouts stay clear of soft blocks; none comes near a start.
-          if (def.railLayouts!.includes(layout)) expect(def.map[y][x], `rail at ${x},${y}`).toBe('_');
+          // Switcheroo's own layouts stay clear of soft blocks; none comes near a start.
+          if (id === 'n4' && def.railLayouts!.includes(layout)) expect(def.map[y][x], `rail at ${x},${y}`).toBe('_');
           for (const [sx, sy] of starts) expect(Math.abs(sx - x) + Math.abs(sy - y), `rail at ${x},${y}`).toBeGreaterThan(1);
         }
         for (const [x, y] of def.stations!) expect(key.has(`${x},${y}`), `station ${x},${y}`).toBe(true);
-        // One network: every rail reachable from the first.
+        // Destination Unknown: the same four warp holes round the centre in every layout.
+        const holes = railTiles(layout).filter(([x, y]) => layout[y - RAIL_ORIGIN][x - RAIL_ORIGIN] === 'W');
+        if (id === 'a4') expect(holes.map(([x, y]) => `${x},${y}`).sort()).toEqual(['5,5', '5,7', '9,5', '9,7']);
+        // One network: every rail reachable from the first (the warp holes join the pieces).
         const seen = new Set([`${tiles[0][0]},${tiles[0][1]}`]);
         const queue = [tiles[0]];
         while (queue.length) {
           const [x, y] = queue.pop()!;
-          for (const d of ALL_DIRS) {
-            const k = `${x + DX[d]},${y + DY[d]}`;
+          const next = ALL_DIRS.map((d): [number, number] => [x + DX[d], y + DY[d]]);
+          if (holes.some(([hx, hy]) => hx === x && hy === y)) next.push(...holes);
+          for (const [nx, ny] of next) {
+            const k = `${nx},${ny}`;
             if (key.has(k) && !seen.has(k)) {
               seen.add(k);
-              queue.push([x + DX[d], y + DY[d]]);
+              queue.push([nx, ny]);
             }
           }
         }
-        // Destination Unknown's halves may join only through the warp holes.
-        if (id === 'n4') expect(seen.size).toBe(tiles.length);
-        if (id === 'a4') expect(layout.join('').split('W')).toHaveLength(3);
+        expect(seen.size).toBe(tiles.length);
       }
       const t = def.trolley!;
       expect(railTiles(def.railLayouts![0]).some(([x, y]) => x === t.x && y === t.y)).toBe(true);
@@ -75,20 +78,43 @@ describe('changing rails (Switcheroo, Destination Unknown)', () => {
 });
 
 describe('trolley forecast (what the CPU players watch)', () => {
-  it('follows both branches at a junction and jumps between warp holes', () => {
-    const w = world('a4');
+  it('follows both branches at a junction', () => {
+    const w = world('b4');
     const tr = w.gim.trolleys[0];
-    // Head right along the top rail toward the warp hole at (7, 3).
-    tr.x = tileCenter(5);
+    // Head right toward the points at (9, 3).
+    tr.x = tileCenter(7);
     tr.y = tileCenter(3);
     tr.dir = 'right';
     tr.stop = 0;
     const f = w.gim.trolleyForecast(400);
     const at = (x: number, y: number): number | undefined => f.get(y * w.grid.w + x);
-    expect(at(6, 3)).toBeLessThan(at(7, 3)!);
-    // Out of the other hole at (7, 9), still heading right.
-    expect(at(8, 9)).toBeDefined();
-    expect(at(8, 9)!).toBeLessThan(at(11, 9)!);
+    expect(at(8, 3)).toBeLessThan(at(9, 3)!);
+    expect(at(10, 3)).toBeDefined();
+    expect(at(9, 4)).toBeDefined();
+  });
+
+  it('a warp hole may lead to any of the others', () => {
+    const w = world('a4');
+    const tr = w.gim.trolleys[0];
+    // Along the top arch and down into the hole at (9, 5).
+    tr.x = tileCenter(7);
+    tr.y = tileCenter(3);
+    tr.dir = 'right';
+    tr.stop = 0;
+    const f = w.gim.trolleyForecast(400);
+    const at = (x: number, y: number): number | undefined => f.get(y * w.grid.w + x);
+    expect(at(9, 4)).toBeLessThan(at(9, 5)!);
+    // Out of (5, 7) or (9, 7) heading on down, or out of (5, 5) and along its spur.
+    for (const [x, y] of [[5, 8], [9, 8], [4, 5]]) {
+      expect(at(x, y), `${x},${y}`).toBeDefined();
+      expect(at(x, y)!).toBeGreaterThan(at(9, 4)!);
+    }
+    // And the trolley really goes to a hole other than the one it fell into.
+    tr.x = tileCenter(9);
+    tr.y = tileCenter(4);
+    tr.dir = 'down';
+    for (let t = 0; t < 20; t++) w.gim.update();
+    expect(['5,5', '5,7', '9,7', '4,5', '5,8', '9,8', '10,7']).toContain(`${toTile(tr.x)},${toTile(tr.y)}`);
   });
 
   it('counts the wait at a station before the trolley moves on', () => {
@@ -150,6 +176,8 @@ describe('CPU players and stage hazards', () => {
 
   it('a bomb resting on a belt counts as a threat along the belt, not just where it lies', () => {
     const w = world('b7');
+    // Clear the crates off the belt.
+    w.gim.features.forEach((f, k) => f?.kind === 'conveyor' && w.grid.set(k % w.grid.w, Math.floor(k / w.grid.w), Cell.Floor));
     const i = w.gim.features.findIndex((f) => f?.kind === 'conveyor');
     const x = i % w.grid.w;
     const y = Math.floor(i / w.grid.w);
@@ -162,33 +190,39 @@ describe('CPU players and stage hazards', () => {
 });
 
 describe('Round and Round flowers', () => {
+  const clear = (w: BattleWorld): void => {
+    for (let y = 1; y < w.grid.h - 1; y++) for (let x = 1; x < w.grid.w - 1; x++) if (w.grid.get(x, y) === Cell.Soft) w.grid.set(x, y, Cell.Floor);
+  };
+
   it('a blast into a flower bursts out of its partner, which way its mouth faces', () => {
     const w = world('a3');
-    // (7,4) faces up and is paired with (7,8), which faces down.
-    const blast = w.computeBlast(7, 3, 3, false, null);
+    clear(w);
+    // (3,4) faces up; its partner on the far side of the bush, (5,4), faces down.
+    const blast = w.computeBlast(3, 3, 3, false, null);
     const lit = new Set(blast.tiles.map((t) => `${t.x},${t.y}`));
-    expect(lit.has('7,9')).toBe(true);
-    expect(lit.has('7,10')).toBe(true);
+    expect(lit.has('5,5')).toBe(true);
+    expect(lit.has('5,6')).toBe(true);
     // A blast that meets the back of a flower stops there.
-    const back = w.computeBlast(7, 5, 3, false, null);
-    expect(back.tiles.some((t) => t.y > 8)).toBe(false);
+    const back = new Set(w.computeBlast(3, 5, 3, false, null).tiles.map((t) => `${t.x},${t.y}`));
+    expect(back.has('3,3')).toBe(false);
+    expect(back.has('5,6')).toBe(false);
   });
 
   it('pushing against a flower turns it a quarter, clockwise', () => {
     const w = world('a3');
+    clear(w);
     const b = w.bombers[0];
-    w.grid.set(7, 3, Cell.Floor);
-    b.x = tileCenter(7);
+    b.x = tileCenter(3);
     b.y = tileCenter(3);
-    const f = w.gim.at(7, 4)!;
+    const f = w.gim.at(3, 4)!;
     expect(f).toMatchObject({ kind: 'flower', face: 'up' });
     b.intent = { ...NO_INTENT, dirs: ['down'] };
     for (let t = 0; t < 30; t++) w.update();
     expect(f).toMatchObject({ kind: 'flower', face: 'right' });
-    // Facing a pillar now: a blast from above no longer gets in.
+    // Facing the bush now: a blast from above no longer gets in.
     b.intent = NO_INTENT;
-    const lit = new Set(w.computeBlast(7, 3, 3, false, null).tiles.map((t) => `${t.x},${t.y}`));
-    expect(lit.has('7,9')).toBe(false);
+    const lit = new Set(w.computeBlast(3, 3, 3, false, null).tiles.map((t) => `${t.x},${t.y}`));
+    expect(lit.has('5,5')).toBe(false);
   });
 });
 
@@ -224,5 +258,143 @@ describe('King of the Jungle', () => {
     const arrows = w.gim.features.filter((f) => f?.kind === 'arrow');
     expect(arrows.some((f) => f?.kind === 'arrow' && f.rotating)).toBe(true);
     expect(arrows.some((f) => f?.kind === 'arrow' && !f.rotating)).toBe(true);
+  });
+});
+
+describe('stage maps read from the original', () => {
+  const clearAll = (w: BattleWorld): void => {
+    for (let y = 1; y < w.grid.h - 1; y++) for (let x = 1; x < w.grid.w - 1; x++) if (w.grid.get(x, y) === Cell.Soft) w.grid.set(x, y, Cell.Floor);
+  };
+
+  it('SeeSaw Park: three-tile seesaws tip over their pivot and fling what stands on the far end', () => {
+    const w = world('b2');
+    clearAll(w);
+    expect(w.gim.seesaws).toHaveLength(4);
+    const s = w.gim.seesaws[0];
+    expect([s.a, s.pivot, s.b]).toEqual([[3, 3], [4, 3], [5, 3]]);
+    const [me, other] = w.bombers;
+    // Whoever stands on the lowered end is thrown when someone steps on the raised one.
+    const down = s.down === 0 ? s.a : s.b;
+    const up = s.down === 0 ? s.b : s.a;
+    other.x = tileCenter(down[0]);
+    other.y = tileCenter(down[1]);
+    w.update();
+    // Standing on the pivot does nothing.
+    me.x = tileCenter(4);
+    me.y = tileCenter(3);
+    w.update();
+    expect(other.airborne).toBe(0);
+    me.x = tileCenter(up[0]);
+    w.update();
+    expect(other.airborne).toBeGreaterThan(0);
+  });
+
+  it('The Fast Lane: the belts run through the walls, and reversed they still turn the corners', () => {
+    const w = world('a7');
+    clearAll(w);
+    const b = w.bombers[0];
+    // On the belt heading up column 5, just below the top wall.
+    b.x = tileCenter(5);
+    b.y = tileCenter(1);
+    b.intent = NO_INTENT;
+    for (let t = 0; t < 70; t++) w.update();
+    // Out through the gap at the top, back in at the bottom.
+    expect(b.ty).toBeGreaterThan(9);
+    expect(b.tx).toBe(5);
+    expect(w.gim.beltAt(5, 5)!.dir).toBe('up');
+    w.gim.beltReverse = true;
+    // Reversed, (5, 5) carries things back along row 5, not down off the belt.
+    expect(w.gim.beltAt(5, 5)!.dir).toBe('left');
+    expect(w.gim.beltAt(9, 5)!.dir).toBe('up');
+    expect(w.gim.beltAt(4, 5)!.dir).toBe('left');
+  });
+
+  it('a bomb resting on a belt rides it through the wall', () => {
+    const w = world('a7');
+    clearAll(w);
+    const bomb = w.placeBomb(w.bombers[0], 12, 5)!;
+    bomb.fuse = 600;
+    for (let t = 0; t < 110; t++) w.update();
+    // Along row 5 to the right, round through the side walls and on toward the corner.
+    expect(bomb.exploded).toBe(false);
+    expect(bomb.tx).toBeLessThan(6);
+    expect(bomb.ty).toBe(5);
+  });
+
+  it('Incoming!: a blast goes in one end of an L-pipe and out of the other', () => {
+    const w = world('a6');
+    clearAll(w);
+    // Leftward into the arm at (4, 3), round the elbow at (3, 3), out of (3, 4) heading down.
+    const lit = new Set(w.computeBlast(6, 3, 4, false, null).tiles.map((t) => `${t.x},${t.y}`));
+    expect(lit.has('5,3')).toBe(true);
+    expect(lit.has('3,5')).toBe(true);
+    expect(lit.has('3,6')).toBe(true);
+    // A kicked bomb takes the same way round.
+    const bomb = w.placeBomb(w.bombers[0], 6, 3)!;
+    bomb.fuse = 600;
+    w.startSlide(bomb, 'left', 3);
+    const path: string[] = [];
+    for (let t = 0; t < 40; t++) {
+      w.update();
+      if (path[path.length - 1] !== `${bomb.tx},${bomb.ty}`) path.push(`${bomb.tx},${bomb.ty}`);
+    }
+    expect(path.slice(0, 4)).toEqual(['6,3', '5,3', '3,5', '3,6']);
+    expect(bomb.slide).not.toBe(null);
+  });
+
+  it('Destination Unknown: stars lie on the rails too, and the trolley smashes them', () => {
+    let onRails = 0;
+    for (let seed = 1; seed <= 4; seed++) {
+      const w = world('a4', false, 2, seed);
+      w.gim.features.forEach((f, i) => f?.kind === 'rail' && w.grid.get(i % w.grid.w, Math.floor(i / w.grid.w)) === Cell.Soft && onRails++);
+      const t = w.gim.trolleys[0];
+      expect(w.grid.get(toTile(t.x), toTile(t.y))).toBe(Cell.Floor);
+      for (let k = 0; k < 600; k++) {
+        w.update();
+        expect(w.grid.get(toTile(t.x), toTile(t.y))).not.toBe(Cell.Soft);
+      }
+    }
+    expect(onRails).toBeGreaterThan(0);
+  });
+
+  it('The Seven Seas: every bridge starts piled with floats, with items under them', () => {
+    const w = world('a8');
+    const bridges = w.gim.features.map((f, i) => (f?.kind === 'bridge' ? i : -1)).filter((i) => i >= 0);
+    const piled = bridges.filter((i) => w.grid.get(i % w.grid.w, Math.floor(i / w.grid.w)) === Cell.Soft);
+    // Bridges and the walkway (24 tiles) are piled; the raft in the middle is clear.
+    expect(piled).toHaveLength(24);
+    expect(piled.some((i) => w.items[i])).toBe(true);
+    expect(w.grid.get(7, 5)).toBe(Cell.Floor);
+    // All thirty barrels stand in the sea.
+    let barrels = 0;
+    for (let y = 1; y < w.grid.h - 1; y++) for (let x = 1; x < w.grid.w - 1; x++) if (w.grid.get(x, y) === Cell.Hard) barrels++;
+    expect(barrels).toBe(30);
+  });
+
+  it('palms, bushes, trunks and gold boulders are pillars all the same', () => {
+    for (const id of ['b8', 'a3', 'a5', 'a6']) {
+      const w = world(id);
+      const props = w.gim.features.map((f, i) => (f?.kind === 'prop' ? i : -1)).filter((i) => i >= 0);
+      expect(props.length, id).toBeGreaterThan(0);
+      for (const i of props) expect(w.grid.get(i % w.grid.w, Math.floor(i / w.grid.w))).toBe(Cell.Hard);
+    }
+  });
+
+  it('Robo Bomber: blocks on every other tile, and the robot strides over them', () => {
+    const w = world('a2', false, 2, 7);
+    const r = w.gim.robot!;
+    let soft = 0;
+    for (let y = 1; y < w.grid.h - 1; y++) for (let x = 1; x < w.grid.w - 1; x++) if (w.grid.get(x, y) === Cell.Soft) {
+      soft++;
+      expect((x + y) % 2).toBe(1);
+    }
+    expect(soft).toBeGreaterThan(50);
+    const start = `${toTile(r.x)},${toTile(r.y)}`;
+    const seen = new Set<string>([start]);
+    for (let t = 0; t < 60 * 20; t++) {
+      w.update();
+      seen.add(`${toTile(r.x)},${toTile(r.y)}`);
+    }
+    expect(seen.size).toBeGreaterThan(3);
   });
 });

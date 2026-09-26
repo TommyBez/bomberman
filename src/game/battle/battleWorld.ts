@@ -231,8 +231,14 @@ export class BattleWorld extends World {
         const ch = row[x];
         const special = this.gim.parseTile(ch, x, y);
         let cell: number = Cell.Floor;
-        if (special !== null) cell = special;
-        else if (ch === '#') cell = Cell.Hard;
+        if (special !== null) {
+          cell = special;
+          const kind = this.gim.at(x, y)?.kind;
+          // A block drawn on a gimmick tile ('B'); the regenerating tyre hides nothing at first.
+          if (special === Cell.Soft && kind !== 'tyre') always.push([x, y]);
+          // Belts and rails may lie under random blocks too.
+          else if ((kind === 'conveyor' || kind === 'rail') && x > 0 && y > 0 && x < BATTLE_W - 1 && y < BATTLE_H - 1) softSpots.push([x, y]);
+        } else if (ch === '#') cell = Cell.Hard;
         else if (ch === 'x') always.push([x, y]);
         else if (ch === '.') softSpots.push([x, y]);
         grid.set(x, y, cell as 0 | 1 | 2 | 3);
@@ -263,6 +269,10 @@ export class BattleWorld extends World {
       const open = ALL_DIRS.filter((d) => grid.get(sx + DX[d], sy + DY[d]) === Cell.Floor);
       if (open[0]) reserved.add(`${sx + 2 * DX[open[0]]},${sy + 2 * DY[open[0]]}`);
     }
+
+    // The trolley's own tile starts clear.
+    const t = arena.trolley;
+    if (t) reserved.add(`${t.x},${t.y}`);
 
     // Soft blocks.
     const free = softSpots.filter(([x, y]) => !reserved.has(`${x},${y}`) && !this.gim.blocksSoft(x, y));
@@ -322,7 +332,7 @@ export class BattleWorld extends World {
     if (!this.grid.inside(tx, ty)) {
       if (!this.gim.wrap) return false;
       const [wx, wy] = this.gim.wrapTile(tx, ty);
-      if (this.gim.at(b.tx, b.ty)?.kind !== 'gap') return false;
+      if (!this.gim.gapAt(b.tx, b.ty)) return false;
       return this.bomberCanEnter(b, wx, wy);
     }
     // Hidden land mines do not block anybody.

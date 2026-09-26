@@ -200,7 +200,7 @@ export class CpuPlayer {
       let nx = x + DX[d];
       let ny = y + DY[d];
       if (!w.grid.inside(nx, ny)) {
-        if (!w.gim.wrap || w.gim.at(x, y)?.kind !== 'gap') break;
+        if (!w.gim.gapAt(x, y)) break;
         [nx, ny] = w.gim.wrapTile(nx, ny);
       }
       const i = this.idx(nx, ny);
@@ -243,7 +243,7 @@ export class CpuPlayer {
   private avoid(x: number, y: number): boolean {
     const f = this.w.gim.at(x, y);
     if (!f) return false;
-    return f.kind === 'warp' || (f.kind === 'trampoline' && !f.to) || f.kind === 'seesaw' || (f.kind === 'sign' && f.speed === 0);
+    return f.kind === 'warp' || (f.kind === 'trampoline' && !f.to) || (f.kind === 'seesaw' && f.end !== 2) || (f.kind === 'sign' && f.speed === 0);
   }
 
   /** Ticks to walk one tile in direction d, counting conveyor belts under both tiles. */
@@ -288,7 +288,7 @@ export class CpuPlayer {
           let nx = n.x + DX[d];
           let ny = n.y + DY[d];
           if (!w.grid.inside(nx, ny)) {
-            if (!w.gim.wrap || w.gim.at(n.x, n.y)?.kind !== 'gap') continue;
+            if (!w.gim.gapAt(n.x, n.y)) continue;
             [nx, ny] = w.gim.wrapTile(nx, ny);
           }
           const i = this.idx(nx, ny);

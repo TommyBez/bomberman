@@ -6,11 +6,13 @@ import { RAIL_ORIGIN, type ArenaDef } from './arenas';
 import type { BattleWorld } from './battleWorld';
 
 export type Feature =
-  | { kind: 'conveyor'; dir: Dir }
+  /** `rev`: where the belt runs when reversed (back toward the tile that feeds it, round corners too). */
+  | { kind: 'conveyor'; dir: Dir; rev: Dir }
   | { kind: 'arrow'; dir: Dir; rotating: boolean }
   | { kind: 'warp'; index: number }
   | { kind: 'trampoline'; to?: [number, number] }
-  | { kind: 'seesaw'; id: number; end: 0 | 1 }
+  /** A seesaw's ends (0, 1) and, on three-tile seesaws, its pivot (2). */
+  | { kind: 'seesaw'; id: number; end: 0 | 1 | 2 }
   | { kind: 'sign'; speed: number }
   | { kind: 'tyre' }
   | { kind: 'rail'; trolleyWarp: boolean }
@@ -24,11 +26,20 @@ export type Feature =
   | { kind: 'bend'; turn: Partial<Record<Dir, Dir>> }
   /** Round and Round: turns a quarter when pushed; a blast into its mouth leaves its partner's. */
   | { kind: 'flower'; to: [number, number]; face: Dir; push: number; turn: number }
-  | { kind: 'gap' };
+  | { kind: 'gap' }
+  /** A hard block drawn as a piece of scenery (palm, bush, tree trunk, gold boulder). */
+  | { kind: 'prop'; style: PropStyle };
+
+export type PropStyle = 'palm' | 'bush' | 'trunk' | 'gold';
+
+/** Which prop 'Y' stands for on each stage. */
+const PROPS: Partial<Record<string, PropStyle>> = { warp: 'palm', flowers: 'bush', jungle: 'trunk', incoming: 'gold' };
 
 export interface Seesaw {
   a: [number, number];
   b: [number, number];
+  /** The middle tile of a three-tile seesaw. */
+  pivot?: [number, number];
   /** Which end is currently down (0 = a, 1 = b). */
   down: 0 | 1;
   /** Tilt animation frames left. */
@@ -138,9 +149,11 @@ export class Gimmicks {
       case '>':
       case '<':
       case '^':
-      case 'v':
-        this.set(x, y, { kind: 'conveyor', dir: ch === '>' ? 'right' : ch === '<' ? 'left' : ch === '^' ? 'up' : 'down' });
+      case 'v': {
+        const dir: Dir = ch === '>' ? 'right' : ch === '<' ? 'left' : ch === '^' ? 'up' : 'down';
+        this.set(x, y, { kind: 'conveyor', dir, rev: OPPOSITE[dir] });
         return Cell.Floor;
+      }
       case 'R':
       case 'L':
       case 'U':
@@ -163,11 +176,20 @@ export class Gimmicks {
         this.set(x, y, { kind: 'trampoline' });
         return Cell.Floor;
       case 'S': {
+        // Two ends side by side ("SS"), or three tiles round a pivot ("S_S").
+        const open = (f: Feature | null): f is Extract<Feature, { kind: 'seesaw' }> => !!f && f.kind === 'seesaw' && f.end === 0 && this.seesaws[f.id].b[0] === -1;
         const left = this.at(x - 1, y);
-        if (left && left.kind === 'seesaw' && left.end === 0 && this.seesaws[left.id].b[0] === -1) {
+        const left2 = this.at(x - 2, y);
+        if (open(left)) {
           const s = this.seesaws[left.id];
           s.b = [x, y];
           this.set(x, y, { kind: 'seesaw', id: left.id, end: 1 });
+        } else if (!left && open(left2) && '_.'.includes(this.arena.map[y][x - 1])) {
+          const s = this.seesaws[left2.id];
+          s.b = [x, y];
+          s.pivot = [x - 1, y];
+          this.set(x - 1, y, { kind: 'seesaw', id: left2.id, end: 2 });
+          this.set(x, y, { kind: 'seesaw', id: left2.id, end: 1 });
         } else {
           const id = this.seesaws.length;
           this.seesaws.push({ a: [x, y], b: [-1, -1], down: this.seesaws.length % 2 === 0 ? 0 : 1, anim: 0 });
@@ -224,9 +246,15 @@ export class Gimmicks {
       case 'J':
         this.set(x, y, { kind: 'bend', turn: this.arena.bends?.[`${x},${y}`] ?? {} });
         return Cell.Hard;
+      case 'B':
+        // A bridge that starts under a soft block.
+        this.set(x, y, { kind: 'bridge' });
+        return Cell.Soft;
+      case 'Y':
+        this.set(x, y, { kind: 'prop', style: PROPS[g ?? ''] ?? 'palm' });
+        return Cell.Hard;
       case 'w':
         this.set(x, y, { kind: 'gap' });
-        this.wrap = true;
         return Cell.Floor;
       default:
         return null;
@@ -235,6 +263,26 @@ export class Gimmicks {
 
   /** After the whole map is parsed. */
   finish(): void {
+    const g = this.w.grid;
+    // Floor in the border wall (a gap, or a belt running through it) wraps round.
+    for (let y = 0; y < g.h; y++) {
+      for (let x = 0; x < g.w; x++) {
+        if ((x === 0 || y === 0 || x === g.w - 1 || y === g.h - 1) && g.get(x, y) !== Cell.Hard) this.wrap = true;
+      }
+    }
+    // Reversed belts run back toward the tile that feeds them, so they turn the corners too.
+    for (let i = 0; i < this.features.length; i++) {
+      const f = this.features[i];
+      if (!f || f.kind !== 'conveyor') continue;
+      const x = i % g.w;
+      const y = Math.floor(i / g.w);
+      const feeds = ALL_DIRS.filter((d) => {
+        const n = this.step(x, y, d);
+        const nf = n && this.at(n[0], n[1]);
+        return !!nf && nf.kind === 'conveyor' && nf.dir === OPPOSITE[d];
+      });
+      f.rev = feeds.includes(OPPOSITE[f.dir]) || !feeds.length ? OPPOSITE[f.dir] : feeds[0];
+    }
     for (const pair of this.arena.portalPairs ?? []) {
       const [a, b] = pair;
       for (const [from, to] of [[a, b], [b, a]]) {
@@ -275,10 +323,15 @@ export class Gimmicks {
     return null;
   }
 
-  /** Tiles that must never receive a random soft block. */
+  /**
+   * Tiles that must never receive a random soft block. Blocks do lie on belts, rails,
+   * bridges and thin ice (the trolley smashes the ones on its rails).
+   */
   blocksSoft(x: number, y: number): boolean {
     const f = this.at(x, y);
-    return !!f && f.kind !== 'ice';
+    if (!f) return false;
+    if (f.kind === 'rail') return f.trolleyWarp;
+    return f.kind !== 'ice' && f.kind !== 'conveyor' && f.kind !== 'bridge';
   }
 
   coverAt(x: number, y: number): 'pipe' | 'hut' | 'foliage' | null {
@@ -311,6 +364,42 @@ export class Gimmicks {
     return [((tx % g.w) + g.w) % g.w, ((ty % g.h) + g.h) % g.h];
   }
 
+  /** A walkable tile in the border wall: whatever leaves the arena through it comes back on the far side. */
+  gapAt(x: number, y: number): boolean {
+    if (!this.wrap) return false;
+    const g = this.w.grid;
+    return g.inside(x, y) && (x === 0 || y === 0 || x === g.w - 1 || y === g.h - 1) && g.get(x, y) !== Cell.Hard;
+  }
+
+  /** The tile one step from (x, y) toward `d`, through the border gaps; null off the edge. */
+  step(x: number, y: number, d: Dir): [number, number] | null {
+    const nx = x + DX[d];
+    const ny = y + DY[d];
+    if (this.w.grid.inside(nx, ny)) return [nx, ny];
+    return this.gapAt(x, y) ? this.wrapTile(nx, ny) : null;
+  }
+
+  /**
+   * Through a run of bent pipe tiles that starts at (x, y) heading `d`: each tile turns (or
+   * keeps) the direction. The tile beyond the last one and the direction out, or null if
+   * the pipe is closed that way.
+   */
+  throughBends(x: number, y: number, d: Dir): [number, number, Dir] | null {
+    let cx = x;
+    let cy = y;
+    let cd = d;
+    for (let k = 0; k < 16; k++) {
+      const f = this.at(cx, cy);
+      if (!f || f.kind !== 'bend') return [cx, cy, cd];
+      const nd = f.turn[cd];
+      if (!nd) return null;
+      cd = nd;
+      cx += DX[cd];
+      cy += DY[cd];
+    }
+    return null;
+  }
+
   wrapBody(b: { x: number; y: number }): void {
     if (!this.wrap) return;
     const W = this.w.grid.w * TILE;
@@ -323,23 +412,16 @@ export class Gimmicks {
 
   /** Where a flame goes next: pipes and flowers teleport it, bends turn it, gaps wrap it. */
   flameNext(x: number, y: number, d: Dir): [number, number, Dir] | null {
-    let nx = x + DX[d];
-    let ny = y + DY[d];
-    if (!this.w.grid.inside(nx, ny)) {
-      if (!this.wrap || this.at(x, y)?.kind !== 'gap') return null;
-      [nx, ny] = this.wrapTile(nx, ny);
-    }
+    const n = this.step(x, y, d);
+    if (!n) return null;
+    const [nx, ny] = n;
     const f = this.at(nx, ny);
     if (!f) return [nx, ny, d];
     if (f.kind === 'portal') {
       const [px, py] = f.to;
       return [px + DX[d], py + DY[d], d];
     }
-    if (f.kind === 'bend') {
-      const nd = f.turn[d];
-      if (!nd) return null;
-      return [nx + DX[nd], ny + DY[nd], nd];
-    }
+    if (f.kind === 'bend') return this.throughBends(nx, ny, d);
     if (f.kind === 'flower') {
       // In through the mouth, out of the partner's mouth.
       const to = this.at(f.to[0], f.to[1]);
@@ -385,8 +467,9 @@ export class Gimmicks {
     for (const b of w.bombers) this.watchTile(b);
   }
 
-  private beltDir(f: { dir: Dir }): Dir {
-    return this.beltReverse ? OPPOSITE[f.dir] : f.dir;
+  /** Which way a belt runs now (switches may have reversed it). */
+  beltDir(f: { dir: Dir; rev: Dir }): Dir {
+    return this.beltReverse ? f.rev : f.dir;
   }
 
   /** The conveyor on a tile: where it carries bombers and how fast (px/frame). */
@@ -411,7 +494,8 @@ export class Gimmicks {
       const f = this.at(bomb.tx, bomb.ty);
       if (!f || f.kind !== 'conveyor') continue;
       const d = this.beltDir(f);
-      if (w.bombCanEnter(bomb.tx + DX[d], bomb.ty + DY[d], bomb) || Math.abs(bomb.x - tileCenter(bomb.tx)) + Math.abs(bomb.y - tileCenter(bomb.ty)) > 0.01) {
+      const n = this.step(bomb.tx, bomb.ty, d);
+      if ((n && w.bombCanEnter(n[0], n[1], bomb)) || Math.abs(bomb.x - tileCenter(bomb.tx)) + Math.abs(bomb.y - tileCenter(bomb.ty)) > 0.01) {
         w.startSlide(bomb, d, speed, true);
       }
     }
@@ -471,10 +555,9 @@ export class Gimmicks {
       return 'blocked';
     }
     if (f?.kind === 'bend') {
-      const nd = f.turn[d];
-      if (!nd) return 'blocked';
-      const ox = nx + DX[nd];
-      const oy = ny + DY[nd];
+      const out = this.throughBends(nx, ny, d);
+      if (!out) return 'blocked';
+      const [ox, oy, nd] = out;
       if (w.bombCanEnter(ox, oy, bomb)) {
         w.moveBomb(bomb, ox, oy);
         bomb.slide = nd;
@@ -552,7 +635,7 @@ export class Gimmicks {
         this.toggleSwitch(f.mode);
         break;
       case 'seesaw':
-        this.stepSeesaw(f.id, f.end);
+        if (f.end !== 2) this.stepSeesaw(f.id, f.end);
         break;
       default:
         break;
@@ -645,6 +728,16 @@ export class Gimmicks {
   }
 
   // ------------------------------------------------------------------ trolleys
+
+  /** The trolley's warp holes on the current rails. */
+  warpHoles(): [number, number][] {
+    const out: [number, number][] = [];
+    for (let i = 0; i < this.features.length; i++) {
+      const f = this.features[i];
+      if (f && f.kind === 'rail' && f.trolleyWarp) out.push([i % this.w.grid.w, Math.floor(i / this.w.grid.w)]);
+    }
+    return out;
+  }
 
   private railAt(x: number, y: number): boolean {
     const f = this.at(x, y);
@@ -752,24 +845,20 @@ export class Gimmicks {
         if ((best.get(key) ?? Infinity) <= time) continue;
         best.set(key, time);
         mark(x, y, time - half);
-        let cx = x;
-        let cy = y;
-        let now = time;
         const f = this.at(x, y);
+        // A warp hole sends the trolley to any of the others: follow them all.
+        const exits: [number, number][] = [[x, y]];
         if (f && f.kind === 'rail' && f.trolleyWarp) {
-          for (let i = 0; i < this.features.length; i++) {
-            const g = this.features[i];
-            if (g && g.kind === 'rail' && g.trolleyWarp && i !== this.idx(x, y)) {
-              cx = i % this.w.grid.w;
-              cy = Math.floor(i / this.w.grid.w);
-              mark(cx, cy, now - half);
-              break;
-            }
-          }
+          const others = this.warpHoles().filter(([hx, hy]) => hx !== x || hy !== y);
+          if (others.length) exits.splice(0, 1, ...others);
         }
-        if (this.stations.has(this.idx(cx, cy))) now += STATION_STOP;
-        const options = ALL_DIRS.filter((nd) => nd !== OPPOSITE[d] && this.railAt(cx + DX[nd], cy + DY[nd]));
-        for (const nd of options.length ? options : [OPPOSITE[d]]) queue.push([cx + DX[nd], cy + DY[nd], nd, now + perTile]);
+        for (const [cx, cy] of exits) {
+          let now = time;
+          mark(cx, cy, now - half);
+          if (this.stations.has(this.idx(cx, cy))) now += STATION_STOP;
+          const options = ALL_DIRS.filter((nd) => nd !== OPPOSITE[d] && this.railAt(cx + DX[nd], cy + DY[nd]));
+          for (const nd of options.length ? options : [OPPOSITE[d]]) queue.push([cx + DX[nd], cy + DY[nd], nd, now + perTile]);
+        }
       }
     }
     this.forecast = out;
@@ -784,22 +873,18 @@ export class Gimmicks {
     if (this.railPending) this.relayRails(tx, ty);
     const f = this.at(tx, ty);
     if (f && f.kind === 'rail' && f.trolleyWarp && t.flash === 0) {
-      // Destination Unknown: jump to the other warp on the rails.
-      for (let i = 0; i < this.features.length; i++) {
-        const g = this.features[i];
-        if (g && g.kind === 'rail' && g.trolleyWarp && i !== this.idx(tx, ty)) {
-          tx = i % w.grid.w;
-          ty = Math.floor(i / w.grid.w);
-          t.x = tileCenter(tx);
-          t.y = tileCenter(ty);
-          t.flash = 20;
-          for (const r of t.riders) {
-            r.x = t.x;
-            r.y = t.y;
-          }
-          w.emit({ type: 'warp', tx, ty });
-          break;
+      // Destination Unknown: the trolley drops into a warp hole and comes out of another.
+      const others = this.warpHoles().filter(([hx, hy]) => hx !== tx || hy !== ty);
+      if (others.length) {
+        [tx, ty] = w.rng.pick(others);
+        t.x = tileCenter(tx);
+        t.y = tileCenter(ty);
+        t.flash = 20;
+        for (const r of t.riders) {
+          r.x = t.x;
+          r.y = t.y;
         }
+        w.emit({ type: 'warp', tx, ty });
       }
     }
     if (this.stations.has(this.idx(tx, ty))) {
@@ -879,8 +964,10 @@ export class Gimmicks {
     // Lumber along the corridors.
     const speed = 0.5;
     const atC = r.x === tileCenter(toTile(r.x)) && r.y === tileCenter(toTile(r.y));
+    // A giant: it strides over soft blocks, but not pillars or bombs.
     const walk = (tx: number, ty: number): boolean => {
-      if (w.grid.get(tx, ty) !== Cell.Floor) return false;
+      const c = w.grid.get(tx, ty);
+      if (c !== Cell.Floor && c !== Cell.Soft) return false;
       if (w.bombAtTile(tx, ty)) return false;
       return true;
     };

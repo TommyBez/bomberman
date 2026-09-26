@@ -251,7 +251,7 @@ function bevel(p: PixelCanvas, base: string, depth = 1): void {
 }
 
 /** Indestructible pillar block. */
-function hardTile(t: Theme): HTMLCanvasElement {
+export function hardTile(t: Theme): HTMLCanvasElement {
   const p = new PixelCanvas(16, 16);
   const base = t.hard;
   const light = mix(base, '#ffffff', 0.45);
