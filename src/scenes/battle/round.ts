@@ -14,7 +14,7 @@ import { THEMES } from '../../gfx/tiles';
 import { BattleRenderer } from '../../render/battleField';
 import type { View } from '../../render/field';
 import { clockText, hudIcons, hudStrip } from '../../render/hud';
-import { drawBanner } from '../../render/ui';
+import { drawBanner, PauseMenu } from '../../render/ui';
 import { goTitle } from '../nav';
 import { DEMO_TICKS } from './demo';
 import type { BattleMatch } from './match';
@@ -41,7 +41,7 @@ export class BattleRoundScene implements Scene {
   private phase: Phase = 'ready';
   private t = 0;
   private paused = false;
-  private pauseSel = 0;
+  private readonly pauseMenu: PauseMenu;
   private banner: { text: string; t: number; color: string } | null = null;
   private popups: Popup[] = [];
   private shake = 0;
@@ -55,6 +55,7 @@ export class BattleRoundScene implements Scene {
   ) {
     this.world = new BattleWorld({ cfg: match.cfg, arena, prizes, gold, seed: (Math.random() * 2 ** 31) | 0 });
     this.renderer = new BattleRenderer(this.world);
+    this.pauseMenu = new PauseMenu(app);
     // Build this round's sprites now (during the menu fade), not on its first frames.
     gimmickSprites();
     for (const b of this.world.bombers) characterSprites(b.character, b.id, b.gold);
@@ -95,7 +96,7 @@ export class BattleRoundScene implements Scene {
     const focusLost = input.takeFocusLoss() && this.cpus.size < this.world.bombers.length;
     if (this.phase === 'play' && !this.match.demo && (input.systemPausePressed() || focusLost)) {
       this.paused = true;
-      this.pauseSel = 0;
+      this.pauseMenu.reset();
       this.app.audio.sfx('pause');
       return;
     }
@@ -132,22 +133,13 @@ export class BattleRoundScene implements Scene {
   }
 
   private updatePause(): void {
-    const pad = this.app.input.menu;
-    if (pad.repeat('up') || pad.repeat('down')) {
-      this.pauseSel = 1 - this.pauseSel;
-      this.app.audio.sfx('menuMove');
-    }
-    if (pad.pressed('a') || pad.pressed('start')) {
-      pad.swallow();
-      if (this.pauseSel === 0) {
-        this.paused = false;
-        this.app.audio.sfx('pause');
-      } else {
-        this.app.audio.sfx('menuBack');
-        this.match.quit();
-      }
-    } else if (pad.pressed('b') || pad.pressed('select')) {
+    const choice = this.pauseMenu.update(this.app.input.menu);
+    if (choice === 'continue') {
       this.paused = false;
+      this.app.audio.sfx('pause');
+    } else if (choice === 'quit') {
+      this.app.audio.sfx('menuBack');
+      this.match.quit();
     }
   }
 
@@ -245,16 +237,7 @@ export class BattleRoundScene implements Scene {
     if (this.match.demo && Math.floor(this.app.frame / 30) % 2 === 0) {
       g.text('DEMO PLAY', g.width / 2, g.height - 12, { align: 'center', color: '#ffe040', outline: '#000000' });
     }
-    if (this.paused) {
-      g.ctx.globalAlpha = 0.55;
-      g.rect(0, 0, g.width, g.height, '#000000');
-      g.ctx.globalAlpha = 1;
-      drawBanner(g, 'PAUSE!', 86, '#ffe040');
-      ['CONTINUE', 'QUIT'].forEach((o, i) => {
-        const sel = i === this.pauseSel;
-        g.text((sel ? '▶ ' : '  ') + o, g.width / 2 - 30, 116 + i * 14, { color: sel ? '#ffe040' : '#ffffff', outline: '#000000' });
-      });
-    }
+    if (this.paused) this.pauseMenu.draw(g);
   }
 
   private renderHud(g: Gfx): void {

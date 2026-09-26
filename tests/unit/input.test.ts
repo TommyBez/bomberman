@@ -34,6 +34,18 @@ describe('gamepad layouts', () => {
     expect([...input.deviceState('pad0')].sort()).toEqual(['b', 'c']);
   });
 
+  it('L1 + L2 + R1 + R2 + SELECT + START is a soft reset (once per press)', () => {
+    const input = new Input();
+    withPad([4, 5, 6, 7, 8]);
+    input.poll();
+    expect(input.takeSoftReset()).toBe(false);
+    withPad([4, 5, 6, 7, 8, 9]);
+    input.poll();
+    expect(input.takeSoftReset()).toBe(true);
+    input.poll();
+    expect(input.takeSoftReset()).toBe(false);
+  });
+
   it('every layout maps the four face buttons to four different functions', () => {
     for (const l of PAD_LAYOUTS) expect(new Set(l.face).size).toBe(4);
   });

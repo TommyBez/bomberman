@@ -11,7 +11,7 @@ import { TILE } from '../../game/core/types';
 import { THEMES, themeForStage } from '../../gfx/tiles';
 import { FieldRenderer, type Actor, type View } from '../../render/field';
 import { clockText, hudIcons, hudStrip } from '../../render/hud';
-import { drawBanner } from '../../render/ui';
+import { drawBanner, PauseMenu } from '../../render/ui';
 
 type Phase = 'card' | 'ready' | 'play' | 'dying' | 'clear';
 
@@ -30,7 +30,7 @@ export class StageScene implements Scene {
   private phase: Phase = 'card';
   private timer = 0;
   private paused = false;
-  private pauseSel = 0;
+  private readonly pauseMenu: PauseMenu;
   private camX = 0;
   private shake = 0;
   private readonly field: FieldRenderer;
@@ -43,6 +43,7 @@ export class StageScene implements Scene {
     private readonly bonus: BonusStageDef | null,
     private readonly done: (exit: StageExit, world: CampaignWorld) => void,
   ) {
+    this.pauseMenu = new PauseMenu(app);
     this.retro = session.version === 'retro';
     this.themeName = themeForStage(session.stageNumber, this.retro);
     this.field = new FieldRenderer(this.themeName, this.retro);
@@ -91,7 +92,7 @@ export class StageScene implements Scene {
     const focusLost = this.app.input.takeFocusLoss();
     if (this.phase === 'play' && (pad.pressed('start') || focusLost)) {
       this.paused = true;
-      this.pauseSel = 0;
+      this.pauseMenu.reset();
       this.app.audio.sfx('pause');
       return;
     }
@@ -130,22 +131,14 @@ export class StageScene implements Scene {
   }
 
   private updatePause(): void {
-    const pad = this.app.input.players[0];
-    if (pad.repeat('up') || pad.repeat('down')) {
-      this.pauseSel = 1 - this.pauseSel;
-      this.app.audio.sfx('menuMove');
-    }
-    if (pad.pressed('start') || pad.pressed('a')) {
-      if (this.pauseSel === 0) {
-        this.paused = false;
-        this.app.audio.sfx('pause');
-      } else {
-        this.app.audio.sfx('menuBack');
-        this.app.audio.stopMusic();
-        this.done('quit', this.world);
-      }
-    } else if (pad.pressed('b') || pad.pressed('select')) {
+    const choice = this.pauseMenu.update(this.app.input.players[0]);
+    if (choice === 'continue') {
       this.paused = false;
+      this.app.audio.sfx('pause');
+    } else if (choice === 'quit') {
+      this.app.audio.sfx('menuBack');
+      this.app.audio.stopMusic();
+      this.done('quit', this.world);
     }
   }
 
@@ -260,7 +253,7 @@ export class StageScene implements Scene {
     if (this.world.timeUp && this.phase === 'play' && this.world.tick % 60 < 40 && this.timer < 600) {
       // flashing warning after the clock ran out
     }
-    if (this.paused) this.renderPause(g);
+    if (this.paused) this.pauseMenu.draw(g);
   }
 
   private renderHud(g: Gfx): void {
@@ -324,16 +317,5 @@ export class StageScene implements Scene {
     const icons = hudIcons();
     g.image(icons.heads[0], g.width / 2 - 20, g.height / 2 + 14);
     g.text(`× ${String(Math.max(0, this.session.lives)).padStart(2, '0')}`, g.width / 2 - 6, g.height / 2 + 16, { color: '#ffffff' });
-  }
-
-  private renderPause(g: Gfx): void {
-    g.ctx.globalAlpha = 0.55;
-    g.rect(0, 0, g.width, g.height, '#000000');
-    g.ctx.globalAlpha = 1;
-    drawBanner(g, 'PAUSE!', 86, '#ffe040');
-    ['CONTINUE', 'QUIT'].forEach((o, i) => {
-      const sel = i === this.pauseSel;
-      g.text((sel ? '▶ ' : '  ') + o, g.width / 2 - 30, 116 + i * 14, { color: sel ? '#ffe040' : '#ffffff', outline: '#000000' });
-    });
   }
 }

@@ -1,5 +1,6 @@
 import type { App } from '../app';
 import { mix, textWidth, type Gfx } from '../engine/gfx';
+import type { Controller } from '../engine/input';
 
 /** Big outlined banner text across the screen ("READY", "PAUSE!", "HURRY!"…). */
 export function drawBanner(g: Gfx, text: string, y: number, color = '#ffe040', scale = 2): void {
@@ -151,5 +152,63 @@ export class Menu {
     const h = this.items[this.index]?.help;
     const help = typeof h === 'function' ? h() : h;
     if (help) g.text(help, g.width / 2, g.height - 14, { align: 'center', color: '#c8d0ff', outline: '#000000' });
+  }
+}
+
+/** In-game pause: CONTINUE / QUIT, and QUIT asks YES / NO first (as on PlayStation). */
+export class PauseMenu {
+  private sel = 0;
+  private confirming = false;
+
+  constructor(private readonly app: App) {}
+
+  reset(): void {
+    this.sel = 0;
+    this.confirming = false;
+  }
+
+  /** Feed one tick of input; returns what the player chose, if anything. */
+  update(pad: Controller): 'continue' | 'quit' | null {
+    const sfx = (n: string): void => this.app.audio.sfx(n);
+    if (pad.repeat('up') || pad.repeat('down')) {
+      this.sel = 1 - this.sel;
+      sfx('menuMove');
+    }
+    if (pad.pressed('start') || pad.pressed('a')) {
+      pad.swallow();
+      if (!this.confirming) {
+        if (this.sel === 0) return 'continue';
+        this.confirming = true;
+        this.sel = 1; // NO is the safe default
+        sfx('menuOk');
+        return null;
+      }
+      if (this.sel === 0) return 'quit';
+      this.confirming = false;
+      this.sel = 1;
+      sfx('menuBack');
+      return null;
+    }
+    if (pad.pressed('b') || pad.pressed('d') || pad.pressed('select')) {
+      pad.swallow();
+      if (!this.confirming) return 'continue';
+      this.confirming = false;
+      this.sel = 1;
+      sfx('menuBack');
+    }
+    return null;
+  }
+
+  draw(g: Gfx): void {
+    g.ctx.globalAlpha = 0.55;
+    g.rect(0, 0, g.width, g.height, '#000000');
+    g.ctx.globalAlpha = 1;
+    drawBanner(g, 'PAUSE!', 86, '#ffe040');
+    if (this.confirming) g.text('QUIT THIS GAME?', g.width / 2, 108, { align: 'center', color: '#ffb0b0', outline: '#000000' });
+    const options = this.confirming ? ['YES', 'NO'] : ['CONTINUE', 'QUIT'];
+    options.forEach((o, i) => {
+      const sel = i === this.sel;
+      g.text((sel ? '▶ ' : '  ') + o, g.width / 2 - 30, (this.confirming ? 122 : 116) + i * 14, { color: sel ? '#ffe040' : '#ffffff', outline: '#000000' });
+    });
   }
 }

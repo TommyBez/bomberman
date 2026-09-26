@@ -160,6 +160,8 @@ export class Input {
   /** Face-button layout (index into PAD_LAYOUTS) for each of the four gamepads. */
   padLayouts: number[] = [0, 0, 0, 0];
   private focusLost = false;
+  private softReset = false;
+  private resetHeld = [false, false, false, false];
 
   attach(win: Window): void {
     win.addEventListener('keydown', (e) => {
@@ -292,6 +294,13 @@ export class Input {
     this.touchTapped.clear();
   }
 
+  /** True once after a gamepad did the soft-reset combination. */
+  takeSoftReset(): boolean {
+    const r = this.softReset;
+    this.softReset = false;
+    return r;
+  }
+
   /** True once after the window lost focus (games pause themselves). */
   takeFocusLoss(): boolean {
     const lost = this.focusLost;
@@ -369,6 +378,10 @@ export class Input {
       if (btn(6) || btn(7)) s.add('c');
       if (btn(9)) s.add('start');
       if (btn(8)) s.add('select');
+      // Soft reset: L1 + L2 + R1 + R2 + SELECT + START together.
+      const reset = [4, 5, 6, 7, 8, 9].every(btn);
+      if (reset && !this.resetHeld[i]) this.softReset = true;
+      this.resetHeld[i] = reset;
       if (!hadInput && s.size > 0) this.gesture();
     }
   }

@@ -10,6 +10,7 @@ import { Screen } from './engine/screen';
 import { sprites } from './gfx/sprites';
 import { hudIcons } from './render/hud';
 import { BootScene } from './scenes/boot';
+import { goTitle } from './scenes/nav';
 import { applyScreenOffset, loadSettings } from './settings';
 
 function boot(): void {
@@ -42,6 +43,7 @@ function boot(): void {
   const loop = new Loop(
     () => {
       input.poll();
+      if (input.takeSoftReset()) goTitle(app);
       app.scenes.update();
       app.frame++;
     },
