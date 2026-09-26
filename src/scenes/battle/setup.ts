@@ -127,7 +127,7 @@ export class BattleSetup {
     const menu = new Menu(
       this.app,
       [
-        { label: 'SINGLE MATCH', action: () => ((this.cfg.tag = false), this.rules()), help: 'EVERY BOMBER FOR HIMSELF' },
+        { label: 'SINGLE MATCH', action: () => ((this.cfg.tag = false), this.rules()), help: 'EVERYONE FOR THEMSELVES' },
         { label: 'TAG MATCH', action: () => ((this.cfg.tag = true), (this.cfg.rules.hyperBomber = false), this.rules()), help: 'TWO TEAMS' },
       ],
       () => this.selectLevel(),
@@ -475,11 +475,10 @@ class StageSelectScene implements Scene {
     g.text('◀', 20, 96, { scale: 2, color: '#ffe040', outline: '#000000' });
     g.text('▶', 224, 96, { scale: 2, color: '#ffe040', outline: '#000000' });
     // Name banner
-    g.rect(0, 174, g.width, 16, '#000000');
-    g.text(`${this.setup.cfg.stage + 1}/8  ${a.name}`, g.width / 2, 178, { align: 'center', color: '#ffe040' });
+    drawPanel(g, 24, 173, 208, 17, '#1c6848', '#082818');
+    g.text(`${this.setup.cfg.stage + 1}/8  ${a.name}`, g.width / 2, 178, { align: 'center', color: '#ffe040', outline: '#000000' });
     g.text(a.blurb, g.width / 2, 196, { align: 'center', color: '#ffffff', outline: '#000000' });
     g.text(LEVEL_NAMES[this.setup.cfg.level], g.width / 2, 210, { align: 'center', color: '#a8ffc8', outline: '#000000' });
-    void sprites;
   }
 }
 

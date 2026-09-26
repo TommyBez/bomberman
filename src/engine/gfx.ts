@@ -1,4 +1,4 @@
-import { ADVANCE, GLYPH_H, GLYPH_W, glyph, textWidth } from './font';
+import { ADVANCE, FONT_CHARS, GLYPH_H, GLYPH_W, glyph, textWidth } from './font';
 
 export type Sprite = HTMLCanvasElement;
 
@@ -150,9 +150,6 @@ class FontCache {
   }
 }
 
-const FONT_CHARS = [
-  ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,:;!?-+=/\'"()*#%&<>_[]©→←↑↓▶♥×',
-];
 
 export class Gfx {
   private fonts = new FontCache();

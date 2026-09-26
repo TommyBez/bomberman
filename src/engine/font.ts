@@ -70,9 +70,13 @@ const GLYPHS: Record<string, string> = {
   '↑': '..#..|.###.|#.#.#|..#..|..#..|..#..|.....',
   '↓': '.....|..#..|..#..|..#..|#.#.#|.###.|..#..',
   '▶': '#....|##...|###..|####.|###..|##...|#....',
+  '◀': '...#.|..##.|.###.|####.|.###.|..##.|...#.',
   '♥': '.....|.#.#.|#####|#####|.###.|..#..|.....',
   '×': '.....|#...#|.#.#.|..#..|.#.#.|#...#|.....',
 };
+
+/** Every drawable character (the space has no glyph but keeps its slot). */
+export const FONT_CHARS: readonly string[] = [' ', ...Object.keys(GLYPHS)];
 
 export const GLYPH_W = 5;
 export const GLYPH_H = 7;
