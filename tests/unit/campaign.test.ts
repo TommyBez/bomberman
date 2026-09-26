@@ -90,6 +90,59 @@ describe('CampaignWorld generation', () => {
   });
 });
 
+describe('hidden panels', () => {
+  const stageWith = (panel: string) => STAGES.find((s) => s.secret === panel)!;
+
+  it('B: uncover the exit without killing anything, then stand on it', () => {
+    const w = new CampaignWorld(stageWith('b'), freshPowers(), 21);
+    w.player.invincible = 1e9;
+    w.grid.set(w.exitTx, w.exitTy, Cell.Floor);
+    w.player.x = tileCenter(w.exitTx);
+    w.player.y = tileCenter(w.exitTy);
+    w.update();
+    expect(w.secret.shown).toBe(true);
+  });
+
+  it('B: a single kill spoils it', () => {
+    const w = new CampaignWorld(stageWith('b'), freshPowers(), 21);
+    w.player.invincible = 1e9;
+    w['killEnemy'](w.enemies[0], 0);
+    w.grid.set(w.exitTx, w.exitTy, Cell.Floor);
+    w.player.x = tileCenter(w.exitTx);
+    w.player.y = tileCenter(w.exitTy);
+    w.update();
+    expect(w.secret.shown).toBe(false);
+  });
+
+  it('Golden Bomberman: 248 explosions in one stage', () => {
+    const w = new CampaignWorld(stageWith('golden'), freshPowers(), 3);
+    w.player.invincible = 1e9;
+    w.bombsExploded = 246;
+    w.explode(w.placeBomb(w.player, 1, 1)!);
+    expect(w.bombsExploded).toBe(247);
+    expect(w.secret.shown).toBe(false);
+    w.explode(w.placeBomb(w.player, 2, 1)!);
+    expect(w.secret.shown).toBe(true);
+  });
+
+  it('Nakamoto-san: clear the monsters, then break 16 more soft blocks', () => {
+    const w = new CampaignWorld(stageWith('nakamoto'), freshPowers(), 4);
+    w.player.invincible = 1e9;
+    for (const e of w.enemies) w['killEnemy'](e, 0);
+    let broken = 0;
+    for (let y = 1; y < w.grid.h - 1 && broken < 16; y++) {
+      for (let x = 1; x < w.grid.w - 1 && broken < 16; x++) {
+        if (w.grid.get(x, y) !== Cell.Soft || (x === w.exitTx && y === w.exitTy)) continue;
+        w.grid.set(x, y, Cell.Floor);
+        w['onBlockGone'](x, y);
+        broken++;
+        w.update();
+        expect(w.secret.shown).toBe(broken >= 16);
+      }
+    }
+  });
+});
+
 describe('session', () => {
   it('awards a life for every cleared stage and keeps only fire/bombs after a miss', () => {
     const s = new CampaignSession('modern');
