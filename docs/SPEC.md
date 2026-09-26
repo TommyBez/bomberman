@@ -90,15 +90,31 @@ The stage table (enemies and item for all 50 stages) lives in `src/game/campaign
   Bomber Cart Off/On/Super (Off). Beginner locks Sudden Death, Random Position and Skull.
 - Arena 15×13 (13×11 playable), whole arena on screen. Starts: P1 white top-left,
   P2 black bottom-right, P3 red top-right, P4 blue bottom-left, P5 green centre.
-- Controls: A = bomb / Power Glove, B = remote / specials, stop kicked bomb, punch / push /
-  multi bomb.
+- Controls (PlayStation): ○ = bomb / Power Glove, × = specials and partner abilities
+  (× + direction for an Advanced character's special), △ = stop a kicked bomb / back,
+  □ = Push → Punch → Multi Bomb.
 - "Hurry!" at 1:00 left: pressure blocks spiral in from the top-left (fill everything
   with Sudden Death on). "Time's UP!" at 0:00 → draw.
-- Two kicked bombs colliding make a **Super Bomb**; Super/Power bombs colliding make an
-  **Ultra Bomb**.
-- Items: Bomb, Fire, Speed, Steel Shoes (−speed), Kick, Power Glove, Punch, Push,
-  Multi Bomb, Power Bomb, Rubber Bomb, Metabomb (pierce), Full Fire, Land Mine, Heart, Egg,
-  Skull, Remote Control.
+- Two kicked bombs colliding make a **Dangerous Bomb** (5×5 blast); two Power Bombs (or
+  two Dangerous Bombs) make a **Super Dangerous Bomb** (7×7).
+- Items: Bomb, Fire, Speed, Steel Shoes (−speed), Kick, Bomb Pass, Power Glove, Punch,
+  Push, Multi Bomb, Power Bomb, Rubber Bomb, Metabomb (pierce, also through items),
+  Full Fire, Land Mine, Heart, Egg, Skull; Wall Pass on some alternate stages; Flak Jacket
+  only through Custom Battle. Steel Shoes and Hearts come from Hyper Bomber (or Custom).
+  Remote Control is Normal Game only. Kick and Bomb Pass replace each other.
+- A kicked Power Bomb, a bouncing Rubber Bomb or a thrown bomb that hits someone knocks
+  their items loose.
+- Advanced characters: Bazooka (rocket: blocks, bombs, players), Lady (beam), Jet (boost
+  that runs players over), Hammer, Great (invincible), Honey (pistol sets off bombs),
+  Kotetsu (sword shockwave). Bazooka, Jet and Great are at their weakest for 10 s after.
+- Partners (Eggs): Normal level Louies (Yellow block kick, Blue bomb kick over walls,
+  Green dash, Pink jump, Brown line of bombs); Advanced level Ptera (swallow a bomb),
+  Kicky (lift a block), Draco (jump and stomp), Shell (line bomb, shell against fire from
+  behind), Dogyu (charge, rams blocks). An Advanced rider can stock one egg, which trails
+  behind, can be burnt, and revives the same partner.
+- Alternate ("ura") stages: every stage has a second layout with different blocks and
+  items, opened per level with the passwords 56565656 (Beginner), 16161616 (Normal) and
+  49894989 (Advanced) on the password screen.
 - Skull diseases: Superspeed, Superslow, Diarrhea, Impotent, Feeble, Streaking, Confusion,
   Short-tempered, Slow Motion, Warp. Cured by another item or passed on by touch.
 - Bomber Cart: knocked-out players ride carts around the edge and lob bombs (Super: a hit
