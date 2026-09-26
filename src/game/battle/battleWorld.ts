@@ -4,7 +4,7 @@ import { ALL_DIRS, Cell, DX, DY, OPPOSITE, TILE, tileCenter, toTile, type Dir } 
 import { World, type Blast, type Bomb, type BombShape } from '../core/world';
 import type { ArenaDef } from './arenas';
 import { CHARACTERS, PARTNERS, type PartnerKind } from './characters';
-import { LEVEL_ITEMS, type BattleConfig, type BattleItem } from './config';
+import { CUSTOM_ITEMS, LEVEL_ITEMS, MAX_HP, type BattleConfig, type BattleItem, type Level } from './config';
 import { Gimmicks } from './gimmicks';
 
 export const BATTLE_W = 15;
@@ -159,7 +159,8 @@ export class BattleWorld extends World {
       const b = new Bomber(i, sx, sy);
       b.team = cfg.tag ? p.team : i;
       b.character = p.character;
-      b.hp = Math.max(1, p.hp);
+      // Hit points are a Custom Battle handicap only.
+      b.hp = cfg.mode === 'custom' ? Math.max(1, Math.min(MAX_HP, p.hp)) : 1;
       b.stats.bombs = 1;
       b.stats.fire = arena.maxFire ? BATTLE_MAX_FIRE : 2;
       b.gold = setup.gold?.[i] ?? false;
@@ -178,7 +179,7 @@ export class BattleWorld extends World {
     for (const [x, y] of soft) grid.set(x, y, Cell.Soft);
 
     // Items hidden under soft blocks.
-    const counts: Partial<Record<BattleItem, number>> = cfg.mode === 'custom' && cfg.customItems ? { ...cfg.customItems } : { ...LEVEL_ITEMS[cfg.level], ...(arena.items ?? {}) };
+    const counts = cfg.mode === 'custom' && cfg.customItems ? customCounts(cfg.customItems) : stageItems(cfg.level, arena);
     for (const [kind, n] of Object.entries(counts) as [BattleItem, number][]) {
       for (let k = 0; k < n; k++) this.itemPool.push(kind);
     }
@@ -400,8 +401,13 @@ export class BattleWorld extends World {
         s.speed = Math.max(-1, s.speed - 1);
         break;
       case 'kick':
+        // Bomb Kick and Bomb Pass can't be combined: the newer one wins.
         s.kick = true;
         s.bombPass = false;
+        break;
+      case 'bombpass':
+        s.bombPass = true;
+        s.kick = false;
         break;
       case 'glove':
         s.glove = true;
@@ -478,11 +484,23 @@ export class BattleWorld extends World {
       case 'fire':
         s.fire = Math.max(1, s.fire - 1);
         break;
+      case 'fullfire':
+        s.fire = Math.min(BATTLE_MAX_FIRE, 2 + b.collected.filter((k) => k === 'fire').length);
+        break;
       case 'speed':
         s.speed = Math.max(0, s.speed - 1);
         break;
+      case 'geta':
+        s.speed = Math.min(this.rules.maxSpeedLevel, s.speed + 1);
+        break;
       case 'kick':
         s.kick = false;
+        break;
+      case 'bombpass':
+        s.bombPass = false;
+        break;
+      case 'wallpass':
+        s.wallPass = false;
         break;
       case 'glove':
         s.glove = false;
@@ -1177,4 +1195,24 @@ export function perimeterPath(w: number, h: number): [number, number][] {
   for (let x = w - 2; x >= 1; x--) out.push([x, h - 1]);
   for (let y = h - 2; y >= 1; y--) out.push([0, y]);
   return out;
+}
+
+/** The items hidden in a stage in Battle Royal: the level's mix with the stage's tweaks. */
+export function stageItems(level: Level, arena: ArenaDef): Partial<Record<BattleItem, number>> {
+  return { ...LEVEL_ITEMS[level], ...(arena.items ?? {}) };
+}
+
+/** Custom Battle counts, limited to what the Set Item screen offers. */
+export function customCounts(items: Partial<Record<BattleItem, number>>): Partial<Record<BattleItem, number>> {
+  const out: Partial<Record<BattleItem, number>> = {};
+  for (const kind of CUSTOM_ITEMS) {
+    const n = items[kind];
+    if (typeof n === 'number' && n > 0) out[kind] = Math.min(9, Math.floor(n));
+  }
+  return out;
+}
+
+/** How many soft blocks (and so hidden items at most) a stage gets. */
+export function softBlockCount(cfg: BattleConfig, arena: ArenaDef): number {
+  return new BattleWorld({ cfg, arena, seed: 1 }).grid.count(Cell.Soft);
 }

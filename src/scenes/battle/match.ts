@@ -200,7 +200,8 @@ class ResultsScene implements Scene {
 
 // ------------------------------------------------------------------ Hyper Bomber
 
-const PRIZES: BattleItem[] = ['bomb', 'fire', 'speed', 'kick', 'glove', 'punch', 'remote', 'fullfire', 'heart', 'line', 'pierce', 'push'];
+/** Hyper Bomber panels; Steel Shoes and Hearts are only won here (or set in Custom Battle). */
+const PRIZES: BattleItem[] = ['bomb', 'fire', 'speed', 'geta', 'kick', 'bombpass', 'glove', 'punch', 'fullfire', 'heart', 'line', 'pierce', 'push'];
 
 /** The winner throws a yo-yo at moving item panels to win an item for the next game. */
 class HyperBomberScene implements Scene {

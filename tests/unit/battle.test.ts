@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../../src/engine/rng';
 import { ARENAS } from '../../src/game/battle/arenas';
-import { BATTLE_MAX_FIRE, BattleWorld, HURRY_TICKS, perimeterPath, spiralOrder } from '../../src/game/battle/battleWorld';
+import { BATTLE_MAX_FIRE, BattleWorld, customCounts, HURRY_TICKS, perimeterPath, spiralOrder, stageItems } from '../../src/game/battle/battleWorld';
 import { defaultConfig, type BattleConfig } from '../../src/game/battle/config';
 import { NO_INTENT } from '../../src/game/core/bomber';
 import { ALL_DIRS, Cell, tileCenter } from '../../src/game/core/types';
@@ -56,6 +56,43 @@ describe('battle world', () => {
     b.mineNext = true;
     expect(w.bombShape(b)).toMatchObject({ kind: 'mine', hidden: true, remote: true });
     expect(b.mineNext).toBe(true); // asking has no side effects
+  });
+
+  it('Bomb Kick and Bomb Pass replace each other', () => {
+    const w = new BattleWorld({ cfg: config('beginner', 2), arena: ARENAS[0], seed: 2 });
+    const b = w.bombers[0];
+    w.giveItem(b, 'kick', true);
+    expect(b.stats.kick).toBe(true);
+    w.giveItem(b, 'bombpass', true);
+    expect(b.stats).toMatchObject({ kick: false, bombPass: true });
+    w.giveItem(b, 'kick', true);
+    expect(b.stats).toMatchObject({ kick: true, bombPass: false });
+  });
+
+  it('keeps Custom-only and Hyper-Bomber-only items out of Battle Royal', () => {
+    for (const level of ['beginner', 'normal', 'advanced'] as const) {
+      for (const arena of ARENAS.filter((a) => a.level === level)) {
+        const items = stageItems(level, arena);
+        for (const k of ['geta', 'heart', 'remote', 'flak'] as const) expect(items[k] ?? 0).toBe(0);
+        if (level === 'beginner') expect(items.egg ?? 0).toBe(0);
+      }
+    }
+  });
+
+  it('Custom Battle only places items from the Set Item list', () => {
+    const counts = customCounts({ bomb: 3, mine: 2, line: 1, egg: 2, remote: 1, flak: 1, wallpass: 4 });
+    expect(counts).toEqual({ bomb: 3, flak: 1 });
+  });
+
+  it('hit points are a Custom Battle handicap only', () => {
+    const royal = config('beginner', 2);
+    royal.players[0].hp = 3;
+    expect(new BattleWorld({ cfg: royal, arena: ARENAS[0], seed: 1 }).bombers[0].hp).toBe(1);
+    const custom = config('beginner', 2);
+    custom.mode = 'custom';
+    custom.customItems = { bomb: 2 };
+    custom.players[0].hp = 3;
+    expect(new BattleWorld({ cfg: custom, arena: ARENAS[0], seed: 1 }).bombers[0].hp).toBe(3);
   });
 
   it('hides the level items under soft blocks', () => {

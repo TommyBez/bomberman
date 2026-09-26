@@ -4,7 +4,8 @@ import type { DeviceId } from '../../engine/input';
 import type { Scene } from '../../engine/scene';
 import { arenasFor, type ArenaDef } from '../../game/battle/arenas';
 import { charactersFor, CHARACTERS } from '../../game/battle/characters';
-import { CUSTOM_ITEMS, defaultConfig, ITEM_NAMES, LEVEL_ITEMS, LEVEL_NAMES, type BattleConfig, type Level } from '../../game/battle/config';
+import { CUSTOM_ITEMS, defaultConfig, ITEM_NAMES, LEVEL_NAMES, MAX_HP, type BattleConfig, type Level } from '../../game/battle/config';
+import { customCounts, softBlockCount, stageItems } from '../../game/battle/battleWorld';
 import { load, save } from '../../engine/storage';
 import { sprites } from '../../gfx/sprites';
 import { drawMenuBackdrop, drawPanel, drawTitleBar, Menu, type MenuItem } from '../../render/ui';
@@ -488,7 +489,12 @@ class CustomScene implements Scene {
     setup: BattleSetup,
   ) {
     const cfg = setup.cfg;
-    if (!cfg.customItems) cfg.customItems = { ...LEVEL_ITEMS[cfg.level] };
+    // Item kinds and amounts depend on the stage: start from its own mix.
+    const key = `${cfg.level}:${cfg.stage}`;
+    if (!cfg.customItems || cfg.customFor !== key) {
+      cfg.customItems = customCounts(stageItems(cfg.level, arenasFor(cfg.level)[cfg.stage]));
+      cfg.customFor = key;
+    }
     this.menu = new Menu(
       app,
       [
@@ -512,14 +518,21 @@ class CustomScene implements Scene {
   }
 }
 
+const ITEM_COLS = 4;
+
 class ItemSetScene implements Scene {
   private sel = 0;
+  /** Items hide under soft blocks, so the stage's block count is the limit. */
+  private readonly capacity: number;
 
   constructor(
     private readonly app: App,
     private readonly setup: BattleSetup,
     private readonly back: () => void,
-  ) {}
+  ) {
+    const cfg = setup.cfg;
+    this.capacity = softBlockCount(cfg, arenasFor(cfg.level)[cfg.stage]);
+  }
 
   private total(): number {
     return Object.values(this.setup.cfg.customItems ?? {}).reduce((a, b) => a + (b ?? 0), 0);
@@ -528,22 +541,21 @@ class ItemSetScene implements Scene {
   update(): void {
     const pad = this.app.input.menu;
     const n = CUSTOM_ITEMS.length;
-    const cols = 5;
     if (pad.repeat('left')) this.sel = (this.sel + n - 1) % n;
     if (pad.repeat('right')) this.sel = (this.sel + 1) % n;
-    if (pad.repeat('up')) this.sel = (this.sel + n - cols) % n;
-    if (pad.repeat('down')) this.sel = (this.sel + cols) % n;
+    if (pad.repeat('up')) this.sel = (this.sel + n - ITEM_COLS) % n;
+    if (pad.repeat('down')) this.sel = (this.sel + ITEM_COLS) % n;
     const items = this.setup.cfg.customItems!;
     const kind = CUSTOM_ITEMS[this.sel];
-    if (pad.repeat('a') && this.total() < 40) {
-      items[kind] = Math.min(9, (items[kind] ?? 0) + 1);
+    if (pad.repeat('a') && this.total() < this.capacity && (items[kind] ?? 0) < 9) {
+      items[kind] = (items[kind] ?? 0) + 1;
       this.app.audio.sfx('select');
     }
-    if (pad.repeat('c')) {
-      items[kind] = Math.max(0, (items[kind] ?? 0) - 1);
+    if ((pad.repeat('b') || pad.repeat('c')) && (items[kind] ?? 0) > 0) {
+      items[kind] = (items[kind] ?? 0) - 1;
       this.app.audio.sfx('select');
     }
-    if (pad.pressed('start') || pad.pressed('b')) {
+    if (pad.pressed('start') || pad.pressed('select')) {
       pad.swallow();
       this.app.audio.sfx('menuOk');
       this.back();
@@ -553,18 +565,18 @@ class ItemSetScene implements Scene {
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame, '#0c3a2a', '#11473a');
     drawTitleBar(g, 'SET ITEM', this.app.frame);
-    drawPanel(g, 12, 34, 232, 142, '#28a068', '#0c4028');
+    drawPanel(g, 16, 32, 224, 148, '#28a068', '#0c4028');
     const items = this.setup.cfg.customItems!;
     const s = sprites();
     CUSTOM_ITEMS.forEach((kind, i) => {
-      const x = 24 + (i % 5) * 44;
-      const y = 44 + Math.floor(i / 5) * 42;
-      if (i === this.sel) g.frame(x - 3, y - 3, 22, 34, '#ffe040');
+      const x = 28 + (i % ITEM_COLS) * 52;
+      const y = 40 + Math.floor(i / ITEM_COLS) * 35;
+      if (i === this.sel) g.frame(x - 3, y - 3, 44, 22, '#ffe040');
       g.image(s.items[kind], x, y);
-      g.text(String(items[kind] ?? 0), x + 8, y + 20, { align: 'center', color: '#ffffff', outline: '#000000' });
+      g.text(`×${items[kind] ?? 0}`, x + 20, y + 5, { color: '#ffffff', outline: '#000000' });
     });
-    g.text(ITEM_NAMES[CUSTOM_ITEMS[this.sel]], g.width / 2, 180, { align: 'center', color: '#ffe040', outline: '#000000' });
-    g.text(`A: MORE  C: LESS  START: OK   (${40 - this.total()} LEFT)`, g.width / 2, 196, { align: 'center', color: '#c8ffe0', outline: '#000000' });
+    g.text(ITEM_NAMES[CUSTOM_ITEMS[this.sel]], g.width / 2, 184, { align: 'center', color: '#ffe040', outline: '#000000' });
+    g.text(`A: MORE  B: LESS  START: OK   ${this.capacity - this.total()} LEFT`, g.width / 2, 198, { align: 'center', color: '#c8ffe0', outline: '#000000' });
   }
 }
 
@@ -579,7 +591,7 @@ class HitPointScene implements Scene {
     const items: MenuItem[] = setup.cfg.players.map((p, i) => ({
       label: `PLAYER ${i + 1}`,
       value: () => (p.type === 'off' ? '-' : '♥'.repeat(p.hp)),
-      change: (d: -1 | 1) => (p.hp = Math.max(1, Math.min(5, p.hp + d))),
+      change: (d: -1 | 1) => (p.hp = Math.max(1, Math.min(MAX_HP, p.hp + d))),
       disabled: () => p.type === 'off',
     }));
     items.push({ label: 'OK', action: () => this.back() });
@@ -620,9 +632,10 @@ function restoreConfig(saved: Partial<BattleConfig> | null): BattleConfig {
       if (Array.isArray(q.devices)) p.devices = q.devices.filter((d) => typeof d === 'string');
       if (typeof q.character === 'string' && CHARACTERS[q.character]) p.character = q.character;
       if (q.team === 0 || q.team === 1) p.team = q.team;
-      if (Number.isInteger(q.hp) && q.hp >= 1 && q.hp <= 9) p.hp = q.hp;
+      if (Number.isInteger(q.hp) && q.hp >= 1 && q.hp <= MAX_HP) p.hp = q.hp;
     });
   }
-  if (saved.customItems && typeof saved.customItems === 'object') cfg.customItems = { ...saved.customItems };
+  if (saved.customItems && typeof saved.customItems === 'object') cfg.customItems = customCounts(saved.customItems);
+  if (typeof saved.customFor === 'string') cfg.customFor = saved.customFor;
   return cfg;
 }
