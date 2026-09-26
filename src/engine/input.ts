@@ -9,9 +9,9 @@
  */
 
 export type Dir = 'up' | 'down' | 'left' | 'right';
-export type Button = Dir | 'a' | 'b' | 'start' | 'select';
+export type Button = Dir | 'a' | 'b' | 'c' | 'start' | 'select';
 export const DIRS: readonly Dir[] = ['up', 'down', 'left', 'right'];
-const BUTTONS: readonly Button[] = ['up', 'down', 'left', 'right', 'a', 'b', 'start', 'select'];
+const BUTTONS: readonly Button[] = ['up', 'down', 'left', 'right', 'a', 'b', 'c', 'start', 'select'];
 
 export type DeviceId = 'kb' | 'kb1' | 'kb2' | 'pad0' | 'pad1' | 'pad2' | 'pad3' | 'touch';
 export const ALL_DEVICES: readonly DeviceId[] = ['kb', 'pad0', 'pad1', 'pad2', 'pad3', 'touch'];
@@ -24,6 +24,7 @@ const KB_SOLO: KeyMap = {
   KeyW: 'up', KeyS: 'down', KeyA: 'left', KeyD: 'right',
   Space: 'a', KeyX: 'a', KeyJ: 'a', KeyF: 'a',
   KeyZ: 'b', KeyK: 'b', KeyG: 'b', ShiftLeft: 'b', ShiftRight: 'b',
+  KeyC: 'c', KeyL: 'c', KeyE: 'c', KeyQ: 'c',
   Enter: 'start', NumpadEnter: 'start', KeyP: 'start',
   Escape: 'select', Backspace: 'select', Tab: 'select',
 };
@@ -31,15 +32,17 @@ const KB_SOLO: KeyMap = {
 /** Battle, keyboard player 1 (left hand). */
 const KB1: KeyMap = {
   KeyW: 'up', KeyS: 'down', KeyA: 'left', KeyD: 'right',
-  Space: 'a', KeyF: 'a', KeyC: 'a',
-  ShiftLeft: 'b', KeyG: 'b', KeyV: 'b',
+  Space: 'a', KeyF: 'a',
+  ShiftLeft: 'b', KeyG: 'b',
+  KeyE: 'c', KeyQ: 'c', KeyR: 'c',
 };
 
 /** Battle, keyboard player 2 (right hand). */
 const KB2: KeyMap = {
   ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
-  Enter: 'a', NumpadEnter: 'a', Numpad0: 'a', Slash: 'a', KeyL: 'a',
-  ShiftRight: 'b', Period: 'b', NumpadDecimal: 'b', KeyK: 'b', ControlRight: 'b',
+  Enter: 'a', NumpadEnter: 'a', Numpad0: 'a', Slash: 'a',
+  ShiftRight: 'b', Period: 'b', NumpadDecimal: 'b',
+  ControlRight: 'c', Comma: 'c', Numpad1: 'c', Quote: 'c', Backslash: 'c',
 };
 
 const KEYMAPS: Partial<Record<DeviceId, KeyMap>> = { kb: KB_SOLO, kb1: KB1, kb2: KB2 };
@@ -239,6 +242,7 @@ export class Input {
     };
     bindButton('tb-a', 'a');
     bindButton('tb-b', 'b');
+    bindButton('tb-c', 'c');
     bindButton('tb-start', 'start');
     bindButton('tb-select', 'select');
   }
@@ -306,8 +310,9 @@ export class Input {
       if (btn(13) || ay > 0.5) s.add('down');
       if (btn(14) || ax < -0.5) s.add('left');
       if (btn(15) || ax > 0.5) s.add('right');
-      if (btn(0) || btn(2)) s.add('a');
-      if (btn(1) || btn(3) || btn(4) || btn(5)) s.add('b');
+      if (btn(0)) s.add('a');
+      if (btn(1) || btn(4) || btn(5)) s.add('b');
+      if (btn(2) || btn(3)) s.add('c');
       if (btn(9)) s.add('start');
       if (btn(8)) s.add('select');
       if (!hadInput && s.size > 0) this.gesture();
@@ -322,6 +327,6 @@ function isBound(code: string): boolean {
 /** Human-readable control hints for menus / README. */
 export const CONTROL_HELP = {
   solo: 'MOVE: ARROWS/WASD  BOMB: SPACE/X  DETONATE: Z/SHIFT  PAUSE: ENTER/P/ESC',
-  kb1: 'WASD + SPACE (BOMB) + L-SHIFT (SPECIAL)',
-  kb2: 'ARROWS + ENTER (BOMB) + R-SHIFT (SPECIAL)',
+  kb1: 'WASD + SPACE (BOMB) + L-SHIFT (B) + E (C)',
+  kb2: 'ARROWS + ENTER (BOMB) + R-SHIFT (B) + R-CTRL (C)',
 };

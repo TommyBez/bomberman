@@ -2,7 +2,7 @@ import { Bomber } from '../core/bomber';
 import { Grid } from '../core/grid';
 import { overlaps } from '../core/movement';
 import { ALL_DIRS, Cell, DX, DY, tileCenter } from '../core/types';
-import { World, type Bomb, type ItemCell } from '../core/world';
+import { World, type Blast, type Bomb, type ItemCell } from '../core/world';
 import { Enemy, type EnemyEnv } from './enemy';
 import { ENEMY_ORDER, type EnemyKind } from './enemies';
 import { SECRET_POINTS, type BonusStageDef, type CampaignItem, type SecretPanel, type StageDef } from './stages';
@@ -336,7 +336,7 @@ export class CampaignWorld extends World implements EnemyEnv {
     this.enemies = this.enemies.filter((e) => e.alive || e.deathTimer < ENEMY_DEATH_TICKS);
   }
 
-  protected override onExplode(bomb: Bomb): void {
+  protected override onExplode(bomb: Bomb, _blast: Blast): void {
     // The exit door caught in a blast releases a pack of monsters.
     if (this.exitRevealed() && this.flameAt(this.exitTx, this.exitTy) && this.flameSource[this.idx(this.exitTx, this.exitTy)] === bomb.id) {
       this.release(this.exitTx, this.exitTy, `door:${bomb.id}`);

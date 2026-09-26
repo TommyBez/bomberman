@@ -54,14 +54,23 @@ function bomberPalette(c: BomberColors): Record<string, string> {
   };
 }
 
-function buildBomber(c: BomberColors): BomberSprites {
+export function buildBomber(c: BomberColors, decorate?: (p: PixelCanvas, dir: BomberDir) => void): BomberSprites {
   const pal = bomberPalette(c);
   const F = BOMBER_FRAMES;
-  const s = (rows: string[]): Sprite => pixelSprite(rows, pal);
-  const down = [s(F.down0), s(F.down1), s(F.down0), s(F.down2)];
-  const up = [s(F.up0), s(F.up1), s(F.up0), s(F.up2)];
-  const left = [s(F.left0), s(F.left1), s(F.left0), s(F.left2)];
-  const right = left.map(flipX);
+  const s = (rows: string[], dir: BomberDir): Sprite => {
+    const base = pixelSprite(rows, pal);
+    if (!decorate) return base;
+    const p = new PixelCanvas(16, 24);
+    p.ctx.drawImage(base, 0, 0);
+    decorate(p, dir);
+    return p.canvas;
+  };
+  const down = [s(F.down0, 'down'), s(F.down1, 'down'), s(F.down0, 'down'), s(F.down2, 'down')];
+  const up = [s(F.up0, 'up'), s(F.up1, 'up'), s(F.up0, 'up'), s(F.up2, 'up')];
+  const left = [s(F.left0, 'left'), s(F.left1, 'left'), s(F.left0, 'left'), s(F.left2, 'left')];
+  const right = decorate
+    ? [s(F.left0, 'right'), s(F.left1, 'right'), s(F.left0, 'right'), s(F.left2, 'right')].map(flipX)
+    : left.map(flipX);
   // Death: flash, blacken, then crumble into smoke.
   const burnt = pixelSprite(F.down0, {
     ...pal,
@@ -78,7 +87,7 @@ function buildBomber(c: BomberColors): BomberSprites {
     squash(burnt, 0.5),
     squash(burnt, 0.28),
   ];
-  const win = [s(F.down0), s(F.down1)];
+  const win = [s(F.down0, 'down'), s(F.down1, 'down')];
   return {
     walk: { down, up, left, right },
     death,
@@ -240,7 +249,7 @@ export function sprites(): Sprites {
   const tiles: Record<string, TileSet> = {};
   for (const [name, theme] of Object.entries(THEMES)) tiles[name] = buildTiles(theme);
   cache = {
-    bombers: BOMBER_COLORS.map(buildBomber),
+    bombers: BOMBER_COLORS.map((c) => buildBomber(c)),
     bomb: Array.from({ length: BOMB_FRAMES }, (_, i) => drawBomb(i)),
     remoteBomb: Array.from({ length: BOMB_FRAMES }, (_, i) => drawBomb(i, REMOTE_BOMB_COLORS)),
     flame,

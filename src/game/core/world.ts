@@ -10,6 +10,10 @@ import {
   DY,
   FLAME_BIT,
   FLAME_CENTER,
+  FLAME_DOWN,
+  FLAME_LEFT,
+  FLAME_RIGHT,
+  FLAME_UP,
   OPPOSITE,
   TILE,
   tileCenter,
@@ -83,6 +87,37 @@ export interface Bomb extends Body {
   /** Carried by a glove bomber (not on the field). */
   held: boolean;
   age: number;
+  /** >0: square blast radius (Super Bomb 2, Ultra Bomb 3). */
+  square: number;
+  /** Special bomb type (battle). */
+  kind: BombKind;
+  /** Land mine: invisible, explodes when stepped on. */
+  hidden: boolean;
+  /** Carried by a conveyor belt (stops when the belt ends) rather than kicked. */
+  conveyed: boolean;
+  /** Current sliding speed (px per tick). */
+  slideSpeed: number;
+  /** Bomber who kicked it (power bomb damage, super bomb merges). */
+  kicker: Bomber | null;
+}
+
+export type BombKind = 'normal' | 'remote' | 'power' | 'rubber' | 'pierce' | 'mine' | 'super' | 'ultra';
+
+export interface BlastTile {
+  x: number;
+  y: number;
+  bits: number;
+}
+
+export interface BlastHit {
+  tx: number;
+  ty: number;
+  kind: 'soft' | 'bomb' | 'item';
+}
+
+export interface Blast {
+  tiles: BlastTile[];
+  hits: BlastHit[];
 }
 
 export interface Flight {
@@ -175,7 +210,7 @@ export class World {
   /** Walkability for a bomber (mode hooks may add obstacles). */
   bomberCanEnter(b: Bomber, tx: number, ty: number): boolean {
     const c = this.grid.get(tx, ty);
-    if (c === Cell.Hard) return false;
+    if (c === Cell.Hard || c === Cell.Void) return false;
     if (c === Cell.Soft && !b.stats.wallPass) return false;
     const bomb = this.bombAt[this.idx(tx, ty)];
     if (bomb && !b.stats.bombPass && !bomb.passers.has(b)) return false;
@@ -205,10 +240,11 @@ export class World {
   }
 
   speedOf(b: Bomber): number {
-    let s = this.rules.baseSpeed + Math.min(b.stats.speed, this.rules.maxSpeedLevel) * this.rules.speedStep;
-    if (b.curse === 'slow') s = this.rules.baseSpeed * 0.5;
-    if (b.curse === 'fast') s = this.rules.baseSpeed + (this.rules.maxSpeedLevel + 2) * this.rules.speedStep;
-    return s;
+    if (b.curse === 'superslow') return this.rules.baseSpeed * 0.5;
+    if (b.curse === 'superspeed') return this.rules.baseSpeed + (this.rules.maxSpeedLevel + 2) * this.rules.speedStep;
+    if (b.speedOverride !== null) return b.speedOverride;
+    const level = Math.max(-1, Math.min(b.stats.speed, this.rules.maxSpeedLevel));
+    return this.rules.baseSpeed + level * this.rules.speedStep;
   }
 
   // ---------------------------------------------------------------- main update
@@ -240,11 +276,15 @@ export class World {
       return;
     }
     if (b.invincible > 0) b.invincible--;
-    if (b.curse) {
+    if (b.curse && b.curseTimer > 0) {
       b.curseTimer--;
       if (b.curseTimer <= 0) b.curse = null;
     }
-    if (b.frozen) {
+    if (b.airborne > 0) {
+      this.updateJump(b);
+      return;
+    }
+    if (b.frozen || b.riding) {
       b.moving = false;
       return;
     }
@@ -253,11 +293,15 @@ export class World {
       b.moving = false;
       return;
     }
-    if (b.airborne > 0) return;
 
     const intent = b.intent;
     let dirs = intent.dirs;
-    if (b.curse === 'reverse') dirs = dirs.map((d) => OPPOSITE[d]);
+    if (b.curse === 'confusion') dirs = dirs.map((d) => OPPOSITE[d]);
+    if (b.curse === 'streaking') {
+      // Once moving, keep running until something is in the way.
+      if (dirs.length) b.streak = dirs[0];
+      else if (b.streak) dirs = [b.streak];
+    }
 
     // Movement
     b.moving = false;
@@ -273,18 +317,62 @@ export class World {
           break;
         }
       }
-      if (!b.moving) this.onBlocked(b, dirs[0]);
+      this.afterMove(b);
+      if (!b.moving) {
+        if (b.curse === 'streaking') b.streak = null;
+        this.onBlocked(b, dirs[0]);
+      }
       if (b.moving) b.walkTick++;
     }
 
     // Bomb placement (A)
     const wantsBomb = intent.bomb || b.curse === 'diarrhea';
-    if (wantsBomb && b.curse !== 'noBomb') {
+    if (wantsBomb && b.curse !== 'impotent') {
       const placed = this.placeBomb(b);
       if (!placed && intent.bomb) this.onBombButtonOnBomb(b);
     }
     // Special (B)
     if (intent.special) this.onSpecial(b);
+    // Action (C)
+    if (intent.action) this.onAction(b);
+  }
+
+  /** Hook: after a movement step (wrap-around arenas normalise coordinates here). */
+  protected afterMove(_b: Bomber): void {}
+
+  /** C button (battle): punch / push / multi bomb / stop kicked bombs. */
+  protected onAction(_b: Bomber): void {}
+
+  /** Send a bomber flying to a tile (trampolines, seesaws, glove throws). */
+  jump(b: Bomber, tx: number, ty: number, dur: number, height: number): void {
+    b.jump = { fx: b.x, fy: b.y, tx: tileCenter(tx), ty: tileCenter(ty), t: 0, dur, height };
+    b.airborne = dur;
+    b.moving = false;
+  }
+
+  private updateJump(b: Bomber): void {
+    const j = b.jump;
+    if (!j) {
+      b.airborne = 0;
+      return;
+    }
+    j.t++;
+    const k = Math.min(1, j.t / j.dur);
+    b.x = j.fx + (j.tx - j.fx) * k;
+    b.y = j.fy + (j.ty - j.fy) * k;
+    b.airborne = j.dur - j.t;
+    if (b.airborne <= 0) {
+      b.airborne = 0;
+      b.jump = null;
+      b.x = j.tx;
+      b.y = j.ty;
+      this.onLand(b);
+    }
+  }
+
+  /** Hook: a jumping bomber touched down. */
+  protected onLand(b: Bomber): void {
+    this.emit({ type: 'land', tx: b.tx, ty: b.ty });
   }
 
   /** Hook: bomber pushed against an obstacle (kick lives here in battle rules). */
@@ -295,10 +383,10 @@ export class World {
     // Only kick when centred on our tile, facing the bomb.
     if (Math.abs(b.x - tileCenter(tx)) > 0.01 || Math.abs(b.y - tileCenter(ty)) > 0.01) return;
     const bomb = this.bombAtTile(tx + DX[dir], ty + DY[dir]);
-    if (!bomb || bomb.slide || bomb.flight) return;
-    if (!this.bombCanEnter(tx + 2 * DX[dir], ty + 2 * DY[dir], bomb)) return;
-    bomb.slide = dir;
-    bomb.passers.clear();
+    if (!bomb || (bomb.slide && !bomb.conveyed) || bomb.flight || bomb.hidden) return;
+    if (this.slideCheck(bomb, dir) === 'blocked') return;
+    this.startSlide(bomb, dir, this.rules.kickSpeed);
+    bomb.kicker = b;
     this.emit({ type: 'kick', tx: bomb.tx, ty: bomb.ty });
   }
 
@@ -311,7 +399,8 @@ export class World {
   }
 
   canPlaceBomb(b: Bomber, tx = b.tx, ty = b.ty): boolean {
-    if (!b.alive || b.activeBombs >= b.stats.bombs) return false;
+    const cap = b.curse === 'feeble' ? 1 : b.stats.bombs;
+    if (!b.alive || b.activeBombs >= cap) return false;
     if (!this.grid.inside(tx, ty) || this.grid.get(tx, ty) !== Cell.Floor) return false;
     if (this.bombAt[this.idx(tx, ty)]) return false;
     return this.extraCanPlace(b, tx, ty);
@@ -325,8 +414,8 @@ export class World {
     if (!this.canPlaceBomb(b, tx, ty)) return null;
     let fuse = this.rules.fuseTicks;
     if (b.curse === 'shortFuse') fuse = Math.floor(fuse / 3);
-    if (b.curse === 'longFuse') fuse = fuse * 2;
-    const range = b.curse === 'lowFire' ? 1 : b.stats.fullFire ? this.rules.maxFire : b.stats.fire;
+    if (b.curse === 'slowFuse') fuse = fuse * 2;
+    const range = b.curse === 'feeble' ? 1 : b.stats.fullFire ? this.rules.maxFire : b.stats.fire;
     const bomb: Bomb = {
       id: this.nextBombId++,
       owner: b,
@@ -346,7 +435,14 @@ export class World {
       exploded: false,
       held: false,
       age: 0,
+      square: 0,
+      kind: 'normal',
+      hidden: false,
+      conveyed: false,
+      slideSpeed: this.rules.kickSpeed,
+      kicker: null,
     };
+    this.configureBomb(b, bomb);
     this.addPassers(bomb);
     this.bombs.push(bomb);
     this.bombAt[this.idx(tx, ty)] = bomb;
@@ -354,6 +450,9 @@ export class World {
     this.emit({ type: 'bomb', tx, ty });
     return bomb;
   }
+
+  /** Hook: set the special bomb type (battle). */
+  protected configureBomb(_b: Bomber, _bomb: Bomb): void {}
 
   protected addPassers(bomb: Bomb): void {
     for (const o of this.bombers) {
@@ -374,9 +473,13 @@ export class World {
     return true;
   }
 
-  /** The bomber dies (flame, enemy, pressure block…). */
-  kill(b: Bomber, killer: Bomber | null = null): void {
+  /**
+   * The bomber is hit (flame, monster, pressure block…). Hearts, hit points and partners may
+   * absorb the hit unless `force` (crushing hazards).
+   */
+  kill(b: Bomber, killer: Bomber | null = null, force = false): void {
     if (!b.alive) return;
+    if (!force && this.absorbHit(b, killer)) return;
     b.alive = false;
     b.deathTimer = 0;
     b.moving = false;
@@ -395,6 +498,11 @@ export class World {
 
   protected onBomberDeath(_b: Bomber, _killer: Bomber | null): void {}
 
+  /** Hook: return true if the hit was absorbed (heart, hit points, partner). */
+  protected absorbHit(_b: Bomber, _killer: Bomber | null): boolean {
+    return false;
+  }
+
   protected dropCarried(b: Bomber, bomb: Bomb): void {
     // Put it back on the field where the bomber stood.
     bomb.tx = b.tx;
@@ -408,7 +516,7 @@ export class World {
     this.bombAt[this.idx(bomb.tx, bomb.ty)] = bomb;
   }
 
-  applyCurse(b: Bomber, curse: Curse, ticks: number): void {
+  applyCurse(b: Bomber, curse: Curse, ticks = 0): void {
     b.curse = curse;
     b.curseTimer = ticks;
   }
@@ -448,25 +556,58 @@ export class World {
   }
 
   protected updateSlide(bomb: Bomb): void {
-    const dir = bomb.slide!;
-    let remaining = this.rules.kickSpeed;
-    while (remaining > 0 && bomb.slide) {
-      const step = Math.min(1, remaining);
-      remaining -= step;
+    let remaining = bomb.slideSpeed;
+    let guard = 0;
+    while (remaining > 1e-6 && bomb.slide && guard++ < 24) {
       const cx = tileCenter(bomb.tx);
       const cy = tileCenter(bomb.ty);
       const atC = Math.abs(bomb.x - cx) < 1e-6 && Math.abs(bomb.y - cy) < 1e-6;
-      if (atC && !this.bombCanEnter(bomb.tx + DX[dir], bomb.ty + DY[dir], bomb)) {
-        bomb.slide = null;
-        this.onSlideStop(bomb);
-        break;
+      if (atC) {
+        this.onSlideCenter(bomb);
+        if (!bomb.slide || bomb.exploded) break;
+        const res = this.slideCheck(bomb, bomb.slide);
+        if (res === 'sink') {
+          this.sinkBomb(bomb);
+          return;
+        }
+        if (res === 'moved') continue;
+        if (res === 'blocked') {
+          const dir = bomb.slide;
+          bomb.slide = null;
+          this.onSlideBlocked(bomb, dir);
+          if (!bomb.exploded && !bomb.slide) this.onSlideStop(bomb);
+          break;
+        }
       }
+      const dir: Dir = bomb.slide;
+      // Never step past the next tile centre, so every centre is visited exactly.
+      const along = DX[dir] !== 0 ? bomb.x : bomb.y;
+      const sign = DX[dir] !== 0 ? DX[dir] : DY[dir];
+      let nextCenter = tileCenter(Math.floor(along / TILE));
+      if ((nextCenter - along) * sign <= 1e-9) nextCenter += sign * TILE;
+      const step = Math.min(1, remaining, Math.abs(nextCenter - along));
+      remaining -= step;
       bomb.x += DX[dir] * step;
       bomb.y += DY[dir] * step;
+      if (Math.abs(Math.abs(nextCenter - along) - step) < 1e-6) {
+        if (DX[dir] !== 0) bomb.x = nextCenter;
+        else bomb.y = nextCenter;
+      }
+      this.afterBombMove(bomb);
       const ntx = toTile(bomb.x);
       const nty = toTile(bomb.y);
       if (ntx !== bomb.tx || nty !== bomb.ty) {
-        this.bombAt[this.idx(bomb.tx, bomb.ty)] = null;
+        const occupant = this.grid.inside(ntx, nty) ? this.bombAt[this.idx(ntx, nty)] : null;
+        if (occupant && occupant !== bomb) {
+          // Ran into another bomb mid-tile: back up to our tile centre and stop.
+          bomb.x = tileCenter(bomb.tx);
+          bomb.y = tileCenter(bomb.ty);
+          bomb.slide = null;
+          this.onSlideBlocked(bomb, dir);
+          if (!bomb.exploded && !bomb.slide) this.onSlideStop(bomb);
+          return;
+        }
+        if (this.bombAt[this.idx(bomb.tx, bomb.ty)] === bomb) this.bombAt[this.idx(bomb.tx, bomb.ty)] = null;
         bomb.tx = ntx;
         bomb.ty = nty;
         this.bombAt[this.idx(ntx, nty)] = bomb;
@@ -474,6 +615,82 @@ export class World {
         if (bomb.exploded) return;
       }
     }
+  }
+
+  /** Hook: a sliding bomb sits exactly on a tile centre (arrows, belts steer it here). */
+  protected onSlideCenter(_bomb: Bomb): void {}
+
+  /** Hook: may a sliding bomb continue from its tile in `dir`? */
+  protected slideCheck(bomb: Bomb, dir: Dir): 'ok' | 'blocked' | 'moved' | 'sink' {
+    return this.bombCanEnter(bomb.tx + DX[dir], bomb.ty + DY[dir], bomb) ? 'ok' : 'blocked';
+  }
+
+  /** Hook: a sliding bomb ran into something (merges, rubber bounces, power bomb hits). */
+  protected onSlideBlocked(_bomb: Bomb, _dir: Dir): void {}
+
+  /** Hook: wrap-around arenas normalise a moving bomb. */
+  protected afterBombMove(_bomb: Bomb): void {}
+
+  /** Start a bomb sliding (kick or conveyor). */
+  startSlide(bomb: Bomb, dir: Dir, speed: number, conveyed = false): void {
+    bomb.slide = dir;
+    bomb.slideSpeed = speed;
+    bomb.conveyed = conveyed;
+    bomb.passers.clear();
+  }
+
+  /** Teleport a bomb onto another tile centre. */
+  moveBomb(bomb: Bomb, tx: number, ty: number): void {
+    if (this.bombAt[this.idx(bomb.tx, bomb.ty)] === bomb) this.bombAt[this.idx(bomb.tx, bomb.ty)] = null;
+    bomb.tx = tx;
+    bomb.ty = ty;
+    bomb.x = tileCenter(tx);
+    bomb.y = tileCenter(ty);
+    this.bombAt[this.idx(tx, ty)] = bomb;
+    if (this.flameTimer[this.idx(tx, ty)] > 0) this.explode(bomb);
+  }
+
+  /** Remove a bomb without an explosion (crushed, sunk). */
+  removeBomb(bomb: Bomb): void {
+    if (bomb.exploded) return;
+    bomb.exploded = true;
+    this.bombs = this.bombs.filter((b) => b !== bomb);
+    if (this.bombAt[this.idx(bomb.tx, bomb.ty)] === bomb) this.bombAt[this.idx(bomb.tx, bomb.ty)] = null;
+    if (bomb.owner) bomb.owner.activeBombs = Math.max(0, bomb.owner.activeBombs - 1);
+  }
+
+  crushBomb(bomb: Bomb): void {
+    this.removeBomb(bomb);
+    this.emit({ type: 'pressure', tx: bomb.tx, ty: bomb.ty });
+  }
+
+  sinkBomb(bomb: Bomb): void {
+    this.removeBomb(bomb);
+    this.emit({ type: 'bounce', tx: bomb.tx, ty: bomb.ty });
+  }
+
+  /** Lob a bomb to an exact tile (seesaws, bomber carts). */
+  throwTo(bomb: Bomb, tx: number, ty: number): void {
+    if (this.bombAt[this.idx(bomb.tx, bomb.ty)] === bomb) this.bombAt[this.idx(bomb.tx, bomb.ty)] = null;
+    bomb.slide = null;
+    bomb.held = false;
+    bomb.passers.clear();
+    const dx = tx - bomb.tx;
+    const dy = ty - bomb.ty;
+    const dir: Dir = Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? 'right' : 'left') : dy >= 0 ? 'down' : 'up';
+    const dist = Math.max(1, Math.abs(dx) + Math.abs(dy));
+    bomb.flight = {
+      sx: bomb.x,
+      sy: bomb.y,
+      ex: tileCenter(tx),
+      ey: tileCenter(ty),
+      t: 0,
+      dur: 16 + dist * 4,
+      dir,
+      height: 18 + dist * 3,
+      ttx: tx,
+      tty: ty,
+    };
   }
 
   /** Hook: a sliding bomb entered a new tile (flames there detonate it). */
@@ -535,6 +752,11 @@ export class World {
       victim.stunned = Math.max(victim.stunned, 60);
       this.emit({ type: 'stun', who: victim.id });
     }
+    if (!victim && this.grid.get(tx, ty) === Cell.Void) {
+      bomb.flight = null;
+      this.sinkBomb(bomb);
+      return;
+    }
     if (victim || !this.bombCanLand(tx, ty)) {
       // Bounce one more tile onward.
       this.emit({ type: 'bounce', tx, ty });
@@ -572,59 +794,14 @@ export class World {
     const { tx, ty } = bomb;
     const owner = bomb.owner;
     this.bombsExploded++;
-
-    // First work out how far each arm reaches.
-    const reach: Record<Dir, number> = { up: 0, right: 0, down: 0, left: 0 };
-    const hits: { tx: number; ty: number; kind: 'soft' | 'bomb' | 'item' }[] = [];
-    for (const dir of ALL_DIRS) {
-      for (let i = 1; i <= bomb.range; i++) {
-        const x = tx + DX[dir] * i;
-        const y = ty + DY[dir] * i;
-        const cell = this.grid.get(x, y);
-        if (cell === Cell.Hard) break;
-        if (cell === Cell.Soft) {
-          hits.push({ tx: x, ty: y, kind: 'soft' });
-          if (bomb.pierce && this.burnTimer[this.idx(x, y)] === 0) {
-            continue;
-          }
-          break;
-        }
-        reach[dir] = i;
-        const other = this.bombAt[this.idx(x, y)];
-        if (other && other !== bomb) {
-          hits.push({ tx: x, ty: y, kind: 'bomb' });
-          break;
-        }
-        const item = this.items[this.idx(x, y)];
-        if (item && !item.hidden && item.burning === 0 && this.rules.flamesBurnItems) {
-          hits.push({ tx: x, ty: y, kind: 'item' });
-          if (this.rules.flamesStopAtItems) break;
-        }
-        if (this.stopFlameAt(x, y)) break;
-      }
-    }
-
-    // Light the flames.
-    let centerBits = FLAME_CENTER;
-    for (const dir of ALL_DIRS) if (reach[dir] > 0) centerBits |= FLAME_BIT[dir];
-    this.light(tx, ty, centerBits, owner, bomb.id);
-    for (const dir of ALL_DIRS) {
-      for (let i = 1; i <= reach[dir]; i++) {
-        let bits = FLAME_BIT[OPPOSITE[dir]];
-        if (i < reach[dir]) bits |= FLAME_BIT[dir];
-        this.light(tx + DX[dir] * i, ty + DY[dir] * i, bits, owner, bomb.id);
-      }
-    }
-    let size = 1;
-    for (const dir of ALL_DIRS) size += reach[dir];
-    this.emit({ type: 'explode', tx, ty, size });
-
-    for (const h of hits) {
+    const blast = this.computeBlast(tx, ty, bomb.range, bomb.pierce, bomb, bomb.square);
+    for (const t of blast.tiles) this.light(t.x, t.y, t.bits, owner, bomb.id);
+    this.emit({ type: 'explode', tx, ty, size: blast.tiles.length });
+    for (const h of blast.hits) {
       if (h.kind === 'soft') {
         this.onSoftHit(h.tx, h.ty, bomb);
         this.burnBlock(h.tx, h.ty);
-      }
-      else if (h.kind === 'item') this.burnItem(h.tx, h.ty);
+      } else if (h.kind === 'item') this.burnItem(h.tx, h.ty);
       else if (h.kind === 'bomb') {
         const other = this.bombAt[this.idx(h.tx, h.ty)];
         if (other && !other.exploded && other.chain < 0) {
@@ -633,7 +810,88 @@ export class World {
         }
       }
     }
-    this.onExplode(bomb, reach);
+    this.onExplode(bomb, blast);
+  }
+
+  /**
+   * Work out which tiles a blast covers (also used by the CPU players to predict danger).
+   * `square` > 0 makes a square blast of that radius (Super / Ultra bombs).
+   */
+  computeBlast(tx: number, ty: number, range: number, pierce: boolean, self: Bomb | null, square = 0): Blast {
+    const bits = new Map<number, number>();
+    const hits: BlastHit[] = [];
+    const add = (x: number, y: number, b: number): void => {
+      const i = this.idx(x, y);
+      bits.set(i, (bits.get(i) ?? 0) | b);
+    };
+    add(tx, ty, FLAME_CENTER);
+    if (square > 0) {
+      for (let y = ty - square; y <= ty + square; y++) {
+        for (let x = tx - square; x <= tx + square; x++) {
+          if ((x === tx && y === ty) || !this.grid.inside(x, y)) continue;
+          const c = this.grid.get(x, y);
+          if (c === Cell.Hard) continue;
+          if (c === Cell.Soft) {
+            hits.push({ tx: x, ty: y, kind: 'soft' });
+            continue;
+          }
+          add(x, y, FLAME_CENTER | FLAME_UP | FLAME_DOWN | FLAME_LEFT | FLAME_RIGHT);
+          const other = this.bombAt[this.idx(x, y)];
+          if (other && other !== self) hits.push({ tx: x, ty: y, kind: 'bomb' });
+          const item = this.items[this.idx(x, y)];
+          if (item && !item.hidden && item.burning === 0) hits.push({ tx: x, ty: y, kind: 'item' });
+        }
+      }
+    } else {
+      for (const dir of ALL_DIRS) {
+        let x = tx;
+        let y = ty;
+        let d: Dir = dir;
+        let prev = this.idx(tx, ty);
+        for (let i = 1; i <= range; i++) {
+          const step = this.flameNext(x, y, d);
+          if (!step) break;
+          const [nx, ny, nd] = step;
+          const cell = this.grid.get(nx, ny);
+          if (cell === Cell.Hard) break;
+          if (cell === Cell.Soft) {
+            hits.push({ tx: nx, ty: ny, kind: 'soft' });
+            if (pierce && this.burnTimer[this.idx(nx, ny)] === 0) {
+              x = nx;
+              y = ny;
+              d = nd;
+              continue;
+            }
+            break;
+          }
+          bits.set(prev, (bits.get(prev) ?? 0) | FLAME_BIT[d]);
+          add(nx, ny, FLAME_BIT[OPPOSITE[nd]]);
+          prev = this.idx(nx, ny);
+          x = nx;
+          y = ny;
+          d = nd;
+          const other = this.bombAt[this.idx(nx, ny)];
+          if (other && other !== self) {
+            hits.push({ tx: nx, ty: ny, kind: 'bomb' });
+            break;
+          }
+          const item = this.items[this.idx(nx, ny)];
+          if (item && !item.hidden && item.burning === 0 && this.rules.flamesBurnItems) {
+            hits.push({ tx: nx, ty: ny, kind: 'item' });
+            if (this.rules.flamesStopAtItems) break;
+          }
+          if (this.stopFlameAt(nx, ny)) break;
+        }
+      }
+    }
+    const tiles: BlastTile[] = [];
+    for (const [i, b] of bits) tiles.push({ x: i % this.grid.w, y: Math.floor(i / this.grid.w), bits: b });
+    return { tiles, hits };
+  }
+
+  /** Next tile a flame travelling `d` from (x, y) reaches (hooks: pipes, bends, wrapping). */
+  protected flameNext(x: number, y: number, d: Dir): [number, number, Dir] | null {
+    return [x + DX[d], y + DY[d], d];
   }
 
   /** Hook: tiles where flames stop without a block (e.g. special floors). */
@@ -641,7 +899,7 @@ export class World {
     return false;
   }
 
-  protected onExplode(_bomb: Bomb, _reach: Record<Dir, number>): void {}
+  protected onExplode(_bomb: Bomb, _blast: Blast): void {}
 
   /** Hook: a blast reached a soft block (anything hiding inside it is caught too). */
   protected onSoftHit(tx: number, ty: number, bomb: Bomb): void {

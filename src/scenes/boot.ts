@@ -4,6 +4,9 @@ import type { Scene } from '../engine/scene';
 import { CampaignSession } from '../game/campaign/session';
 import { startNormalGame } from './normal/flow';
 import { goTitle } from './nav';
+import { BattleMatch } from './battle/match';
+import { ARENAS } from '../game/battle/arenas';
+import { defaultConfig } from '../game/battle/config';
 import { BOMBER_FRAMES, BOMBER_PALETTE } from '../gfx/art/bomberArt';
 import { BOMB_FRAMES, drawBomb, drawFlame, drawPuff, FLAME_PHASES } from '../gfx/fx';
 import { FLAME_CENTER, FLAME_DOWN, FLAME_LEFT, FLAME_RIGHT, FLAME_UP } from '../game/core/types';
@@ -42,6 +45,18 @@ export class BootScene implements Scene {
       const s = new CampaignSession(m?.[2] ? 'retro' : 'modern');
       if (m?.[1]) s.stageIndex = Math.max(0, Math.min(49, Number(m[1]) - 1));
       startNormalGame(this.app, s);
+    } else if (h.startsWith('#battle') || h.startsWith('#demo')) {
+      // Dev shortcut: #battle=a5 (you + 4 CPUs) or #demo=a5 (5 CPUs)
+      const id = h.split('=')[1] ?? 'b1';
+      const arena = ARENAS.find((a) => a.id === id) ?? ARENAS[0];
+      const cfg = defaultConfig();
+      cfg.level = arena.level;
+      cfg.stage = ARENAS.filter((a) => a.level === arena.level).indexOf(arena);
+      cfg.rules.cart = 'on';
+      cfg.players.forEach((p, i) => (p.type = h.startsWith('#demo') || i > 0 ? 'com' : 'human'));
+      const chars = ['bomberman', 'cossack', 'punk', 'mexican', 'barbarian', 'great', 'jet', 'bazooka', 'hammer', 'lady'];
+      if (arena.level !== 'beginner') cfg.players.forEach((p, i) => (p.character = chars[(i + (arena.level === 'advanced' ? 5 : 0)) % chars.length]));
+      new BattleMatch(this.app, cfg, () => goTitle(this.app)).start();
     } else if (!['#arena', '#enemies', '#sprites'].includes(h)) {
       goTitle(this.app);
     }

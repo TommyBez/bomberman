@@ -5,7 +5,8 @@ export type { Dir };
 export const TILE = 16;
 export const HALF = TILE / 2;
 
-export const Cell = { Floor: 0, Hard: 1, Soft: 2 } as const;
+/** Void = water / holes: impassable on foot, but blasts sweep across it. */
+export const Cell = { Floor: 0, Hard: 1, Soft: 2, Void: 3 } as const;
 export type Cell = (typeof Cell)[keyof typeof Cell];
 
 export const DX: Readonly<Record<Dir, number>> = { up: 0, down: 0, left: -1, right: 1 };

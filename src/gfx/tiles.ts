@@ -1,4 +1,5 @@
 import { mix } from '../engine/gfx';
+import { BATTLE_THEMES } from './battleArt';
 import { PixelCanvas } from './pixel';
 
 /** Colour/style theme for a playfield. All tiles are generated procedurally from it. */
@@ -17,7 +18,7 @@ export interface Theme {
   wallStyle: 'bevel' | 'metal' | 'balloon' | 'candy' | 'stone' | 'brick' | 'nes' | 'hedge';
   soft: string;
   softAlt?: string;
-  softStyle: 'brick' | 'crate' | 'toy' | 'rock' | 'bush' | 'ice' | 'nes' | 'barrel';
+  softStyle: 'brick' | 'crate' | 'toy' | 'rock' | 'bush' | 'ice' | 'nes' | 'barrel' | 'snow';
   /** HUD strip colours (the tall top wall). */
   hud: [string, string];
   /** Floor shadow strength (0 = none, as on the NES). */
@@ -79,6 +80,7 @@ export const THEMES: Record<string, Theme> = {
     soft: '#bcbcbc', softStyle: 'nes',
     hud: ['#bcbcbc', '#bcbcbc'], shadow: 0,
   },
+  ...BATTLE_THEMES,
   // Battle arena default (Beginner "Normal").
   battle: {
     name: 'battle', backdrop: '#101820',
@@ -456,6 +458,14 @@ function softTile(t: Theme): HTMLCanvasElement {
       p.px(10, 11, dark);
       p.px(11, 10, dark);
       p.px(4, 11, dark);
+      break;
+    case 'snow':
+      p.ellipse(7.5, 9.5, 7.6, 6.4, '#5078a8');
+      p.ellipse(7.5, 9, 6.8, 5.8, '#ffffff');
+      p.ellipse(9, 11, 4.5, 3, '#d8e8f8');
+      p.ellipse(5, 6, 2.4, 1.6, '#ffffff');
+      p.px(4, 5, '#ffffff');
+      p.rect(3, 14, 10, 1, '#5078a8');
       break;
     case 'barrel':
       p.rect(2, 0, 12, 16, '#000000');

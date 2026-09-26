@@ -112,6 +112,17 @@
       #tb-b.on {
         background: rgba(90, 150, 255, 0.6);
       }
+      #tb-c {
+        right: max(112px, calc(env(safe-area-inset-right) + 90px));
+        bottom: max(112px, calc(env(safe-area-inset-bottom) + 90px));
+        width: 58px;
+        height: 58px;
+        font-size: 16px;
+        background: rgba(80, 200, 120, 0.28);
+      }
+      #tb-c.on {
+        background: rgba(100, 230, 140, 0.6);
+      }
       .tsmall {
         position: absolute;
         pointer-events: auto;
@@ -154,6 +165,7 @@
       <div class="tpad" id="tp-dpad"></div>
       <div class="tbtn" id="tb-a">A</div>
       <div class="tbtn" id="tb-b">B</div>
+      <div class="tbtn" id="tb-c">C</div>
       <div class="tsmall" id="tb-select">SELECT</div>
       <div class="tsmall" id="tb-start">START</div>
     </div>

@@ -1,0 +1,130 @@
+import type { DeviceId } from '../../engine/input';
+
+export type Level = 'beginner' | 'normal' | 'advanced';
+export type ComLevel = 'weak' | 'normal' | 'strong';
+export type CartRule = 'off' | 'on' | 'super';
+export type SlotType = 'human' | 'com' | 'off';
+
+/** Every item that can appear in the Battle Game. */
+export type BattleItem =
+  | 'bomb'
+  | 'fire'
+  | 'speed'
+  | 'geta'
+  | 'kick'
+  | 'glove'
+  | 'punch'
+  | 'push'
+  | 'line'
+  | 'powerbomb'
+  | 'rubber'
+  | 'pierce'
+  | 'fullfire'
+  | 'mine'
+  | 'heart'
+  | 'egg'
+  | 'skull'
+  | 'remote'
+  | 'wallpass'
+  | 'flak';
+
+export const ITEM_NAMES: Record<BattleItem, string> = {
+  bomb: 'BOMB UP',
+  fire: 'FIRE UP',
+  speed: 'SPEED UP',
+  geta: 'STEEL SHOES',
+  kick: 'BOMB KICK',
+  glove: 'POWER GLOVE',
+  punch: 'PUNCH',
+  push: 'PUSH',
+  line: 'MULTI BOMB',
+  powerbomb: 'POWER BOMB',
+  rubber: 'RUBBER BOMB',
+  pierce: 'METABOMB',
+  fullfire: 'FULL FIRE',
+  mine: 'LAND MINE',
+  heart: 'HEART',
+  egg: 'EGG',
+  skull: 'SKULL',
+  remote: 'REMOTE CONTROL',
+  wallpass: 'WALL PASS',
+  flak: 'FLAK JACKET',
+};
+
+/** Items the Custom Battle "Set Item" screen offers (15 kinds; no mine, multi bomb, wall pass). */
+export const CUSTOM_ITEMS: BattleItem[] = [
+  'bomb', 'fire', 'speed', 'geta', 'kick', 'glove', 'punch', 'push', 'powerbomb', 'rubber', 'pierce', 'fullfire', 'heart', 'skull', 'remote',
+];
+
+export interface Rules {
+  com: ComLevel;
+  /** Games needed to win the set (1–5). */
+  wins: number;
+  /** Minutes per game (1–5), 0 = unlimited. */
+  time: number;
+  suddenDeath: boolean;
+  randomPosition: boolean;
+  /** Skull items can be burnt by blasts. */
+  skullBomb: boolean;
+  hyperBomber: boolean;
+  cart: CartRule;
+}
+
+export const DEFAULT_RULES: Rules = {
+  com: 'weak',
+  wins: 3,
+  time: 3,
+  suddenDeath: false,
+  randomPosition: false,
+  skullBomb: false,
+  hyperBomber: true,
+  cart: 'off',
+};
+
+export interface PlayerSlot {
+  type: SlotType;
+  devices: DeviceId[];
+  character: string;
+  team: 0 | 1;
+  /** Custom Battle handicap: hits this player survives (1 = normal). */
+  hp: number;
+}
+
+export interface BattleConfig {
+  mode: 'royal' | 'custom';
+  level: Level;
+  tag: boolean;
+  rules: Rules;
+  players: PlayerSlot[];
+  stage: number;
+  /** Custom Battle item counts (overrides the stage's defaults). */
+  customItems?: Partial<Record<BattleItem, number>>;
+}
+
+export const DEFAULT_DEVICES: DeviceId[][] = [['kb1', 'pad0', 'touch'], ['kb2', 'pad1'], ['pad2'], ['pad3'], []];
+
+export function defaultConfig(): BattleConfig {
+  return {
+    mode: 'royal',
+    level: 'beginner',
+    tag: false,
+    rules: { ...DEFAULT_RULES },
+    players: [0, 1, 2, 3, 4].map((i) => ({
+      type: i === 0 ? 'human' : i < 4 ? 'com' : 'off',
+      devices: [...DEFAULT_DEVICES[i]],
+      character: 'bomberman',
+      team: (i % 2) as 0 | 1,
+      hp: 1,
+    })),
+    stage: 0,
+  };
+}
+
+/** Default item mix per level (per stage tweaks are applied by the arena). */
+export const LEVEL_ITEMS: Record<Level, Partial<Record<BattleItem, number>>> = {
+  beginner: { bomb: 6, fire: 6, speed: 3, kick: 2, skull: 2, rubber: 1 },
+  normal: { bomb: 5, fire: 5, speed: 2, kick: 2, glove: 1, punch: 1, line: 1, pierce: 1, heart: 1, egg: 3, skull: 2, remote: 1, geta: 1 },
+  advanced: { bomb: 5, fire: 5, speed: 2, kick: 2, glove: 1, punch: 1, push: 1, line: 1, powerbomb: 1, rubber: 1, pierce: 1, mine: 1, fullfire: 1, heart: 1, egg: 3, skull: 2, geta: 1 },
+};
+
+export const LEVEL_NAMES: Record<Level, string> = { beginner: 'BEGINNER', normal: 'NORMAL', advanced: 'ADVANCED' };
