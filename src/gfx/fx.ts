@@ -34,9 +34,12 @@ export function drawBomb(frame: number, palette: { body: string; mid: string; sh
 
 export const BOMB_COLORS = { body: '#181830', mid: '#2c2c58', shine: '#9aa0e0' };
 export const REMOTE_BOMB_COLORS = { body: '#401010', mid: '#702020', shine: '#ffa0a0' };
+export const RETRO_BOMB_COLORS = { body: '#000000', mid: '#000000', shine: '#fcfcfc' };
 
 /** Explosion colours, outside → inside. */
 const FLAME_LAYERS = ['#d81800', '#ff6a00', '#ffc020', '#fff4a0', '#ffffff'];
+/** Three-colour 8-bit explosion for the Retro version. */
+const RETRO_FLAME_LAYERS = ['#d82800', '#d82800', '#fc9838', '#fcfcfc', '#fcfcfc'];
 
 export const FLAME_PHASES = 5;
 const FLAME_HALF = [3, 5, 7, 6, 4];
@@ -57,7 +60,7 @@ function segDist(px: number, py: number, [ax, ay, bx, by]: Seg): number {
  * Draw one flame tile. `bits` says which neighbours it connects to (FLAME_* flags),
  * `phase` 0..4 is the animation step (0/4 thin, 2 thickest).
  */
-export function drawFlame(bits: number, phase: number): HTMLCanvasElement {
+export function drawFlame(bits: number, phase: number, retro = false): HTMLCanvasElement {
   const p = new PixelCanvas(16, 16);
   const half = FLAME_HALF[Math.max(0, Math.min(FLAME_PHASES - 1, phase))];
   const c = 8;
@@ -82,7 +85,7 @@ export function drawFlame(bits: number, phase: number): HTMLCanvasElement {
     else if (U) segs.push([c, -2, c, tip]);
     else if (D) segs.push([c, 18, c, 16 - tip]);
   }
-  FLAME_LAYERS.forEach((color, li) => {
+  (retro ? RETRO_FLAME_LAYERS : FLAME_LAYERS).forEach((color, li) => {
     const r = half - li * 1.45 + (center ? 0.8 : 0);
     if (r <= 0.3) return;
     for (let y = 0; y < 16; y++) {

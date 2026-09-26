@@ -63,14 +63,22 @@ function mouth(p: PixelCanvas, cx: number, y: number, mood: Face['mood'], wide =
   p.px(cx + wide, y - 1, '#000000');
 }
 
+let flat = false;
+
 function body(p: PixelCanvas, cx: number, cy: number, rx: number, ry: number, base: string): void {
   p.ellipse(cx, cy, rx + 1, ry + 1, '#000000');
+  if (flat) {
+    p.ellipse(cx, cy, rx, ry, base);
+    return;
+  }
   p.ellipse(cx, cy, rx, ry, mix(base, '#000000', 0.3));
   p.ellipse(cx - 0.6, cy - 0.7, rx - 0.8, ry - 0.9, base);
   p.ellipse(cx - rx * 0.42, cy - ry * 0.45, Math.max(1, rx * 0.28), Math.max(1, ry * 0.22), mix(base, '#ffffff', 0.55));
 }
 
-export function drawEnemy(kind: EnemyKind, frame: number, look: Look, dead = false): HTMLCanvasElement {
+/** `retro` draws flat, NES-like colours without shading. */
+export function drawEnemy(kind: EnemyKind, frame: number, look: Look, dead = false, retro = false): HTMLCanvasElement {
+  flat = retro;
   const p = new PixelCanvas(16, 16);
   const f = frame % ENEMY_ANIM_FRAMES;
   const bob = f === 1 || f === 2 ? 1 : 0;

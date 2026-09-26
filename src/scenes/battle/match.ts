@@ -170,13 +170,13 @@ class ResultsScene implements Scene {
     const icons = hudIcons();
     drawPanel(g, 16, 34, 224, 156, '#402858', '#180828');
     g.text('WHO BEAT WHOM', 128, 40, { align: 'center', color: '#ffe040', outline: '#000000' });
-    const cell = 30;
-    const gx = 72;
-    const gy = 70;
-    g.text('BY', 40, gy - 14, { color: '#c0a0e0' });
+    const cell = slots.length > 4 ? 25 : 30;
+    const gx = 128 - (slots.length * cell) / 2 + 14;
+    const gy = 68;
+    g.text('BY', gx - 26, gy - 14, { color: '#c0a0e0' });
     slots.forEach(({ i }, k) => {
-      g.image(icons.heads[i], gx + k * cell + 10, gy - 16);
-      g.image(icons.crying[i], 44, gy + k * cell + 6);
+      g.image(icons.heads[i], gx + k * cell + (cell - 10) / 2, gy - 16);
+      g.image(icons.crying[i], gx - 22, gy + k * cell + (cell - 10) / 2);
     });
     slots.forEach(({ i: victim }, r) => {
       slots.forEach(({ i: killer }, c) => {
@@ -184,7 +184,7 @@ class ResultsScene implements Scene {
         const x = gx + c * cell;
         const y = gy + r * cell;
         g.rect(x + 2, y + 2, cell - 4, cell - 4, killer === victim ? '#502040' : '#281838');
-        g.text(String(n), x + cell / 2, y + 11, { align: 'center', color: n ? '#ffffff' : '#806890' });
+        g.text(String(n), x + cell / 2, y + cell / 2 - 3, { align: 'center', color: n ? '#ffffff' : '#806890' });
       });
     });
     g.text('← RESULTS     A: NEXT', g.width / 2, 206, { align: 'center', color: '#e0c8ff', outline: '#000000' });

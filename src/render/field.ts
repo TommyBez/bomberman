@@ -35,7 +35,10 @@ export function flamePhase(timer: number, total: number): number {
 export class FieldRenderer {
   readonly s: Sprites = sprites();
 
-  constructor(public theme: string) {}
+  constructor(
+    public theme: string,
+    public retro = false,
+  ) {}
 
   /** Floor, blocks, burning blocks. */
   drawTiles(g: Gfx, world: World, v: View, skipTopRow = false): void {
@@ -98,7 +101,7 @@ export class FieldRenderer {
       const tx = i % grid.w;
       const ty = Math.floor(i / grid.w);
       const ph = flamePhase(t, world.rules.flameTicks);
-      g.image(this.s.flame[ph][world.flameBits[i]], v.ox + tx * TILE, v.oy + ty * TILE);
+      g.image((this.retro ? this.s.retroFlame : this.s.flame)[ph][world.flameBits[i]], v.ox + tx * TILE, v.oy + ty * TILE);
     }
   }
 
@@ -106,7 +109,7 @@ export class FieldRenderer {
   bombActors(world: World, actors: Actor[]): void {
     for (const b of world.bombs) {
       if (b.held) continue;
-      const frames = b.remote ? this.s.remoteBomb : this.s.bomb;
+      const frames = this.retro ? this.s.retroBomb : b.remote ? this.s.remoteBomb : this.s.bomb;
       const img = frames[BOMB_PULSE[Math.floor(b.age / 8) % 4]];
       if (b.flight) {
         const f = b.flight;
@@ -126,7 +129,7 @@ export class FieldRenderer {
   }
 
   bomberActor(b: Bomber, colorIndex: number, frame: number): Actor | null {
-    const sp = this.s.bombers[colorIndex % this.s.bombers.length];
+    const sp = this.retro ? this.s.retroBomber : this.s.bombers[colorIndex % this.s.bombers.length];
     if (!b.alive) {
       const f = Math.floor(b.deathTimer / 8);
       if (b.deathTimer < 0 || f >= sp.death.length) return null;

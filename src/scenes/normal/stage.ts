@@ -45,7 +45,7 @@ export class StageScene implements Scene {
   ) {
     this.retro = session.version === 'retro';
     this.themeName = themeForStage(session.stageNumber, this.retro);
-    this.field = new FieldRenderer(this.themeName);
+    this.field = new FieldRenderer(this.themeName, this.retro);
     this.world = new CampaignWorld(session.stage, session.powers, (Math.random() * 2 ** 31) | 0, bonus);
     this.updateCamera();
   }
@@ -217,7 +217,7 @@ export class StageScene implements Scene {
     const actors: Actor[] = [];
     this.field.bombActors(w, actors);
     for (const e of w.enemies) {
-      const sp = s.enemies[e.kind];
+      const sp = (this.retro ? s.retroEnemies : s.enemies)[e.kind];
       if (!e.alive) {
         // Shrink away, then vanish (score floats up meanwhile).
         const t = e.deathTimer;

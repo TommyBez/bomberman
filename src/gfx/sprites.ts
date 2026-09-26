@@ -2,9 +2,10 @@ import { flipX, mix, pixelSprite, silhouette, type Sprite } from '../engine/gfx'
 import { ENEMY_ORDER, type EnemyKind } from '../game/campaign/enemies';
 import { FLAME_CENTER, FLAME_DOWN, FLAME_LEFT, FLAME_RIGHT, FLAME_UP } from '../game/core/types';
 import { BOMBER_FRAMES, BOMBER_PALETTE } from './art/bomberArt';
+import { RETRO_FRAMES, RETRO_PALETTE } from './art/retroArt';
 import { ITEM_ICONS, ITEM_PALETTE } from './art/itemArt';
 import { drawEnemy, ENEMY_ANIM_FRAMES } from './enemyArt';
-import { BOMB_FRAMES, drawBomb, drawFlame, drawPuff, FLAME_PHASES, REMOTE_BOMB_COLORS } from './fx';
+import { BOMB_FRAMES, drawBomb, drawFlame, drawPuff, FLAME_PHASES, REMOTE_BOMB_COLORS, RETRO_BOMB_COLORS } from './fx';
 import { PixelCanvas } from './pixel';
 import { buildTiles, THEMES, type TileSet } from './tiles';
 
@@ -54,9 +55,14 @@ function bomberPalette(c: BomberColors): Record<string, string> {
   };
 }
 
-export function buildBomber(c: BomberColors, decorate?: (p: PixelCanvas, dir: BomberDir) => void): BomberSprites {
-  const pal = bomberPalette(c);
-  const F = BOMBER_FRAMES;
+export function buildBomber(
+  c: BomberColors,
+  decorate?: (p: PixelCanvas, dir: BomberDir) => void,
+  frames: typeof BOMBER_FRAMES = BOMBER_FRAMES,
+  palette?: Record<string, string>,
+): BomberSprites {
+  const pal = palette ?? bomberPalette(c);
+  const F = frames;
   const s = (rows: string[], dir: BomberDir): Sprite => {
     const base = pixelSprite(rows, pal);
     if (!decorate) return base;
@@ -76,6 +82,7 @@ export function buildBomber(c: BomberColors, decorate?: (p: PixelCanvas, dir: Bo
     ...pal,
     W: '#686878', w: '#484858', g: '#303040', c: '#383848', b: '#282838', B: '#181828',
     s: '#584838', S: '#403020', q: '#605060', p: '#483848', P: '#302030', y: '#504830', Y: '#383020', e: '#ffffff',
+    r: '#402020',
   });
   const death: Sprite[] = [
     down[0],
@@ -118,8 +125,13 @@ export interface EnemySprites {
 
 export interface Sprites {
   bombers: BomberSprites[];
+  /** 8-bit style Bomberman for the Retro version. */
+  retroBomber: BomberSprites;
   bomb: Sprite[];
   remoteBomb: Sprite[];
+  retroBomb: Sprite[];
+  retroFlame: Sprite[][];
+  retroEnemies: Record<EnemyKind, EnemySprites>;
   /** flame[phase][bits] */
   flame: Sprite[][];
   puff: Sprite[];
@@ -220,17 +232,29 @@ export function sprites(): Sprites {
   ];
   void bitsList;
   const flame: Sprite[][] = [];
+  const retroFlame: Sprite[][] = [];
   for (let ph = 0; ph < FLAME_PHASES; ph++) {
     const row: Sprite[] = [];
-    for (let bits = 0; bits < 32; bits++) row.push(drawFlame(bits, ph));
+    const rrow: Sprite[] = [];
+    for (let bits = 0; bits < 32; bits++) {
+      row.push(drawFlame(bits, ph));
+      rrow.push(drawFlame(bits, ph, true));
+    }
     flame.push(row);
+    retroFlame.push(rrow);
   }
   const enemies = {} as Record<EnemyKind, EnemySprites>;
+  const retroEnemies = {} as Record<EnemyKind, EnemySprites>;
   for (const k of ENEMY_ORDER) {
     enemies[k] = {
       right: Array.from({ length: ENEMY_ANIM_FRAMES }, (_, i) => drawEnemy(k, i, 'right')),
       left: Array.from({ length: ENEMY_ANIM_FRAMES }, (_, i) => drawEnemy(k, i, 'left')),
       dead: drawEnemy(k, 0, 'right', true),
+    };
+    retroEnemies[k] = {
+      right: Array.from({ length: ENEMY_ANIM_FRAMES }, (_, i) => drawEnemy(k, i, 'right', false, true)),
+      left: Array.from({ length: ENEMY_ANIM_FRAMES }, (_, i) => drawEnemy(k, i, 'left', false, true)),
+      dead: drawEnemy(k, 0, 'right', true, true),
     };
   }
   const items: Record<string, Sprite> = {};
@@ -250,8 +274,12 @@ export function sprites(): Sprites {
   for (const [name, theme] of Object.entries(THEMES)) tiles[name] = buildTiles(theme);
   cache = {
     bombers: BOMBER_COLORS.map((c) => buildBomber(c)),
+    retroBomber: buildBomber(BOMBER_COLORS[0], undefined, RETRO_FRAMES, RETRO_PALETTE),
     bomb: Array.from({ length: BOMB_FRAMES }, (_, i) => drawBomb(i)),
     remoteBomb: Array.from({ length: BOMB_FRAMES }, (_, i) => drawBomb(i, REMOTE_BOMB_COLORS)),
+    retroBomb: Array.from({ length: BOMB_FRAMES }, (_, i) => drawBomb(i, RETRO_BOMB_COLORS)),
+    retroFlame,
+    retroEnemies,
     flame,
     puff: [0, 1, 2, 3].map(drawPuff),
     tiles,
