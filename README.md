@@ -166,6 +166,7 @@ Debug URLs:
 | `#play=Nr` | Stage N in the Retro version |
 | `#battle=<id>` | You plus four CPUs on a battle stage |
 | `#demo=<id>` | Five CPUs on a battle stage |
+| `#demo=<id>x` | The same on the alternate layout (once that level is unlocked) |
 
 Battle stage ids run `b1`–`b8`, `n1`–`n8` and `a1`–`a8`. In the browser, `window.__bomberman`
 exposes the running app for tests.

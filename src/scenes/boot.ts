@@ -50,12 +50,14 @@ export class BootScene implements Scene {
       if (m?.[1]) s.stageIndex = Math.max(0, Math.min(49, Number(m[1]) - 1));
       startNormalGame(this.app, s);
     } else if (h.startsWith('#battle') || h.startsWith('#demo')) {
-      // Dev shortcut: #battle=a5 (you + 4 CPUs) or #demo=a5 (5 CPUs)
+      // Dev shortcut: #battle=a5 / #demo=a5, with an x suffix for the alternate layout
+      // (only once that level's alternates have been opened).
       const id = h.split('=')[1] ?? 'b1';
-      const arena = ARENAS.find((a) => a.id === id) ?? ARENAS[0];
+      const arena = ARENAS.find((a) => a.id === id.replace(/x$/, '')) ?? ARENAS[0];
       const cfg = defaultConfig();
       cfg.level = arena.level;
       cfg.stage = ARENAS.filter((a) => a.level === arena.level).indexOf(arena);
+      cfg.alternate = id.endsWith('x');
       cfg.rules.cart = 'on';
       cfg.players.forEach((p, i) => (p.type = h.startsWith('#demo') || i > 0 ? 'com' : 'human'));
       const chars = ['bomberman', 'cossack', 'punk', 'mexican', 'barbarian', 'great', 'jet', 'bazooka', 'hammer', 'lady'];
