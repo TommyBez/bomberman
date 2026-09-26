@@ -81,14 +81,14 @@ export const THEMES: Record<string, Theme> = {
     hud: ['#bcbcbc', '#bcbcbc'], shadow: 0,
   },
   ...BATTLE_THEMES,
-  // Battle arena default (Beginner "Normal").
+  // Battle arena default (Beginner "Normal"): grass, grey stone, pale stone bricks.
   battle: {
     name: 'battle', backdrop: '#101820',
     floor: '#3c9a3a', floorAlt: '#48aa44', floorStyle: 'grass',
-    hard: '#9aa2b4', hardStyle: 'bevel',
-    wall: '#7a8296', wallStyle: 'stone',
-    soft: '#d08848', softStyle: 'brick',
-    hud: ['#56607a', '#2c3244'], shadow: 0.38,
+    hard: '#a4aabc', hardStyle: 'bevel',
+    wall: '#b0b6c4', wallStyle: 'bevel',
+    soft: '#dde1ec', softAlt: '#8894b4', softStyle: 'brick',
+    hud: ['#c8ccd8', '#9ca2b4'], shadow: 0.38,
   },
 };
 
