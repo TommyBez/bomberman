@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../../src/engine/rng';
 import { ARENAS } from '../../src/game/battle/arenas';
-import { BATTLE_MAX_FIRE, BattleWorld, customCounts, HURRY_TICKS, perimeterPath, PRESSURE_PATTERNS, pressureOrder, spiralOrder, stageItems } from '../../src/game/battle/battleWorld';
+import { BATTLE_FIRE_CAP, BATTLE_MAX_FIRE, BattleWorld, customCounts, HURRY_TICKS, perimeterPath, PRESSURE_PATTERNS, pressureOrder, spiralOrder, stageItems } from '../../src/game/battle/battleWorld';
 import { defaultConfig, type BattleConfig } from '../../src/game/battle/config';
 import { NO_INTENT, type Bomber } from '../../src/game/core/bomber';
 import { ALL_DIRS, Cell, tileCenter } from '../../src/game/core/types';
@@ -36,6 +36,24 @@ describe('battle world', () => {
       }
     });
   }
+
+  it('Full Fire reaches edge to edge; Fire items stop at their cap', () => {
+    const w = new BattleWorld({ cfg: config('beginner', 2), arena: ARENAS[0], seed: 2 });
+    const b = w.bombers[0];
+    for (let x = 1; x < w.grid.w - 1; x++) for (const y of [1, w.grid.h - 2]) w.grid.set(x, y, Cell.Floor);
+    for (let y = 1; y < w.grid.h - 1; y++) w.grid.set(1, y, Cell.Floor);
+    for (let i = 0; i < 20; i++) w.giveItem(b, 'fire', true);
+    expect(b.stats.fire).toBe(BATTLE_FIRE_CAP);
+    w.giveItem(b, 'fullfire', true);
+    const shape = w.bombShape(b, 1, 1);
+    const blast = w.computeBlast(1, 1, shape.range, false, null);
+    const reached = new Set(blast.tiles.map((t) => `${t.x},${t.y}`));
+    expect(reached.has(`${w.grid.w - 2},1`)).toBe(true); // far right column
+    expect(reached.has(`1,${w.grid.h - 2}`)).toBe(true); // bottom row
+    // A Fire item never lowers maximum fire.
+    w.giveItem(b, 'fire', true);
+    expect(b.stats.fire).toBe(BATTLE_MAX_FIRE);
+  });
 
   it('predicts the next bomb exactly (Power Bomb, Metabomb, mines, fuse diseases)', () => {
     const w = new BattleWorld({ cfg: config('beginner', 2), arena: ARENAS[0], seed: 2 });

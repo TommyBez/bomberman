@@ -11,7 +11,13 @@ import { Gimmicks } from './gimmicks';
 export const BATTLE_W = 15;
 export const BATTLE_H = 13;
 export const BATTLE_MAX_BOMBS = 8;
-export const BATTLE_MAX_FIRE = 8;
+/** Fire items stop adding range here. */
+export const BATTLE_FIRE_CAP = 8;
+/**
+ * "Maximum" fire, from Full Fire, the first Power Bomb, huts, leaves and the Super Power
+ * stage: the blast reaches edge to edge across the 13×11 play area.
+ */
+export const BATTLE_MAX_FIRE = BATTLE_W - 3;
 /** Hurry! starts with one minute left. */
 export const HURRY_TICKS = 60 * 60;
 export const DISEASES: Curse[] = ['superspeed', 'superslow', 'diarrhea', 'impotent', 'feeble', 'streaking', 'confusion', 'shortFuse', 'slowFuse', 'warp'];
@@ -485,7 +491,7 @@ export class BattleWorld extends World {
         s.bombs = Math.min(BATTLE_MAX_BOMBS, s.bombs + 1);
         break;
       case 'fire':
-        s.fire = Math.min(BATTLE_MAX_FIRE, s.fire + 1);
+        s.fire = Math.max(s.fire, Math.min(BATTLE_FIRE_CAP, s.fire + 1));
         break;
       case 'fullfire':
         s.fire = BATTLE_MAX_FIRE;
@@ -593,7 +599,7 @@ export class BattleWorld extends World {
         s.fire = Math.max(1, s.fire - 1);
         break;
       case 'fullfire':
-        s.fire = Math.min(BATTLE_MAX_FIRE, 2 + b.collected.filter((k) => k === 'fire').length);
+        s.fire = Math.min(BATTLE_FIRE_CAP, 2 + b.collected.filter((k) => k === 'fire').length);
         break;
       case 'speed':
         s.speed = Math.max(0, s.speed - 1);
