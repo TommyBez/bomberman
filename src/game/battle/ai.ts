@@ -1,5 +1,5 @@
 import type { Bomber, Intent } from '../core/bomber';
-import { ALL_DIRS, Cell, DX, DY, OPPOSITE, TILE, tileCenter, type Dir } from '../core/types';
+import { ALL_DIRS, Cell, DX, DY, OPPOSITE, TILE, tileCenter, toTile, type Dir } from '../core/types';
 import type { Bomb } from '../core/world';
 import type { BattleWorld } from './battleWorld';
 import { CHARACTERS, type Personality } from './characters';
@@ -31,6 +31,12 @@ const DIFFICULTY: Record<ComLevel, { replan: number; slack: number; mistake: num
 
 /** How long (ticks) a spot where bombing was not possible stays unattractive. */
 const TABU_TICKS = 240;
+/** The robot: ticks from starting a stomp to the impact, and how far ahead CPUs look. */
+const ROBOT_WINDUP = 30;
+const ROBOT_IMPACT = 20;
+const ROBOT_HORIZON = 90;
+/** Extra cost (ticks) of waiting on a belt: it carries you away from the safe spot. */
+const BELT_REST_PENALTY = 45;
 
 /** A computer-controlled bomber. */
 export class CpuPlayer {
@@ -134,7 +140,7 @@ export class CpuPlayer {
       const { b, t } = bombs.shift()!;
       if (done.has(b)) continue;
       done.add(b);
-      for (const [tx, ty] of this.blastOrigins(b)) {
+      for (const [tx, ty] of this.blastOrigins(b, t)) {
         const blast = w.computeBlast(tx, ty, b.range, b.pierce, b, b.square);
         for (const tile of blast.tiles) {
           const i = this.idx(tile.x, tile.y);
@@ -151,23 +157,66 @@ export class CpuPlayer {
     for (const f of w.falling) into[this.idx(f.tx, f.ty)] = Math.min(into[this.idx(f.tx, f.ty)], f.t);
     // Trolleys: every rail tile they can reach soon, and when.
     for (const [i, t] of w.gim.trolleyForecast()) into[i] = Math.min(into[i], t);
+    // The robot's stomp stuns everyone within two tiles: keep clear when one is due.
+    const r = w.gim.robot;
+    if (r && !r.gone && r.leaving === 0) {
+      const walking = r.stomp === 0;
+      const due = walking ? r.cooldown + ROBOT_WINDUP : r.stomp - ROBOT_IMPACT;
+      if (due >= 0 && due <= ROBOT_HORIZON) {
+        // While it walks it may still move a tile before stomping.
+        const reach = walking ? 3 : 2;
+        const rx = toTile(r.x);
+        const ry = toTile(r.y);
+        for (let y = ry - reach; y <= ry + reach; y++) {
+          for (let x = rx - reach; x <= rx + reach; x++) {
+            if (!w.grid.inside(x, y) || Math.abs(x - rx) + Math.abs(y - ry) > reach) continue;
+            const i = this.idx(x, y);
+            into[i] = Math.min(into[i], due);
+          }
+        }
+      }
+    }
   }
 
-  /** Where a bomb may go off: its landing tile, or every tile ahead of a kicked bomb. */
-  private blastOrigins(b: Bomb): [number, number][] {
+  /**
+   * Where a bomb may go off: its landing tile, or any tile along the route of a moving
+   * bomb. Arrows turn kicked bombs; belts carry bombs (even ones just resting on them),
+   * turn them with the belt and stop them where it ends, and only so far before the fuse
+   * runs out. (Every tile on the way counts: a bomber or a switch can stop or turn it.)
+   */
+  private blastOrigins(b: Bomb, fuse: number): [number, number][] {
     if (b.flight) return [[b.flight.ttx, b.flight.tty]];
-    const out: [number, number][] = [[b.tx, b.ty]];
-    if (!b.slide) return out;
     const w = this.w;
+    const out: [number, number][] = [[b.tx, b.ty]];
+    const belt = w.gim.beltAt(b.tx, b.ty);
+    const conveyed = b.conveyed || (!b.slide && !!belt);
+    let d = b.slide ?? belt?.dir ?? null;
+    if (!d) return out;
+    const reach = conveyed ? Math.ceil((Math.max(0, fuse) * (belt?.speed ?? b.slideSpeed)) / TILE) + 1 : 16;
     let x = b.tx;
     let y = b.ty;
-    for (let k = 0; k < 16; k++) {
-      const nx = x + DX[b.slide];
-      const ny = y + DY[b.slide];
-      if (!w.grid.inside(nx, ny) || w.grid.get(nx, ny) !== Cell.Floor || w.bombAt[this.idx(nx, ny)]) break;
+    const seen = new Set([this.idx(x, y)]);
+    for (let k = 0; k < reach; k++) {
+      let nx = x + DX[d];
+      let ny = y + DY[d];
+      if (!w.grid.inside(nx, ny)) {
+        if (!w.gim.wrap || w.gim.at(x, y)?.kind !== 'gap') break;
+        [nx, ny] = w.gim.wrapTile(nx, ny);
+      }
+      const i = this.idx(nx, ny);
+      const other = w.bombAt[i];
+      if (seen.has(i) || w.grid.get(nx, ny) !== Cell.Floor || (other && other !== b)) break;
+      seen.add(i);
       x = nx;
       y = ny;
       out.push([x, y]);
+      const f = w.gim.at(x, y);
+      if (f && f.kind === 'arrow') d = f.dir;
+      else if (conveyed) {
+        const next = w.gim.beltAt(x, y);
+        if (!next) break;
+        d = next.dir;
+      }
     }
     return out;
   }
@@ -246,6 +295,7 @@ export class CpuPlayer {
           if (nodes.has(i)) continue;
           if (!this.walkable(nx, ny) || this.avoid(nx, ny)) continue;
           const tt = this.stepTime(n.x, n.y, nx, ny, d, speed);
+          if (tt === INF) continue;
           const t = n.t + tt;
           const dt = danger[i];
           // Would we be standing in fire while passing through? We are inside the tile
@@ -303,7 +353,7 @@ export class CpuPlayer {
       for (const n of nodes.values()) {
         const d = this.danger[this.idx(n.x, n.y)];
         if (d === INF) {
-          if (!best || n.t < best.t) best = n;
+          if (!best || this.restCost(n) < this.restCost(best)) best = n;
         } else if (!bestLeast || d > this.danger[this.idx(bestLeast.x, bestLeast.y)]) {
           bestLeast = n;
         }
@@ -362,6 +412,7 @@ export class CpuPlayer {
       const f = w.gim.at(n.x, n.y);
       if (f && (f.kind === 'trampoline' || f.kind === 'warp' || f.kind === 'seesaw')) score -= 1.5;
       if (f && f.kind === 'rail') score -= 1;
+      if (f && f.kind === 'conveyor') score -= 1.5;
       if (f && f.kind === 'ice' && f.cracks > 0) score -= 2;
       score += rng.next() * 0.6;
       if (score > bestScore) {
@@ -370,6 +421,11 @@ export class CpuPlayer {
       }
     }
     if (best) this.setPath(nodes, best);
+  }
+
+  /** How good a tile is to wait on: near, and not on a belt that carries you off. */
+  private restCost(n: Node): number {
+    return n.t + (this.w.gim.beltAt(n.x, n.y) ? BELT_REST_PENALTY : 0);
   }
 
   private setPath(nodes: Map<number, Node>, target: Node): void {

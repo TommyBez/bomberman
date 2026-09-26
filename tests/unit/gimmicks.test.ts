@@ -126,6 +126,41 @@ describe('trolley forecast (what the CPU players watch)', () => {
   }
 });
 
+describe('CPU players and stage hazards', () => {
+  it('Robo Bomber: CPUs keep out of the stomp and seldom blow themselves up', () => {
+    let selfKills = 0;
+    let hits = 0;
+    for (let seed = 1; seed <= 6; seed++) {
+      const w = world('a2', false, 5, seed * 101);
+      const ais = w.bombers.map((b) => new CpuPlayer(w, b, 'normal'));
+      const kill = w.kill.bind(w);
+      w.kill = (b, killer, force) => {
+        if (b.alive) hits++;
+        if (b.alive && killer === b && !b.curse) selfKills++;
+        kill(b, killer, force);
+      };
+      for (let t = 0; t < 60 * 110 && !w.result; t++) {
+        w.bombers.forEach((b, i) => (b.intent = ais[i].think()));
+        w.update();
+      }
+    }
+    // Before CPUs knew about the stomp, half of all hits here were their own bombs.
+    expect(selfKills).toBeLessThanOrEqual(Math.max(3, hits * 0.25));
+  }, 120_000);
+
+  it('a bomb resting on a belt counts as a threat along the belt, not just where it lies', () => {
+    const w = world('b7');
+    const i = w.gim.features.findIndex((f) => f?.kind === 'conveyor');
+    const x = i % w.grid.w;
+    const y = Math.floor(i / w.grid.w);
+    const b = w.bombers[0];
+    const bomb = w.placeBomb(b, x, y);
+    expect(bomb).toBeTruthy();
+    const ai = new CpuPlayer(w, w.bombers[1], 'normal') as unknown as { blastOrigins(b: unknown, fuse: number): [number, number][] };
+    expect(ai.blastOrigins(bomb, 150).length).toBeGreaterThan(1);
+  });
+});
+
 describe('Round and Round flowers', () => {
   it('a blast into a flower bursts out of its partner, which way its mouth faces', () => {
     const w = world('a3');
