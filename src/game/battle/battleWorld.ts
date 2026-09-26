@@ -665,6 +665,7 @@ export class BattleWorld extends World {
       const kind = b.partner;
       b.partner = null;
       b.dash = null;
+      b.liftedBlock = false;
       b.invincible = 90;
       if (b.eggs > 0) {
         b.eggs--;
@@ -813,17 +814,18 @@ export class BattleWorld extends World {
         return true;
       }
       case 'simeon': {
-        // Lift a soft block, or put it down again.
-        if (this.grid.get(fx, fy) === Cell.Soft && this.burnTimer[this.idx(fx, fy)] === 0 && !b.carrying) {
+        // Lift the soft block ahead (whatever it hid stays behind), or put it down again.
+        if (!b.liftedBlock && !b.carrying && this.grid.get(fx, fy) === Cell.Soft && this.burnTimer[this.idx(fx, fy)] === 0) {
           this.grid.set(fx, fy, Cell.Floor);
-          b.eggs = Math.max(b.eggs, 0);
-          b.speedOverride = b.speedOverride ?? null;
-          (b as Bomber & { block?: boolean }).block = true;
+          const item = this.items[this.idx(fx, fy)];
+          if (item) item.hidden = false;
+          b.liftedBlock = true;
           return true;
         }
-        if ((b as Bomber & { block?: boolean }).block && this.grid.get(fx, fy) === Cell.Floor && !this.bombAt[this.idx(fx, fy)] && !this.bombers.some((o) => o.alive && o.tx === fx && o.ty === fy)) {
+        const free = this.grid.get(fx, fy) === Cell.Floor && !this.bombAt[this.idx(fx, fy)] && !this.items[this.idx(fx, fy)];
+        if (b.liftedBlock && free && !this.bombers.some((o) => o.alive && o.tx === fx && o.ty === fy)) {
           this.grid.set(fx, fy, Cell.Soft);
-          (b as Bomber & { block?: boolean }).block = false;
+          b.liftedBlock = false;
           return true;
         }
         return false;

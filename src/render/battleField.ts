@@ -4,7 +4,7 @@ import type { Bomber } from '../game/core/bomber';
 import { Cell, DX, DY, TILE, toTile, type Dir } from '../game/core/types';
 import { characterSprites, gimmickSprites } from '../gfx/battleSprites';
 import { bendTile } from '../gfx/battleArt';
-import { sprites } from '../gfx/sprites';
+import { sprites, tileSet } from '../gfx/sprites';
 import { FieldRenderer, type Actor, type View } from './field';
 
 const bendCache = new Map<string, HTMLCanvasElement>();
@@ -134,6 +134,7 @@ export class BattleRenderer {
           const bomb = sprites().bomb[1];
           if (b.carrying) g.image(bomb, x - 8, y - 30 - riderUp);
         }
+        if (b.liftedBlock) g.image(tileSet(w.arena.theme).soft, x - 8, y - 32 - riderUp - lift);
         if (b.stunned > 0 && lift === 0) {
           for (let k = 0; k < 3; k++) {
             const a = frame / 8 + (k * Math.PI * 2) / 3;

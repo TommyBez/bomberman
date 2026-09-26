@@ -299,6 +299,6 @@ export function sprites(): Sprites {
 /** Tile set for a theme name (built lazily for themes added later). */
 export function tileSet(name: string): TileSet {
   const s = sprites();
-  if (!s.tiles[name]) s.tiles[name] = buildTiles(THEMES[name] ?? THEMES.classic);
+  if (!s.tiles[name]) s.tiles[name] = buildTiles(THEMES[name] ?? THEMES.m1);
   return s.tiles[name];
 }
