@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../../src/engine/rng';
 import { ARENAS } from '../../src/game/battle/arenas';
-import { BattleWorld, HURRY_TICKS, perimeterPath, spiralOrder } from '../../src/game/battle/battleWorld';
+import { BATTLE_MAX_FIRE, BattleWorld, HURRY_TICKS, perimeterPath, spiralOrder } from '../../src/game/battle/battleWorld';
 import { defaultConfig, type BattleConfig } from '../../src/game/battle/config';
 import { NO_INTENT } from '../../src/game/core/bomber';
 import { ALL_DIRS, Cell, tileCenter } from '../../src/game/core/types';
@@ -35,6 +35,28 @@ describe('battle world', () => {
       }
     });
   }
+
+  it('predicts the next bomb exactly (Power Bomb, Metabomb, mines, fuse diseases)', () => {
+    const w = new BattleWorld({ cfg: config('beginner', 2), arena: ARENAS[0], seed: 2 });
+    const b = w.bombers[0];
+    b.stats.fire = 3;
+    expect(w.bombShape(b)).toMatchObject({ range: 3, kind: 'normal', pierce: false });
+    b.stats.bombType = 'power';
+    b.stats.bombs = 3;
+    expect(w.bombShape(b)).toMatchObject({ range: BATTLE_MAX_FIRE, kind: 'power' });
+    const first = w.placeBomb(b)!;
+    expect(first.range).toBe(BATTLE_MAX_FIRE);
+    // Only one Power Bomb at a time.
+    expect(w.bombShape(b, b.tx + 1, b.ty)).toMatchObject({ range: 3, kind: 'normal' });
+    b.stats.bombType = 'pierce';
+    expect(w.bombShape(b)).toMatchObject({ pierce: true, kind: 'pierce' });
+    b.curse = 'shortFuse';
+    expect(w.bombShape(b).fuse).toBe(Math.floor(w.rules.fuseTicks / 3));
+    b.curse = null;
+    b.mineNext = true;
+    expect(w.bombShape(b)).toMatchObject({ kind: 'mine', hidden: true, remote: true });
+    expect(b.mineNext).toBe(true); // asking has no side effects
+  });
 
   it('hides the level items under soft blocks', () => {
     const w = new BattleWorld({ cfg: config('beginner', 4), arena: ARENAS[0], seed: 1 });
