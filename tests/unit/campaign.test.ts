@@ -114,6 +114,42 @@ describe('hidden panels', () => {
     expect(w.secret.shown).toBe(false);
   });
 
+  /** Walk Bomberman over every tile of the outer ring (clearing any blocks there). */
+  const walkRing = (w: CampaignWorld): void => {
+    const ring: [number, number][] = [];
+    for (let y = 1; y < w.grid.h - 1; y++) for (let x = 1; x < w.grid.w - 1; x++) if (x === 1 || y === 1 || x === w.grid.w - 2 || y === w.grid.h - 2) ring.push([x, y]);
+    for (const [x, y] of ring) {
+      if (w.grid.get(x, y) === Cell.Soft && !(x === w.exitTx && y === w.exitTy)) w.grid.set(x, y, Cell.Floor);
+    }
+    for (const [x, y] of ring) {
+      if (w.grid.get(x, y) !== Cell.Floor) w.grid.set(x, y, Cell.Floor);
+      w.player.x = tileCenter(x);
+      w.player.y = tileCenter(y);
+      w.update();
+      if (w.secret.shown) return;
+    }
+  };
+
+  it('Louie: clear every monster, then walk the whole outer ring', () => {
+    const w = new CampaignWorld(stageWith('louie'), freshPowers(), 6);
+    w.player.invincible = 1e9;
+    for (const e of w.enemies) w['killEnemy'](e, 0);
+    walkRing(w);
+    expect(w.secret.shown).toBe(true);
+  });
+
+  it('Yo-yo: walk the whole outer ring without killing anything', () => {
+    const w = new CampaignWorld(stageWith('yoyo'), freshPowers(), 6);
+    w.player.invincible = 1e9;
+    walkRing(w);
+    expect(w.secret.shown).toBe(true);
+    const spoilt = new CampaignWorld(stageWith('yoyo'), freshPowers(), 6);
+    spoilt.player.invincible = 1e9;
+    spoilt['killEnemy'](spoilt.enemies[0], 0);
+    walkRing(spoilt);
+    expect(spoilt.secret.shown).toBe(false);
+  });
+
   it('Golden Bomberman: 248 explosions in one stage', () => {
     const w = new CampaignWorld(stageWith('golden'), freshPowers(), 3);
     w.player.invincible = 1e9;
