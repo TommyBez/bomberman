@@ -180,3 +180,67 @@ test('Title: Demo Play starts when idle and a key returns to the title', async (
   await waitFor(page, 's && s.idle !== undefined', 10_000);
   expect(errors).toEqual([]);
 });
+
+test('Battle Game: Custom Tag match through every setup screen, then draw, results and report', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.addInitScript(() => localStorage.clear());
+  await page.goto('/');
+  await waitFor(page, 's && s.idle !== undefined');
+  await page.waitForTimeout(500);
+  await press(page, 'Enter'); // PRESS START
+  await waitFor(page, 's && s.menu');
+  await page.waitForTimeout(300);
+  await press(page, 'ArrowDown');
+  await press(page, 'Enter'); // BATTLE GAME
+  await page.waitForTimeout(400);
+  await press(page, 'ArrowDown');
+  await press(page, 'Enter'); // CUSTOM BATTLE
+  await page.waitForTimeout(400);
+  await press(page, 'ArrowDown', 2);
+  await press(page, 'Enter'); // ADVANCED
+  await page.waitForTimeout(400);
+  await press(page, 'ArrowDown');
+  await press(page, 'Enter'); // TAG MATCH
+  await page.waitForTimeout(400);
+  await press(page, 'ArrowUp');
+  await press(page, 'Enter'); // rules: OK
+  await page.waitForTimeout(400);
+  await press(page, 'Enter'); // players: OK
+  await waitFor(page, 's && s.roster', 5_000);
+  await press(page, 'KeyD', 2); // P1 moves their own cursor
+  await press(page, 'Enter'); // START: everyone set
+  await page.waitForTimeout(900);
+  await press(page, 'Enter'); // teams
+  await page.waitForTimeout(500);
+  await press(page, 'Enter'); // stage
+  await page.waitForTimeout(500);
+  await press(page, 'Enter'); // ITEM SELECTION
+  await page.waitForTimeout(300);
+  await press(page, 'Space', 3);
+  await press(page, 'Enter'); // END
+  await page.waitForTimeout(400);
+  await press(page, 'ArrowDown');
+  await press(page, 'Enter'); // HANDICAP
+  await page.waitForTimeout(300);
+  await press(page, 'ArrowRight');
+  await press(page, 'Escape');
+  await page.waitForTimeout(300);
+  await press(page, 'ArrowDown', 2);
+  await press(page, 'Enter'); // START BATTLE
+  await waitFor(page, 's && s.world && s.phase === "play"', 20_000);
+  // Force a draw: its own screen, then the results and the Battle Report.
+  await page.evaluate(() => {
+    const s = (window as any).__bomberman.scenes.scene;
+    s.world.result = { winner: null, team: null, draw: true, timeUp: true };
+    s.match.roundOver(s.world);
+  });
+  await waitFor(page, 's && s.next !== undefined', 5_000);
+  await page.waitForTimeout(900);
+  await press(page, 'Enter');
+  await waitFor(page, 's && s.showReport === false', 5_000);
+  await press(page, 'ArrowRight');
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => (window as any).__bomberman.scenes.scene.showReport)).toBe(true);
+  expect(await page.evaluate(() => (window as any).__bomberman.scenes.scene.match.games)).toBe(0);
+  expect(errors).toEqual([]);
+});
