@@ -88,24 +88,29 @@ letters directly.
   Tag (team) play.
 - **Rules** follow the PS1 options:
   - COM level, games per match and time.
-  - Sudden Death, Random Position and Skull.
+  - Sudden Death and Random Position (Off, On or Random), and Skull.
   - Hyper Bomber.
   - Bomber Cart: off, on or Super.
 - **24 stages**, eight each for Beginner, Normal and Advanced, with their gimmicks. Each
   has an alternate layout with fixed blocks and a different item mix. The original's
   battle passwords open them level by level: `56565656`, `16161616` and `49894989`,
   typed on the password screen.
-  Gimmicks include see-saws, trolleys and switches, arrows, pipes, conveyor belts and
-  warps. The Advanced stages add a stomping robot, jungle tunnels, the Super Power
-  arena and the Seven Seas.
+  Gimmicks include see-saws, trolleys and switches, arrows, pipes, conveyor belts,
+  warps, a two-floor sky stage and snow huts. The Advanced stages add a stomping robot,
+  jungle tunnels, the Super Power arena and the Seven Seas.
 - **Items:**
-  - Bomb, Fire, Full Fire, Speed, Steel Shoes (−speed), Kick, Power Glove, Punch, Push.
-  - Line Bomb, Power, Rubber and Metabomb (pierce) bombs, Land Mine, Remote Control.
-  - Heart, Egg (a riding partner with its own ability), Skull (ten diseases, which
-    spread by touch).
+  - Bomb, Fire, Full Fire, Speed, Kick, Bomb Pass, Power Glove, Punch, Push.
+  - Multi Bomb, Power, Rubber and Metabomb (pierce) bombs, Land Mine.
+  - Egg (a riding partner with its own ability), Skull (ten diseases, which spread by
+    touch).
+  - Steel Shoes (−speed) and Hearts come from Hyper Bomber, Wall Pass from some
+    alternate stages, and the Flak Jacket from Custom Battle only, as in the original.
 - **Other features:**
-  - Characters with specials.
-  - Colliding kicked bombs merge into Super and Ultra Bombs.
+  - Advanced characters with specials: rocket, beam, jet boost, hammer, invincibility,
+    pistol and sword shockwave. Ten partners, including an Advanced rider's stocked egg
+    that trails behind them.
+  - Colliding kicked bombs make a Dangerous Bomb (5×5); two Power Bombs make a Super
+    Dangerous Bomb (7×7).
   - "Hurry!" pressure-block spiral, TIME'S UP draws.
   - Bomber Carts for knocked-out players.
   - Hyper Bomber prize game, results trophies, Battle Report and victory screen.
@@ -117,7 +122,7 @@ letters directly.
 - **Title and menus:** title screen with a **Demo Play** attract mode after 20 s idle,
   and the main menu.
 - **Options:** stereo/mono, music and SE volume, music and SE test, screen position,
-  controller help and vibration.
+  gamepad button layouts, vibration and a keyboard reference.
 - **Audio:** a small WebAudio synthesiser plays every tune and effect from note data.
   It includes pulse, saw and triangle voices, noise drums, reverb and NES-style voices
   for the Retro version.
@@ -130,7 +135,8 @@ letters directly.
   monster speeds in px/frame. The stage tables (rosters, items, bonus stages and panel
   stages) follow the NES and PS1 data. `docs/SPEC.md` lists the sources and values.
 - Battle stage layouts and gimmicks were rebuilt from manuals, descriptions and footage.
-  They play like the originals but are not tile-exact copies.
+  They play like the originals but are not tile-exact copies. The alternate layouts use
+  fixed block patterns because the originals' placements aren't documented.
 - All music, Show Time skits, dialogue and artwork are new, written for this remake.
 
 ## Development
