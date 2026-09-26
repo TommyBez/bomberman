@@ -1,5 +1,6 @@
 import { Bomber, type Curse } from '../core/bomber';
 import { Grid } from '../core/grid';
+import { moveBody } from '../core/movement';
 import { ALL_DIRS, Cell, DX, DY, OPPOSITE, TILE, tileCenter, toTile, type Dir } from '../core/types';
 import { World, type Blast, type Bomb, type BombShape } from '../core/world';
 import type { ArenaDef } from './arenas';
@@ -129,6 +130,26 @@ function anticlockwise(w: number, h: number): [number, number][] {
   return out;
 }
 
+/** A Bazooka rocket or a sword shockwave in flight. */
+export interface Shot {
+  kind: 'rocket' | 'wave';
+  x: number;
+  y: number;
+  dir: Dir;
+  owner: Bomber;
+  /** Pixels travelled so far. */
+  travelled: number;
+}
+
+/** Post-special "weakest" state: one bomb, fire 1, lowest speed, no special. */
+export const WEAK_TICKS = 10 * 60;
+const WEAK_SPEED = 0.6;
+const DASH_SPEED = 3;
+const SHOT_SPEED: Record<Shot['kind'], number> = { rocket: 5, wave: 3.5 };
+const SHOT_RANGE: Record<Shot['kind'], number> = { rocket: 13 * TILE, wave: 7 * TILE };
+/** Positions remembered for the trailing egg (about one tile at walking pace). */
+const TRAIL = 14;
+
 export interface RoundSetup {
   cfg: BattleConfig;
   arena: ArenaDef;
@@ -156,6 +177,11 @@ export class BattleWorld extends World {
   /** report[killer][victim] (killer = victim for accidents and hazards). */
   readonly report: number[][] = [0, 1, 2, 3, 4].map(() => [0, 0, 0, 0, 0]);
   carts: Cart[] = [];
+  shots: Shot[] = [];
+  /** Drake riders in the air: they stomp whoever they land on. */
+  private stompers = new Set<number>();
+  /** Blast origin tile per bomb id (Shelly's shell only stops fire from behind). */
+  private blastOrigin = new Map<number, number>();
   readonly perimeter: [number, number][];
   itemPool: BattleItem[] = [];
   private lastDeathTick = -1000;
@@ -372,6 +398,12 @@ export class BattleWorld extends World {
         break;
     }
     if (this.gim.boosts(tx, ty)) s.range = BATTLE_MAX_FIRE;
+    if (b.weak > 0) s.range = 1;
+  }
+
+  protected override extraCanPlace(b: Bomber, _tx: number, _ty: number): boolean {
+    // The weakest state allows a single bomb at a time.
+    return !(b.weak > 0 && b.activeBombs >= 1);
   }
 
   protected override onBombPlaced(b: Bomber, bomb: Bomb): void {
@@ -422,6 +454,8 @@ export class BattleWorld extends World {
 
   protected override onExplode(bomb: Bomb, _blast: Blast): void {
     this.gim.onBlastAt(bomb.tx, bomb.ty);
+    this.blastOrigin.set(bomb.id, this.idx(bomb.tx, bomb.ty));
+    if (this.blastOrigin.size > 256) this.blastOrigin.delete(this.blastOrigin.keys().next().value!);
     // A cart bomb is done: the cart may throw again.
     for (const c of this.carts) if (c.bomb === bomb) c.bomb = null;
   }
@@ -515,6 +549,17 @@ export class BattleWorld extends World {
         break;
       }
     }
+  }
+
+  /** Is the fire on this bomber's tile coming from behind it? */
+  private fireFromBehind(b: Bomber): boolean {
+    const i = this.idx(b.tx, b.ty);
+    if (this.flameTimer[i] <= 0) return false;
+    const origin = this.blastOrigin.get(this.flameSource[i]);
+    if (origin === undefined || origin === i) return false;
+    const ox = origin % this.grid.w;
+    const oy = Math.floor(origin / this.grid.w);
+    return (ox - b.tx) * DX[b.facing] + (oy - b.ty) * DY[b.facing] < 0;
   }
 
   private hatch(b: Bomber): void {
@@ -614,13 +659,17 @@ export class BattleWorld extends World {
 
   protected override absorbHit(b: Bomber, killer: Bomber | null): boolean {
     if (b.invincible > 0) return true;
+    if (b.partner === 'coney' && this.fireFromBehind(b)) return true; // Shelly's shell
     if (b.partner) {
-      // The partner takes the hit.
+      // The partner takes the hit; a stocked egg brings the same partner back.
+      const kind = b.partner;
       b.partner = null;
+      b.dash = null;
       b.invincible = 90;
       if (b.eggs > 0) {
         b.eggs--;
-        this.hatch(b);
+        b.partner = kind;
+        this.emit({ type: 'item', tx: b.tx, ty: b.ty, item: `partner:${kind}`, who: b.id });
       }
       this.emit({ type: 'stun', who: b.id });
       return true;
@@ -685,9 +734,14 @@ export class BattleWorld extends World {
 
   // ---------------------------------------------------------------- specials (B)
 
+  /**
+   * × button: with a direction held, an Advanced character's special; otherwise the
+   * partner's ability (or a remote detonation).
+   */
   protected override onSpecial(b: Bomber): void {
+    const dir = b.intent.dirs[0];
+    if (this.cfg.level === 'advanced' && dir && CHARACTERS[b.character]?.special && this.characterSpecial(b, dir)) return;
     if (b.partner && this.partnerAbility(b)) return;
-    if (this.cfg.level === 'advanced' && b.intent.dirs.length && this.characterSpecial(b, b.intent.dirs[0])) return;
     if (b.stats.remote) this.detonateRemote(b);
   }
 
@@ -696,13 +750,12 @@ export class BattleWorld extends World {
     const fx = b.tx + DX[d];
     const fy = b.ty + DY[d];
     switch (b.partner as PartnerKind) {
-      case 'louieYellow':
-      case 'dox': {
-        // Kick / shove the soft block ahead.
+      case 'louieYellow': {
+        // Kick the soft block ahead as far as it will slide.
         if (this.grid.get(fx, fy) !== Cell.Soft || this.burnTimer[this.idx(fx, fy)] > 0) return false;
         let x = fx;
         let y = fy;
-        const limit = b.partner === 'dox' ? 1 : 12;
+        const limit = 12;
         for (let i = 0; i < limit; i++) {
           const nx = x + DX[d];
           const ny = y + DY[d];
@@ -726,12 +779,13 @@ export class BattleWorld extends World {
         this.emit({ type: 'punch', tx: fx, ty: fy });
         return true;
       }
-      case 'louieGreen': {
-        b.streak = d;
-        this.applyCurse(b, 'streaking', 0);
-        b.curseTimer = 60;
+      case 'louieGreen':
+      case 'dox':
+        // Charge ahead at full tilt until something is in the way.
+        if (b.dash) return false;
+        b.dash = d;
+        this.emit({ type: 'jump', tx: b.tx, ty: b.ty });
         return true;
-      }
       case 'louiePink': {
         const lx = b.tx + DX[d] * 2;
         const ly = b.ty + DY[d] * 2;
@@ -775,14 +829,12 @@ export class BattleWorld extends World {
         return false;
       }
       case 'drakko': {
-        for (const o of this.bombers) {
-          if (o === b || !o.alive) continue;
-          if (Math.abs(o.tx - b.tx) + Math.abs(o.ty - b.ty) <= 1) {
-            o.stunned = Math.max(o.stunned, 60);
-            this.scatterItems(o, 2);
-          }
-        }
-        this.emit({ type: 'shake', frames: 8 });
+        // Jump two tiles ahead (over anything) and hip-attack whoever is there.
+        const [wx, wy] = this.gim.wrapTile(b.tx + DX[d] * 2, b.ty + DY[d] * 2);
+        if (!this.grid.inside(wx, wy) || this.grid.get(wx, wy) !== Cell.Floor || this.bombAt[this.idx(wx, wy)]) return false;
+        this.jump(b, wx, wy, 30, 22);
+        this.stompers.add(b.id);
+        this.emit({ type: 'jump', tx: b.tx, ty: b.ty });
         return true;
       }
       default:
@@ -800,28 +852,23 @@ export class BattleWorld extends World {
         b.specialCooldown = 180;
         b.weak = -1; // becomes weak when the dash ends
         break;
-      case 'bazooka': {
-        for (let i = 1; i <= 12; i++) {
-          const x = b.tx + DX[d] * i;
-          const y = b.ty + DY[d] * i;
-          const c = this.grid.get(x, y);
-          if (c === Cell.Hard) break;
-          if (c === Cell.Soft) {
-            this.burnBlock(x, y);
-            break;
-          }
-        }
+      case 'bazooka':
+        // A rocket that blows up the first thing it meets; then ten weak seconds.
+        this.shots.push({ kind: 'rocket', x: tileCenter(b.tx), y: tileCenter(b.ty), dir: d, owner: b, travelled: 0 });
         b.specialCooldown = 30;
-        b.weak = 600;
+        b.weak = WEAK_TICKS;
         break;
-      }
       case 'great':
         b.invincible = 5 * 60;
         b.specialCooldown = 5 * 60;
         b.weak = -1;
         break;
-      case 'hammer':
-      case 'sword': {
+      case 'sword':
+        // Kotetsu's slash sends a shockwave along the floor.
+        this.shots.push({ kind: 'wave', x: tileCenter(b.tx), y: tileCenter(b.ty), dir: d, owner: b, travelled: 0 });
+        b.specialCooldown = 150;
+        break;
+      case 'hammer': {
         const o = this.bombers.find((v) => v !== b && v.alive && v.tx === b.tx + DX[d] && v.ty === b.ty + DY[d]);
         if (o) {
           o.stunned = Math.max(o.stunned, 45);
@@ -934,15 +981,21 @@ export class BattleWorld extends World {
     if (b.alive && b.specialCooldown > 0) {
       b.specialCooldown--;
       if (b.specialCooldown === 0 && b.weak === -1) {
-        b.weak = 600;
+        b.weak = WEAK_TICKS;
         if (CHARACTERS[b.character]?.special === 'jet') b.speedOverride = null;
       }
     }
     if (b.weak > 0) {
       b.weak--;
       if (b.weak === 0) b.speedOverride = null;
-      else b.speedOverride = 0.6;
+      else b.speedOverride = WEAK_SPEED;
     }
+    if (b.alive) {
+      b.trail.push([b.x, b.y]);
+      if (b.trail.length > TRAIL) b.trail.shift();
+    }
+    // While charging on a partner, steering is locked (bombs can still be dropped).
+    if (b.alive && b.dash && b.airborne <= 0 && !b.stunned) b.intent = { ...b.intent, dirs: [] };
     if (b.alive && b.stats.glove && !b.stunned && b.airborne <= 0) {
       if (b.carrying || b.carryingBomber) {
         if (!b.intent.bombHeld) {
@@ -987,9 +1040,100 @@ export class BattleWorld extends World {
       }
     }
     super.updateBomber(b);
+    if (b.alive && b.dash && b.airborne <= 0 && !b.stunned) this.updateDash(b);
     if (b.carrying) {
       b.carrying.x = b.x;
       b.carrying.y = b.y - 12;
+    }
+    // The Jet Bomber's boost runs over anyone it touches.
+    if (b.alive && b.weak === -1 && b.specialCooldown > 0 && CHARACTERS[b.character]?.special === 'jet') {
+      for (const o of this.bombers) {
+        if (o !== b && o.alive && o.airborne <= 0 && o.team !== b.team && Math.abs(o.x - b.x) < 12 && Math.abs(o.y - b.y) < 12) this.kill(o, b);
+      }
+    }
+  }
+
+  private updateDash(b: Bomber): void {
+    const d = b.dash!;
+    b.facing = d;
+    const moved = moveBody(b, d, DASH_SPEED, (tx, ty) => this.bomberCanEnter(b, tx, ty));
+    this.afterMove(b);
+    b.moving = moved > 0;
+    if (moved > 0.01) {
+      b.walkTick++;
+      return;
+    }
+    // Hit something: the Boar rams a soft block one tile onward.
+    const fx = b.tx + DX[d];
+    const fy = b.ty + DY[d];
+    if (b.partner === 'dox' && this.grid.get(fx, fy) === Cell.Soft && this.burnTimer[this.idx(fx, fy)] === 0) {
+      const nx = fx + DX[d];
+      const ny = fy + DY[d];
+      const free = this.grid.get(nx, ny) === Cell.Floor && !this.bombAt[this.idx(nx, ny)] && !this.items[this.idx(nx, ny)] && !this.bombers.some((o) => o.alive && o.tx === nx && o.ty === ny);
+      if (free) {
+        const item = this.items[this.idx(fx, fy)];
+        this.grid.set(fx, fy, Cell.Floor);
+        this.items[this.idx(fx, fy)] = null;
+        this.grid.set(nx, ny, Cell.Soft);
+        if (item) this.items[this.idx(nx, ny)] = item;
+        this.emit({ type: 'kick', tx: nx, ty: ny });
+      }
+    }
+    b.dash = null;
+  }
+
+  // ---------------------------------------------------------------- shots
+
+  private updateShots(): void {
+    for (const s of this.shots) {
+      const step = SHOT_SPEED[s.kind];
+      s.x += DX[s.dir] * step;
+      s.y += DY[s.dir] * step;
+      s.travelled += step;
+      const [tx, ty] = [toTile(s.x), toTile(s.y)];
+      if (!this.grid.inside(tx, ty) || s.travelled > SHOT_RANGE[s.kind]) {
+        s.travelled = Infinity;
+        continue;
+      }
+      const c = this.grid.get(tx, ty);
+      const victim = this.bombers.find((o) => o !== s.owner && o.alive && o.airborne <= 0 && Math.abs(o.x - s.x) < 9 && Math.abs(o.y - s.y) < 9);
+      if (s.kind === 'rocket') {
+        const bomb = this.bombAtTile(tx, ty);
+        if (c === Cell.Hard || c === Cell.Void) s.travelled = Infinity;
+        else if (c === Cell.Soft) {
+          this.burnBlock(tx, ty);
+          s.travelled = Infinity;
+        } else if (bomb && !bomb.hidden) {
+          this.explode(bomb);
+          s.travelled = Infinity;
+        } else if (victim) {
+          this.kill(victim, s.owner);
+          s.travelled = Infinity;
+        }
+        if (s.travelled === Infinity) this.emit({ type: 'shake', frames: 4 });
+      } else {
+        if (c === Cell.Hard || c === Cell.Soft || c === Cell.Void) s.travelled = Infinity;
+        else if (victim) {
+          victim.stunned = Math.max(victim.stunned, 45);
+          this.scatterItems(victim, 3);
+          this.emit({ type: 'stun', who: victim.id });
+          s.travelled = Infinity;
+        }
+      }
+    }
+    this.shots = this.shots.filter((s) => s.travelled !== Infinity);
+  }
+
+  /** A stocked egg trails behind its rider; fire destroys it. */
+  private updateEggs(): void {
+    for (const b of this.bombers) {
+      if (!b.alive || b.eggs <= 0 || !b.partner || !b.trail.length) continue;
+      const [ex, ey] = b.trail[0];
+      const i = this.idx(toTile(ex), toTile(ey));
+      if (i !== this.idx(b.tx, b.ty) && this.flameTimer[i] > 0) {
+        b.eggs = 0;
+        this.emit({ type: 'itemBurn', tx: toTile(ex), ty: toTile(ey) });
+      }
     }
   }
 
@@ -1009,6 +1153,15 @@ export class BattleWorld extends World {
 
   protected override onLand(b: Bomber): void {
     super.onLand(b);
+    if (this.stompers.delete(b.id)) {
+      for (const o of this.bombers) {
+        if (o === b || !o.alive || o.airborne > 0 || o.tx !== b.tx || o.ty !== b.ty) continue;
+        o.stunned = Math.max(o.stunned, 90);
+        this.scatterItems(o, 3);
+        this.emit({ type: 'stun', who: o.id });
+      }
+      this.emit({ type: 'shake', frames: 8 });
+    }
     if (this.grid.get(b.tx, b.ty) === Cell.Void || this.grid.get(b.tx, b.ty) === Cell.Hard) {
       // Landed somewhere impossible: hop to the nearest floor.
       const t = this.gim.randomLanding(b.tx, b.ty, 0);
@@ -1213,6 +1366,8 @@ export class BattleWorld extends World {
   // ---------------------------------------------------------------- result
 
   protected override postUpdate(): void {
+    this.updateShots();
+    this.updateEggs();
     if (this.result) return;
     const living = this.alive();
     const teams = new Set(living.map((b) => b.team));

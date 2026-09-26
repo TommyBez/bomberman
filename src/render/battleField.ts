@@ -1,7 +1,7 @@
 import type { Gfx } from '../engine/gfx';
 import type { BattleWorld } from '../game/battle/battleWorld';
 import type { Bomber } from '../game/core/bomber';
-import { Cell, DX, DY, TILE, toTile } from '../game/core/types';
+import { Cell, DX, DY, TILE, toTile, type Dir } from '../game/core/types';
 import { characterSprites, gimmickSprites } from '../gfx/battleSprites';
 import { bendTile } from '../gfx/battleArt';
 import { sprites } from '../gfx/sprites';
@@ -45,6 +45,13 @@ export class BattleRenderer {
       const lift = Math.sin(k * Math.PI) * 18;
       actors.push({ y: f.ty * TILE + 20, draw: (gg, ox, oy) => gg.image(gs.fish[Math.floor(f.t / 6) % 2], ox + f.tx * TILE, oy + f.ty * TILE - lift) });
     }
+    // A stocked egg waddles behind its rider.
+    for (const b of w.bombers) {
+      if (!b.alive || b.eggs <= 0 || !b.partner || !b.trail.length) continue;
+      const [ex, ey] = b.trail[0];
+      actors.push({ y: ey - 0.5, draw: (gg, ox, oy) => drawEgg(gg, ox + ex, oy + ey, frame) });
+    }
+    for (const s of w.shots) actors.push({ y: s.y + 4, draw: (gg, ox, oy) => drawShot(gg, ox + s.x, oy + s.y, s.kind, s.dir, frame) });
     this.field.drawActors(g, actors, v);
     this.drawCovers(g, v);
     this.drawPressure(g, v);
@@ -287,4 +294,47 @@ export class BattleRenderer {
     void toTile;
     void DY;
   }
+}
+
+/** A small spotted egg (7×9) standing on (x, y). */
+function drawEgg(g: Gfx, x: number, y: number, frame: number): void {
+  const bob = Math.floor(frame / 10) % 2;
+  const top = Math.round(y - 9 - bob);
+  const left = Math.round(x - 4);
+  const rows = ['..###..', '.#####.', '#######', '#######', '#######', '#######', '.#####.', '..###..'];
+  rows.forEach((r, j) => {
+    for (let i = 0; i < r.length; i++) if (r[i] === '#') g.rect(left + i, top + j, 1, 1, '#000000');
+  });
+  g.rect(left + 2, top + 1, 3, 6, '#fff8f0');
+  g.rect(left + 1, top + 2, 5, 4, '#fff8f0');
+  g.rect(left + 2, top + 3, 1, 1, '#60c0f0');
+  g.rect(left + 4, top + 5, 1, 1, '#60c0f0');
+  g.rect(left + 2, top + 2, 1, 1, '#ffffff');
+}
+
+/** A Bazooka rocket or a sword shockwave. */
+function drawShot(g: Gfx, x: number, y: number, kind: 'rocket' | 'wave', dir: Dir, frame: number): void {
+  const horiz = dir === 'left' || dir === 'right';
+  const sx = dir === 'left' ? -1 : dir === 'right' ? 1 : 0;
+  const sy = dir === 'up' ? -1 : dir === 'down' ? 1 : 0;
+  const cy = y - 6;
+  if (kind === 'rocket') {
+    const [w, h] = horiz ? [10, 5] : [5, 10];
+    g.rect(Math.round(x - w / 2) - 1, Math.round(cy - h / 2) - 1, w + 2, h + 2, '#000000');
+    g.rect(Math.round(x - w / 2), Math.round(cy - h / 2), w, h, '#a8b0c0');
+    g.rect(Math.round(x + sx * (w / 2 - 2) - (horiz ? 1 : 2)), Math.round(cy + sy * (h / 2 - 2) - (horiz ? 2 : 1)), horiz ? 3 : 5, horiz ? 5 : 3, '#e03030');
+    const flick = frame % 2 ? '#ffe040' : '#ff8020';
+    g.rect(Math.round(x - sx * (w / 2 + 3) - 2), Math.round(cy - sy * (h / 2 + 3) - 2), 4, 4, flick);
+    return;
+  }
+  // Shockwave: a bright crescent with a dark rim.
+  const c = frame % 4 < 2 ? '#ffffff' : '#a0e8ff';
+  const pts: [number, number][] = [];
+  for (let k = -6; k <= 6; k++) {
+    const bend = Math.round((k * k) / 9);
+    pts.push([Math.round(horiz ? x - sx * bend : x + k), Math.round(horiz ? cy + k : cy - sy * bend)]);
+  }
+  for (const [px, py] of pts) g.rect(px - 2, py - 2, 4, 4, '#103080');
+  for (const [px, py] of pts) g.rect(px - 1, py - 1, 2, 2, '#50b0ff');
+  for (const [px, py] of pts.slice(2, -2)) g.rect(px - 1, py - 1, 1, 1, c);
 }

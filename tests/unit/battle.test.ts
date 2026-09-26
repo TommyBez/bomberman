@@ -3,7 +3,7 @@ import { Rng } from '../../src/engine/rng';
 import { ARENAS } from '../../src/game/battle/arenas';
 import { BATTLE_MAX_FIRE, BattleWorld, customCounts, HURRY_TICKS, perimeterPath, PRESSURE_PATTERNS, pressureOrder, spiralOrder, stageItems } from '../../src/game/battle/battleWorld';
 import { defaultConfig, type BattleConfig } from '../../src/game/battle/config';
-import { NO_INTENT } from '../../src/game/core/bomber';
+import { NO_INTENT, type Bomber } from '../../src/game/core/bomber';
 import { ALL_DIRS, Cell, tileCenter } from '../../src/game/core/types';
 import { HUT_OPEN_TICKS } from '../../src/game/battle/gimmicks';
 
@@ -266,6 +266,85 @@ describe('battle world', () => {
     expect(w.gim.boosts(x, y)).toBe(true);
     for (let t = 0; t < HUT_OPEN_TICKS; t++) w.gim.update();
     expect(w.gim.features[i]).toMatchObject({ kind: 'cover', style: 'hut', open: 0 });
+  });
+
+  const advanced = (seed = 4) => {
+    const cfg = config('advanced', 2);
+    const w = new BattleWorld({ cfg, arena: ARENAS.find((a) => a.id === 'a1')!, seed });
+    for (let y = 1; y < 12; y++) for (let x = 1; x < 14; x++) if (w.grid.get(x, y) === Cell.Soft) w.grid.set(x, y, Cell.Floor);
+    for (const f of w.gim.features.keys()) w.gim.features[f] = null;
+    w.items.fill(null);
+    const [a, b] = w.bombers;
+    a.x = tileCenter(3);
+    a.y = tileCenter(5);
+    b.x = tileCenter(9);
+    b.y = tileCenter(5);
+    return { w, a, b };
+  };
+  const press = (w: BattleWorld, who: Bomber, intent: Partial<typeof NO_INTENT>, ticks = 1) => {
+    for (let t = 0; t < ticks; t++) {
+      who.intent = { ...NO_INTENT, ...(t === 0 ? intent : {}) };
+      for (const o of w.bombers) if (o !== who) o.intent = NO_INTENT;
+      w.update();
+    }
+  };
+
+  it('Bomber Bazooka: the rocket knocks out whoever it reaches, then ten weak seconds', () => {
+    const { w, a, b } = advanced();
+    a.character = 'bazooka';
+    b.character = 'bomberman';
+    press(w, a, { dirs: ['right'], special: true }, 30);
+    expect(b.alive).toBe(false);
+    expect(a.weak).toBeGreaterThan(0);
+    expect(w.bombShape(a).range).toBe(1);
+    expect(w.canPlaceBomb(a)).toBe(true);
+    w.placeBomb(a);
+    expect(w.canPlaceBomb(a, a.tx + 1, a.ty)).toBe(false);
+  });
+
+  it('Kotetsu: the shockwave knocks items loose without killing', () => {
+    const { w, a, b } = advanced();
+    a.character = 'kotetsu';
+    w.giveItem(b, 'bomb', true);
+    w.giveItem(b, 'fire', true);
+    press(w, a, { dirs: ['right'], special: true }, 30);
+    expect(b.alive).toBe(true);
+    expect(b.stunned).toBeGreaterThan(0);
+    expect(b.collected).toHaveLength(0);
+  });
+
+  it('Green Roo and Boar charge until blocked; the Boar rams a soft block along', () => {
+    const { w, a } = advanced();
+    a.partner = 'dox';
+    w.grid.set(7, 5, Cell.Soft);
+    press(w, a, { dirs: ['right'], special: true }, 40);
+    expect(a.dash).toBe(null);
+    expect(a.tx).toBe(6);
+    expect(w.grid.get(7, 5)).toBe(Cell.Floor);
+    expect(w.grid.get(8, 5)).toBe(Cell.Soft);
+  });
+
+  it('a stocked egg brings back the same partner', () => {
+    const { w, a } = advanced();
+    a.partner = 'drakko';
+    a.eggs = 1;
+    w.kill(a, null);
+    expect(a.alive).toBe(true);
+    expect(a.partner).toBe('drakko');
+    expect(a.eggs).toBe(0);
+  });
+
+  it("Shelly's shell stops fire from behind", () => {
+    const { w, a } = advanced();
+    a.partner = 'coney';
+    a.facing = 'right';
+    a.stats.bombs = 2;
+    const behind = w.placeBomb(a, 1, 5)!;
+    behind.range = 3;
+    w.explode(behind);
+    w.update();
+    expect(a.alive).toBe(true);
+    expect(a.partner).toBe('coney');
   });
 
   it('knocked-out bombers ride carts around the edge', () => {

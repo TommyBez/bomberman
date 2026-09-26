@@ -136,6 +136,10 @@ export class Bomber implements Body {
   weak = 0;
   /** Streaking disease: keeps running this way. */
   streak: Dir | null = null;
+  /** Partner dash (Green Roo, Boar): charging this way until something is in the way. */
+  dash: Dir | null = null;
+  /** Recent positions (oldest first); a stocked egg follows along them. */
+  trail: [number, number][] = [];
 
   constructor(
     readonly id: number,

@@ -81,6 +81,6 @@ export const PARTNERS: PartnerDef[] = [
   { kind: 'pytera', name: 'PTERY', ability: 'SWALLOW BOMB', level: 'advanced', color: '#e05040' },
   { kind: 'simeon', name: 'MONKEY', ability: 'LIFT BLOCK', level: 'advanced', color: '#c08850' },
   { kind: 'drakko', name: 'DRAKE', ability: 'HIP ATTACK', level: 'advanced', color: '#50b050' },
-  { kind: 'coney', name: 'SHELLY', ability: 'MULTI BOMB', level: 'advanced', color: '#e0a0e0' },
-  { kind: 'dox', name: 'BOAR', ability: 'SHOVE BLOCK', level: 'advanced', color: '#806040' },
+  { kind: 'coney', name: 'SHELLY', ability: 'MULTI BOMB + SHELL', level: 'advanced', color: '#e0a0e0' },
+  { kind: 'dox', name: 'BOAR', ability: 'CHARGE', level: 'advanced', color: '#806040' },
 ];
