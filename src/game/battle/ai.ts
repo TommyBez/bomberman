@@ -1,5 +1,5 @@
 import type { Bomber, Intent } from '../core/bomber';
-import { ALL_DIRS, Cell, DX, DY, OPPOSITE, TILE, tileCenter, toTile, type Dir } from '../core/types';
+import { ALL_DIRS, Cell, DX, DY, OPPOSITE, TILE, tileCenter, type Dir } from '../core/types';
 import type { Bomb } from '../core/world';
 import type { BattleWorld } from './battleWorld';
 import { CHARACTERS, type Personality } from './characters';
@@ -149,18 +149,8 @@ export class CpuPlayer {
     }
     // Pressure blocks about to fall.
     for (const f of w.falling) into[this.idx(f.tx, f.ty)] = Math.min(into[this.idx(f.tx, f.ty)], f.t);
-    // Trolleys: the tiles right ahead of them.
-    for (const tr of w.gim.trolleys) {
-      if (tr.stop > 0) continue;
-      let x = toTile(tr.x);
-      let y = toTile(tr.y);
-      for (let k = 0; k < 3; k++) {
-        into[this.idx(x, y)] = Math.min(into[this.idx(x, y)], k * (TILE / tr.speed));
-        x += DX[tr.dir];
-        y += DY[tr.dir];
-        if (!w.grid.inside(x, y)) break;
-      }
-    }
+    // Trolleys: every rail tile they can reach soon, and when.
+    for (const [i, t] of w.gim.trolleyForecast()) into[i] = Math.min(into[i], t);
   }
 
   /** Where a bomb may go off: its landing tile, or every tile ahead of a kicked bomb. */

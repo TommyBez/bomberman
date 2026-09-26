@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { alternateArena, ARENAS, RAIL_ORIGIN, type ArenaDef } from '../../src/game/battle/arenas';
 import { BattleWorld } from '../../src/game/battle/battleWorld';
 import { defaultConfig } from '../../src/game/battle/config';
+import { CpuPlayer } from '../../src/game/battle/ai';
 import { NO_INTENT } from '../../src/game/core/bomber';
 import { ALL_DIRS, Cell, DX, DY, tileCenter, toTile } from '../../src/game/core/types';
 
@@ -70,6 +71,58 @@ describe('changing rails (Switcheroo, Destination Unknown)', () => {
         expect(seen.size).toBeGreaterThan(1);
       });
     }
+  }
+});
+
+describe('trolley forecast (what the CPU players watch)', () => {
+  it('follows both branches at a junction and jumps between warp holes', () => {
+    const w = world('a4');
+    const tr = w.gim.trolleys[0];
+    // Head right along the top rail toward the warp hole at (7, 3).
+    tr.x = tileCenter(5);
+    tr.y = tileCenter(3);
+    tr.dir = 'right';
+    tr.stop = 0;
+    const f = w.gim.trolleyForecast(400);
+    const at = (x: number, y: number): number | undefined => f.get(y * w.grid.w + x);
+    expect(at(6, 3)).toBeLessThan(at(7, 3)!);
+    // Out of the other hole at (7, 9), still heading right.
+    expect(at(8, 9)).toBeDefined();
+    expect(at(8, 9)!).toBeLessThan(at(11, 9)!);
+  });
+
+  it('counts the wait at a station before the trolley moves on', () => {
+    const w = world('b4');
+    const tr = w.gim.trolleys[0];
+    tr.x = tileCenter(3);
+    tr.y = tileCenter(6);
+    tr.dir = 'down';
+    tr.stop = 80;
+    const f = w.gim.trolleyForecast(400);
+    expect(f.get(7 * w.grid.w + 3)!).toBeGreaterThanOrEqual(80);
+  });
+
+  for (const id of ['n4', 'a4']) {
+    it(`${id}: CPU players seldom get run over`, () => {
+      let runOver = 0;
+      let deaths = 0;
+      for (let seed = 1; seed <= 3; seed++) {
+        const w = world(id, false, 5, seed * 31);
+        const ais = w.bombers.map((b) => new CpuPlayer(w, b, 'normal'));
+        const kill = w.kill.bind(w);
+        w.kill = (b, killer, force) => {
+          if (b.alive && !killer && force) runOver++;
+          if (b.alive) deaths++;
+          kill(b, killer, force);
+        };
+        // Stop before Hurry!: falling blocks also kill with no killer.
+        for (let t = 0; t < 60 * 110 && !w.result; t++) {
+          w.bombers.forEach((b, i) => (b.intent = ais[i].think()));
+          w.update();
+        }
+      }
+      expect(runOver).toBeLessThanOrEqual(Math.max(2, deaths * 0.25));
+    }, 60_000);
   }
 });
 

@@ -71,6 +71,10 @@ const SIGN_SPEEDS = [0.55, 0.8, 1.1, 1.5, 2.0];
 const FAST_BELT = 2.2;
 /** Ticks of pushing that turn a flower. */
 const FLOWER_PUSH = 18;
+/** How long the trolley waits at a station. */
+const STATION_STOP = 100;
+/** How far ahead (ticks) the CPU players look at the trolley's route. */
+const TROLLEY_HORIZON = 150;
 /** The rails change at random every 8 to 16 seconds. */
 const RAIL_CHANGE_TICKS = 8 * 60;
 const TYRE_RESPAWN = 8 * 60;
@@ -96,6 +100,8 @@ export class Gimmicks {
   railFlash = 0;
   private railChangeAt = 0;
   private railPending = false;
+  private forecast: Map<number, number> | null = null;
+  private forecastTick = -1;
   /** Last tile of each bomber (index by bomber id) for "entered a tile" triggers. */
   private lastTile = new Map<number, number>();
   /** Warp/trampoline cooldown: the tile a bomber must leave before it triggers again. */
@@ -715,6 +721,62 @@ export class Gimmicks {
     }
   }
 
+  /**
+   * Where the trolleys will run over the next `horizon` ticks: tile index → ticks until the
+   * trolley reaches it. Follows the rails as the trolley does: both ways at junctions, the
+   * wait at stations, turning back at dead ends and jumping between warp holes.
+   */
+  trolleyForecast(horizon = TROLLEY_HORIZON): Map<number, number> {
+    if (this.forecast && this.forecastTick === this.tick) return this.forecast;
+    const out = new Map<number, number>();
+    const mark = (x: number, y: number, time: number): void => {
+      const i = this.idx(x, y);
+      if (time <= horizon && (out.get(i) ?? Infinity) > time) out.set(i, Math.max(0, time));
+    };
+    for (const t of this.trolleys) {
+      const tx = toTile(t.x);
+      const ty = toTile(t.y);
+      const perTile = TILE / t.speed;
+      const half = perTile / 2;
+      mark(tx, ty, 0);
+      // How far the centre of the current tile still lies ahead (negative: already passed).
+      const ahead = isHorizontal(t.dir) ? (tileCenter(tx) - t.x) * DX[t.dir] : (tileCenter(ty) - t.y) * DY[t.dir];
+      const wait = Math.max(0, t.stop);
+      const queue: [number, number, Dir, number][] =
+        ahead > 1e-6 ? [[tx, ty, t.dir, wait + ahead / t.speed]] : [[tx + DX[t.dir], ty + DY[t.dir], t.dir, wait + (TILE + ahead) / t.speed]];
+      const best = new Map<string, number>();
+      while (queue.length) {
+        const [x, y, d, time] = queue.shift()!;
+        if (time - half > horizon) continue;
+        const key = `${x},${y},${d}`;
+        if ((best.get(key) ?? Infinity) <= time) continue;
+        best.set(key, time);
+        mark(x, y, time - half);
+        let cx = x;
+        let cy = y;
+        let now = time;
+        const f = this.at(x, y);
+        if (f && f.kind === 'rail' && f.trolleyWarp) {
+          for (let i = 0; i < this.features.length; i++) {
+            const g = this.features[i];
+            if (g && g.kind === 'rail' && g.trolleyWarp && i !== this.idx(x, y)) {
+              cx = i % this.w.grid.w;
+              cy = Math.floor(i / this.w.grid.w);
+              mark(cx, cy, now - half);
+              break;
+            }
+          }
+        }
+        if (this.stations.has(this.idx(cx, cy))) now += STATION_STOP;
+        const options = ALL_DIRS.filter((nd) => nd !== OPPOSITE[d] && this.railAt(cx + DX[nd], cy + DY[nd]));
+        for (const nd of options.length ? options : [OPPOSITE[d]]) queue.push([cx + DX[nd], cy + DY[nd], nd, now + perTile]);
+      }
+    }
+    this.forecast = out;
+    this.forecastTick = this.tick;
+    return out;
+  }
+
   private trolleyAtCenter(t: Trolley): void {
     const w = this.w;
     let tx = toTile(t.x);
@@ -741,7 +803,7 @@ export class Gimmicks {
       }
     }
     if (this.stations.has(this.idx(tx, ty))) {
-      t.stop = 100;
+      t.stop = STATION_STOP;
       for (const r of t.riders) r.riding = false;
       t.riders = [];
     }
