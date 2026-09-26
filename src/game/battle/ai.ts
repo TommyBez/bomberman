@@ -1,5 +1,5 @@
 import type { Bomber, Intent } from '../core/bomber';
-import { ALL_DIRS, Cell, DX, DY, OPPOSITE, TILE, tileCenter, toTile, type Dir } from '../core/types';
+import { ALL_DIRS, Cell, DX, DY, OPPOSITE, TILE, tileCenter, type Dir } from '../core/types';
 import type { Bomb } from '../core/world';
 import type { BattleWorld } from './battleWorld';
 import { CHARACTERS, type Personality } from './characters';
@@ -31,9 +31,7 @@ const DIFFICULTY: Record<ComLevel, { replan: number; slack: number; mistake: num
 
 /** How long (ticks) a spot where bombing was not possible stays unattractive. */
 const TABU_TICKS = 240;
-/** The robot: ticks from starting a stomp to the impact, and how far ahead CPUs look. */
-const ROBOT_WINDUP = 30;
-const ROBOT_IMPACT = 20;
+/** How far ahead (ticks) CPUs watch the robot's feet. */
 const ROBOT_HORIZON = 90;
 /** Extra cost (ticks) of waiting on a belt: it carries you away from the safe spot. */
 const BELT_REST_PENALTY = 45;
@@ -157,25 +155,8 @@ export class CpuPlayer {
     for (const f of w.falling) into[this.idx(f.tx, f.ty)] = Math.min(into[this.idx(f.tx, f.ty)], f.t);
     // Trolleys: every rail tile they can reach soon, and when.
     for (const [i, t] of w.gim.trolleyForecast()) into[i] = Math.min(into[i], t);
-    // The robot's stomp stuns everyone within two tiles: keep clear when one is due.
-    const r = w.gim.robot;
-    if (r && !r.gone && r.leaving === 0) {
-      const walking = r.stomp === 0;
-      const due = walking ? r.cooldown + ROBOT_WINDUP : r.stomp - ROBOT_IMPACT;
-      if (due >= 0 && due <= ROBOT_HORIZON) {
-        // While it walks it may still move a tile before stomping.
-        const reach = walking ? 3 : 2;
-        const rx = toTile(r.x);
-        const ry = toTile(r.y);
-        for (let y = ry - reach; y <= ry + reach; y++) {
-          for (let x = rx - reach; x <= rx + reach; x++) {
-            if (!w.grid.inside(x, y) || Math.abs(x - rx) + Math.abs(y - ry) > reach) continue;
-            const i = this.idx(x, y);
-            into[i] = Math.min(into[i], due);
-          }
-        }
-      }
-    }
+    // The robot's feet: keep off the tiles they are about to come down on.
+    for (const [i, t] of w.gim.robotForecast(ROBOT_HORIZON)) into[i] = Math.min(into[i], t);
   }
 
   /**

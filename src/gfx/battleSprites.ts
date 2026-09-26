@@ -18,7 +18,8 @@ import {
   partnerSprite,
   pressureBlock,
   railTile,
-  robotSprite,
+  robotBody,
+  robotFoot,
   seesawPlank,
   seesawTile,
   signTile,
@@ -82,8 +83,8 @@ export interface GimmickSprites {
   foliage: Sprite[];
   canopy: Sprite;
   trolley: Record<Dir, Sprite[]>;
-  robot: Sprite[];
-  robotStomp: Sprite[];
+  robotBody: Sprite[];
+  robotFoot: Sprite;
   fish: Sprite[];
   carts: Sprite[];
   pressure: Sprite;
@@ -130,8 +131,8 @@ export function gimmickSprites(): GimmickSprites {
     foliage: [0, 1, 2].map((v) => coverSprite('foliage', v)),
     canopy: canopySprite(),
     trolley: rec((d) => [0, 1].map((f) => trolleySprite(d, f))),
-    robot: [0, 1, 2].map((f) => robotSprite(f, false, 0)),
-    robotStomp: [0, 6, 12].map((lift) => robotSprite(0, true, lift)),
+    robotBody: [0, 1].map(robotBody),
+    robotFoot: robotFoot(),
     fish: [0, 1].map(fishSprite),
     carts: BOMBER_COLORS.map((c) => cartSprite(c.suit[1])),
     pressure: pressureBlock('#9aa2b4'),

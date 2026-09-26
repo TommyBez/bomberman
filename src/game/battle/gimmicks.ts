@@ -57,15 +57,39 @@ export interface Trolley {
   flash: number;
 }
 
+/** One of the robot's four feet: where it stands, or where it is stepping to. */
+export interface RobotFoot {
+  tx: number;
+  ty: number;
+  /** While the foot is in the air: the tile it lands on, and ticks until it does. */
+  to: [number, number] | null;
+  lift: number;
+}
+
+/**
+ * Robo Bomber's giant: a body high above the arena on four long legs. It walks two tiles
+ * at a time, one foot after another; whoever a foot comes down on is stunned and drops
+ * items. With a minute left it leaves.
+ */
 export interface Robot {
+  /** Body centre (px), over the tile it walks over. */
   x: number;
   y: number;
-  dir: Dir;
-  stomp: number;
-  cooldown: number;
+  /** The body's tile at the start of this walk and where it is walking to. */
+  from: [number, number];
+  goal: [number, number];
+  feet: RobotFoot[];
+  /** Feet that have stepped on this walk (0–4); resting while `rest` counts down. */
+  stepped: number;
+  rest: number;
   leaving: number;
   gone: boolean;
 }
+
+/** Where each foot stands relative to the body's tile: the four diagonals, two tiles out. */
+export const ROBOT_FEET: [number, number][] = [[-2, -2], [2, 2], [2, -2], [-2, 2]];
+/** Ticks a foot is in the air for one step. */
+export const ROBOT_STEP = 26;
 
 export interface Fish {
   tx: number;
@@ -308,7 +332,10 @@ export class Gimmicks {
     for (const [x, y] of this.arena.stations ?? []) this.stations.add(this.idx(x, y));
     const t = this.arena.trolley;
     if (t) this.trolleys.push({ x: tileCenter(t.x), y: tileCenter(t.y), dir: t.dir, speed: 1.2, stop: 0, riders: [], flash: 0 });
-    if (this.arena.gimmick === 'robot') this.robot = { x: tileCenter(7), y: tileCenter(5), dir: 'left', stomp: 0, cooldown: 200, leaving: 0, gone: false };
+    if (this.arena.gimmick === 'robot') {
+      const feet = ROBOT_FEET.map(([dx, dy]) => ({ tx: 7 + dx, ty: 5 + dy, to: null, lift: 0 }));
+      this.robot = { x: tileCenter(7), y: tileCenter(5), from: [7, 5], goal: [7, 5], feet, stepped: 4, rest: 150, leaving: 0, gone: false };
+    }
     // Unpaired seesaw ends become plain floor.
     this.seesaws = this.seesaws.filter((s) => s.b[0] >= 0);
   }
@@ -347,13 +374,11 @@ export class Gimmicks {
 
   // ------------------------------------------------------------------ movement hooks
 
-  /** Extra walkability rules: the trolley and the robot. */
+  /** Extra walkability rules: nobody walks into a moving trolley. */
   canEnter(b: Bomber, tx: number, ty: number): boolean {
     for (const t of this.trolleys) {
       if (t.stop <= 0 && toTile(t.x) === tx && toTile(t.y) === ty && !t.riders.includes(b)) return false;
     }
-    const r = this.robot;
-    if (r && !r.gone && toTile(r.x) === tx && toTile(r.y) === ty) return false;
     return true;
   }
 
@@ -938,51 +963,88 @@ export class Gimmicks {
       if (r.leaving > 90) r.gone = true;
       return;
     }
-    if (r.stomp > 0) {
-      r.stomp--;
-      if (r.stomp === 20) {
-        // Impact: everyone close by is stunned and loses items.
-        for (const b of w.bombers) {
-          if (!b.alive || b.airborne > 0) continue;
-          if (Math.abs(b.tx - toTile(r.x)) + Math.abs(b.ty - toTile(r.y)) <= 2) {
-            b.stunned = Math.max(b.stunned, 90);
-            w.scatterItems(b, 2);
-            w.emit({ type: 'stun', who: b.id });
-          }
-        }
-        w.emit({ type: 'pressure', tx: toTile(r.x), ty: toTile(r.y) });
-        w.emit({ type: 'shake', frames: 12 });
+    if (r.stepped >= 4) {
+      if (--r.rest > 0) return;
+      const prev = r.from;
+      r.from = r.goal;
+      r.goal = this.robotGoal(r.from, prev);
+      r.stepped = 0;
+    }
+    // One foot at a time: lift it, carry it to its place round the new goal, stamp it down.
+    const k = r.stepped;
+    const foot = r.feet[k];
+    if (!foot.to) {
+      foot.to = [r.goal[0] + ROBOT_FEET[k][0], r.goal[1] + ROBOT_FEET[k][1]];
+      foot.lift = ROBOT_STEP;
+    }
+    if (--foot.lift <= 0) {
+      [foot.tx, foot.ty] = foot.to;
+      foot.to = null;
+      foot.lift = 0;
+      this.robotStomp(foot.tx, foot.ty);
+      r.stepped++;
+      if (r.stepped >= 4) r.rest = 50 + w.rng.int(70);
+    }
+    // The body glides along as the feet move.
+    const k2 = Math.min(1, (r.stepped + (foot.to ? 1 - foot.lift / ROBOT_STEP : 0)) / 4);
+    r.x = tileCenter(r.from[0] + (r.goal[0] - r.from[0]) * k2);
+    r.y = tileCenter(r.from[1] + (r.goal[1] - r.from[1]) * k2);
+  }
+
+  /** Two tiles on, keeping all four feet inside the arena; it turns back only at a dead end. */
+  private robotGoal([x, y]: [number, number], prev: [number, number]): [number, number] {
+    const options = ALL_DIRS.map((d): [number, number] => [x + DX[d] * 2, y + DY[d] * 2]).filter(([nx, ny]) => this.robotCanStand(nx, ny));
+    const onward = options.filter(([nx, ny]) => nx !== prev[0] || ny !== prev[1]);
+    return this.w.rng.pick(onward.length ? onward : options);
+  }
+
+  /** The body's tile keeps all four feet inside the walls. */
+  private robotCanStand(x: number, y: number): boolean {
+    return x >= 3 && y >= 3 && x <= this.w.grid.w - 4 && y <= this.w.grid.h - 4;
+  }
+
+  /** A foot comes down: whoever stands under it is stunned and drops items. */
+  private robotStomp(tx: number, ty: number): void {
+    const w = this.w;
+    for (const b of w.bombers) {
+      if (!b.alive || b.airborne > 0 || b.tx !== tx || b.ty !== ty) continue;
+      b.stunned = Math.max(b.stunned, 90);
+      w.scatterItems(b, 2);
+      w.emit({ type: 'stun', who: b.id });
+    }
+    w.emit({ type: 'pressure', tx, ty });
+    w.emit({ type: 'shake', frames: 6 });
+  }
+
+  /**
+   * Where the robot's feet will come down over the next `horizon` ticks: tile index →
+   * ticks until the stamp (what the CPU players keep clear of).
+   */
+  robotForecast(horizon = 120): Map<number, number> {
+    const out = new Map<number, number>();
+    const r = this.robot;
+    if (!r || r.gone || r.leaving > 0) return out;
+    // The next walk's goal isn't chosen yet while resting: every way it might go counts.
+    const walks: { goal: [number, number]; start: number; from: number }[] = [];
+    if (r.stepped >= 4) {
+      for (const d of ALL_DIRS) {
+        const gx = r.goal[0] + DX[d] * 2;
+        const gy = r.goal[1] + DY[d] * 2;
+        if (this.robotCanStand(gx, gy)) walks.push({ goal: [gx, gy], start: r.rest + ROBOT_STEP, from: 0 });
       }
-      return;
+    } else {
+      const foot = r.feet[r.stepped];
+      walks.push({ goal: r.goal, start: foot.to ? foot.lift : ROBOT_STEP, from: r.stepped });
     }
-    r.cooldown--;
-    if (r.cooldown <= 0) {
-      r.stomp = 50;
-      r.cooldown = 150 + w.rng.int(120);
-      return;
-    }
-    // Lumber along the corridors.
-    const speed = 0.5;
-    const atC = r.x === tileCenter(toTile(r.x)) && r.y === tileCenter(toTile(r.y));
-    // A giant: it strides over soft blocks, but not pillars or bombs.
-    const walk = (tx: number, ty: number): boolean => {
-      const c = w.grid.get(tx, ty);
-      if (c !== Cell.Floor && c !== Cell.Soft) return false;
-      if (w.bombAtTile(tx, ty)) return false;
-      return true;
-    };
-    if (atC) {
-      const tx = toTile(r.x);
-      const ty = toTile(r.y);
-      const open = ALL_DIRS.filter((d) => walk(tx + DX[d], ty + DY[d]));
-      if (!open.length) return;
-      if (!open.includes(r.dir) || w.rng.chance(0.25)) {
-        const turns = open.filter((d) => d !== OPPOSITE[r.dir]);
-        r.dir = w.rng.pick(turns.length ? turns : open);
+    for (const { goal, start, from } of walks) {
+      for (let k = from; k < 4; k++) {
+        const t = start + (k - from) * ROBOT_STEP;
+        if (t > horizon) break;
+        const i = this.idx(goal[0] + ROBOT_FEET[k][0], goal[1] + ROBOT_FEET[k][1]);
+        out.set(i, Math.min(out.get(i) ?? Infinity, t));
       }
     }
-    r.x += DX[r.dir] * speed;
-    r.y += DY[r.dir] * speed;
+    return out;
   }
 
   // ------------------------------------------------------------------ fish

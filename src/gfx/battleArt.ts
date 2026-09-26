@@ -645,31 +645,50 @@ export function trolleySprite(dir: Dir, frame: number): Sprite {
   return p.canvas;
 }
 
-export function robotSprite(frame: number, stomping: boolean, lift: number): Sprite {
-  const p = new PixelCanvas(40, 48);
-  const oy = stomping ? -lift : 0;
-  const legY = 34;
-  const step = frame % 2;
-  // legs
-  p.rect(9, legY - step * 2, 8, 12 + step * 2, '#303038');
-  p.rect(23, legY - (1 - step) * 2, 8, 12 + (1 - step) * 2, '#303038');
-  p.rect(7, 44, 12, 4, '#505058');
-  p.rect(21, 44, 12, 4, '#505058');
-  // body
-  p.roundRect(4, 14 + oy, 32, 22, '#000000', 3);
-  p.roundRect(5, 15 + oy, 30, 20, '#d0d4e0', 3);
-  p.rect(8, 20 + oy, 24, 10, '#4060c0');
-  p.rect(10, 22 + oy, 20, 6, '#80a0ff');
-  // head
-  p.roundRect(10, 2 + oy, 20, 14, '#000000', 3);
-  p.roundRect(11, 3 + oy, 18, 12, '#e0e4f0', 3);
-  p.rect(13, 7 + oy, 14, 4, '#200000');
-  p.rect(14 + (frame % 3) * 4, 8 + oy, 3, 2, '#ff3030');
-  p.rect(19, 0 + oy, 2, 3, '#606060');
-  p.circle(20, 0 + oy, 1.5, '#ffe040');
-  // arms
-  p.rect(0, 18 + oy, 5, 12, '#303038');
-  p.rect(35, 18 + oy, 5, 12, '#303038');
+/**
+ * Robo Bomber's giant (48×44): a grey dome with a yellow visor, a dark jaw and the sockets
+ * its legs hang from. `frame` blinks the lamp on top.
+ */
+export function robotBody(frame: number): Sprite {
+  const p = new PixelCanvas(48, 44);
+  const [outline, metal, light, shade] = ['#1c1c2c', '#b8bccb', '#eef0fa', '#7a8098'];
+  // Leg sockets either side.
+  for (const x of [5, 42]) {
+    p.circle(x, 30, 5.5, outline);
+    p.circle(x, 30, 4.5, '#8890a8');
+    p.circle(x - 1, 29, 1.6, light);
+  }
+  // Jaw.
+  p.roundRect(11, 30, 26, 13, outline, 3);
+  p.roundRect(12, 31, 24, 11, '#5a6072', 3);
+  for (let x = 15; x < 34; x += 4) p.rect(x, 34, 2, 6, '#2a2e3c');
+  // Dome.
+  p.ellipse(24, 21, 22.5, 19.5, outline);
+  p.ellipse(24, 21, 21.5, 18.5, metal);
+  p.ellipse(24, 26, 20, 12, shade);
+  p.ellipse(24, 21, 20, 15, metal);
+  p.ellipse(16, 11, 8, 5, light);
+  p.ellipse(14, 9, 3, 2, '#ffffff');
+  // Visor: a yellow band with two slit eyes.
+  p.rect(5, 19, 38, 12, outline);
+  p.rect(6, 20, 36, 10, '#ffc020');
+  p.rect(6, 20, 36, 3, '#fff080');
+  p.rect(6, 27, 36, 3, '#f08010');
+  p.rect(12, 24, 9, 3, '#502000');
+  p.rect(27, 24, 9, 3, '#502000');
+  // Lamp.
+  p.rect(22, 0, 4, 3, outline);
+  p.rect(23, 0, 2, 2, frame % 2 ? '#ff4040' : '#801010');
+  return p.canvas;
+}
+
+/** One of the robot's feet: a heavy round pad (16×10). */
+export function robotFoot(): Sprite {
+  const p = new PixelCanvas(16, 10);
+  p.ellipse(8, 5, 8, 5, '#1c1c2c');
+  p.ellipse(8, 4.5, 7, 4, '#8890a8');
+  p.ellipse(6, 3, 3, 1.6, '#d8dcea');
+  p.rect(3, 7, 10, 1, '#4a5064');
   return p.canvas;
 }
 

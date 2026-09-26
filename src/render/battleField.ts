@@ -6,7 +6,7 @@ import { characterSprites, gimmickSprites } from '../gfx/battleSprites';
 import { bendSides, bendTile, pipeSprites, propSprite } from '../gfx/battleArt';
 import { hardTile, THEMES } from '../gfx/tiles';
 import { sprites, tileSet } from '../gfx/sprites';
-import type { PropStyle } from '../game/battle/gimmicks';
+import { ROBOT_FEET, ROBOT_STEP, type PropStyle } from '../game/battle/gimmicks';
 import { FieldRenderer, type Actor, type View } from './field';
 
 const bendCache = new Map<string, HTMLCanvasElement>();
@@ -53,12 +53,6 @@ export class BattleRenderer {
       const img = gs.trolley[t.dir][Math.floor(frame / 6) % 2];
       actors.push({ y: t.y - 2, draw: (gg, ox, oy) => (t.flash % 4 < 2 ? gg.image(img, ox + t.x - 10, oy + t.y - 10) : undefined) });
     }
-    const r = w.gim.robot;
-    if (r && !r.gone) {
-      const img = r.stomp > 20 ? gs.robotStomp[Math.min(2, Math.floor((50 - r.stomp) / 10))] : r.stomp > 0 ? gs.robotStomp[0] : gs.robot[Math.floor(frame / 12) % 3];
-      const rise = r.leaving > 0 ? r.leaving * 3 : 0;
-      actors.push({ y: r.y + 8, draw: (gg, ox, oy) => gg.image(img, ox + r.x - 20, oy + r.y - 40 - rise) });
-    }
     for (const f of w.gim.fish) {
       const k = f.t / 50;
       const lift = Math.sin(k * Math.PI) * 18;
@@ -81,6 +75,7 @@ export class BattleRenderer {
     });
     this.field.drawActors(g, actors, v);
     this.drawCovers(g, v);
+    this.drawRobot(g, v, frame);
     this.drawPressure(g, v);
   }
 
@@ -346,6 +341,54 @@ export class BattleRenderer {
     for (const [tx, ty] of trees) g.image(gs.canopy, v.ox + (tx - 1) * TILE - 2, v.oy + (ty - 1) * TILE - 8);
   }
 
+  /** Robo Bomber's giant, high above everything on its four legs. */
+  private drawRobot(g: Gfx, v: View, frame: number): void {
+    const r = this.w.gim.robot;
+    if (!r || r.gone) return;
+    const gs = gimmickSprites();
+    const rise = r.leaving > 0 ? r.leaving * 3 : 0;
+    const bx = v.ox + r.x;
+    const by = v.oy + r.y;
+    const hover = 34 + Math.round(Math.sin(frame / 18) * 1.5) + rise;
+    g.ctx.globalAlpha = 0.28;
+    ellipse(g, bx, by + 4, 20, 6, '#000000');
+    g.ctx.globalAlpha = 1;
+    const legs = r.feet.map((f, k) => {
+      let fx = f.tx * TILE + 8;
+      let fy = f.ty * TILE + 8;
+      let lift = 0;
+      if (f.to) {
+        const p = 1 - f.lift / ROBOT_STEP;
+        const [txx, tyy] = [f.to[0] * TILE + 8, f.to[1] * TILE + 8];
+        // The shadow of the coming foot darkens its landing tile.
+        g.ctx.globalAlpha = 0.15 + p * 0.35;
+        ellipse(g, v.ox + txx, v.oy + tyy + 3, 4 + p * 4, 2 + p * 2, '#000000');
+        g.ctx.globalAlpha = 1;
+        fx += (txx - fx) * p;
+        fy += (tyy - fy) * p;
+        lift = Math.sin(p * Math.PI) * 16;
+      }
+      lift += rise;
+      const [dx, dy] = ROBOT_FEET[k];
+      return { hx: bx + Math.sign(dx) * 17, hy: by - hover + 8, fx: v.ox + fx, fy: v.oy + fy - lift, back: dy < 0 };
+    });
+    const leg = (l: (typeof legs)[number]): void => {
+      // Hip up on the body, a knee cocked above the midpoint, down to the foot.
+      const kx = (l.hx + l.fx) / 2 + (l.fx > l.hx ? 4 : -4);
+      const ky = Math.min(l.hy, l.fy) - 12;
+      for (const [w, c] of [[6, '#1c1c2c'], [4, '#dde1ee'], [1, '#ffffff']] as const) {
+        thick(g, l.hx, l.hy, kx, ky, w, c);
+        thick(g, kx, ky, l.fx, l.fy - 3, w, c);
+      }
+      ellipse(g, kx, ky, 3.5, 3.5, '#1c1c2c');
+      ellipse(g, kx, ky, 2.5, 2.5, '#8890a8');
+      g.image(gs.robotFoot, l.fx - 8, l.fy - 6);
+    };
+    for (const l of legs) if (l.back) leg(l);
+    g.image(gs.robotBody[Math.floor(frame / 20) % 2], bx - 24, by - hover - 26);
+    for (const l of legs) if (!l.back) leg(l);
+  }
+
   private drawPressure(g: Gfx, v: View): void {
     const gs = gimmickSprites();
     for (const f of this.w.falling) {
@@ -382,6 +425,20 @@ export class BattleRenderer {
     }
     void toTile;
     void DY;
+  }
+}
+
+/** A line of `w`-pixel squares: pixel-crisp limbs. */
+function thick(g: Gfx, x0: number, y0: number, x1: number, y1: number, w: number, color: string): void {
+  const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0)));
+  for (let i = 0; i <= n; i++) g.rect(Math.round(x0 + ((x1 - x0) * i) / n - w / 2), Math.round(y0 + ((y1 - y0) * i) / n - w / 2), w, w, color);
+}
+
+/** A filled pixel ellipse. */
+function ellipse(g: Gfx, cx: number, cy: number, rx: number, ry: number, color: string): void {
+  for (let y = Math.floor(-ry); y <= Math.ceil(ry); y++) {
+    const half = Math.round(rx * Math.sqrt(Math.max(0, 1 - (y * y) / (ry * ry))));
+    if (half > 0) g.rect(Math.round(cx) - half, Math.round(cy) + y, half * 2, 1, color);
   }
 }
 

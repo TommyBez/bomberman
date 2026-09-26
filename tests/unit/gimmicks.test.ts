@@ -380,6 +380,32 @@ describe('stage maps read from the original', () => {
     }
   });
 
+  it('Robo Bomber: a foot coming down stuns whoever stands under it', () => {
+    const w = world('a2', false, 2, 7);
+    const r = w.gim.robot!;
+    // Start the next walk: the first foot lifts toward its place round the new goal.
+    r.rest = 1;
+    w.gim.update();
+    const foot = r.feet[0];
+    expect(foot.to).not.toBe(null);
+    const [tx, ty] = foot.to!;
+    expect([tx - r.goal[0], ty - r.goal[1]]).toEqual([-2, -2]);
+    // The CPUs see it coming.
+    expect(w.gim.robotForecast().get(ty * w.grid.w + tx)).toBeLessThanOrEqual(26);
+    const b = w.bombers[0];
+    w.grid.set(tx, ty, Cell.Floor);
+    b.x = tileCenter(tx);
+    b.y = tileCenter(ty);
+    b.stats.bombs = 4;
+    b.collected.push('bomb', 'bomb', 'bomb');
+    b.intent = NO_INTENT;
+    for (let t = 0; t < 30; t++) w.update();
+    expect(foot.to).toBe(null);
+    expect([foot.tx, foot.ty]).toEqual([tx, ty]);
+    expect(b.stunned).toBeGreaterThan(0);
+    expect(b.stats.bombs).toBeLessThan(4);
+  });
+
   it('Robo Bomber: blocks on every other tile, and the robot strides over them', () => {
     const w = world('a2', false, 2, 7);
     const r = w.gim.robot!;
