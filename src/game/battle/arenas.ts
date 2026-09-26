@@ -104,7 +104,7 @@ export const ARENAS: ArenaDef[] = [
   {
     id: 'b2', name: 'SEESAW PARK', jpName: 'SEESAW PARK', level: 'beginner', gimmick: 'seesaw', theme: 'park', density: 0.5,
     blurb: 'STEP ON A SEESAW TO LAUNCH WHAT IS ON THE OTHER END.',
-    items: { bomb: 5, fire: 5, speed: 3, rubber: 2, skull: 2, kick: 0 },
+    items: { bomb: 5, fire: 5, speed: 3, skull: 2, kick: 0 },
     map: [
       '###############',
       '#1_........._3#',
@@ -558,7 +558,7 @@ export function arenasFor(level: Level): ArenaDef[] {
 export const ALT_CODES: Record<string, Level> = { '56565656': 'beginner', '16161616': 'normal', '49894989': 'advanced' };
 
 const ALT_ITEMS: Record<Level, Partial<Record<BattleItem, number>>> = {
-  beginner: { bomb: 5, fire: 5, speed: 2, kick: 3, bombpass: 1, fullfire: 1, skull: 1 },
+  beginner: { bomb: 5, fire: 5, speed: 2, kick: 3, bombpass: 1, skull: 1 },
   normal: { bomb: 4, fire: 4, speed: 2, kick: 2, bombpass: 1, glove: 2, punch: 2, push: 1, line: 2, rubber: 1, pierce: 0, egg: 2, skull: 2 },
   advanced: { bomb: 4, fire: 4, speed: 2, kick: 2, bombpass: 1, glove: 1, punch: 1, push: 2, line: 1, powerbomb: 2, rubber: 1, pierce: 2, mine: 2, fullfire: 1, egg: 2, skull: 2 },
 };

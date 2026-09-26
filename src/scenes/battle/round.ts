@@ -139,7 +139,7 @@ export class BattleRoundScene implements Scene {
       this.app.audio.sfx('pause');
     } else if (choice === 'quit') {
       this.app.audio.sfx('menuBack');
-      this.match.quit();
+      this.match.abandon();
     }
   }
 

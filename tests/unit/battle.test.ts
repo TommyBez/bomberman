@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../../src/engine/rng';
-import { ARENAS } from '../../src/game/battle/arenas';
+import { alternateArena, ARENAS } from '../../src/game/battle/arenas';
 import { BATTLE_FIRE_CAP, BATTLE_MAX_FIRE, BattleWorld, customCounts, HURRY_TICKS, perimeterPath, PRESSURE_PATTERNS, pressureOrder, spiralOrder, stageItems } from '../../src/game/battle/battleWorld';
 import { defaultConfig, type BattleConfig } from '../../src/game/battle/config';
 import { NO_INTENT, type Bomber } from '../../src/game/core/bomber';
@@ -94,6 +94,16 @@ describe('battle world', () => {
         const items = stageItems(level, arena);
         for (const k of ['geta', 'heart', 'remote', 'flak'] as const) expect(items[k] ?? 0).toBe(0);
         if (level === 'beginner') expect(items.egg ?? 0).toBe(0);
+      }
+    }
+  });
+
+  it('gives Beginner stages only the most basic items, alternates included', () => {
+    const basic = new Set(['bomb', 'fire', 'speed', 'kick', 'bombpass', 'skull', 'wallpass']);
+    for (const arena of ARENAS.filter((a) => a.level === 'beginner')) {
+      for (const def of [arena, alternateArena(arena)]) {
+        const items = stageItems('beginner', def);
+        for (const [k, n] of Object.entries(items)) if (n) expect(basic.has(k), `${def.id} ${k}`).toBe(true);
       }
     }
   });
@@ -271,6 +281,44 @@ describe('battle world', () => {
     for (let t = 0; t < 60 && bomb.flight; t++) w.update();
     expect(b.stunned).toBeGreaterThan(0);
     expect(b.collected).toHaveLength(0);
+  });
+
+  it('holding a bomb with the Power Glove bats a thrown bomb straight back', () => {
+    const w = new BattleWorld({ cfg: config('normal', 2), arena: ARENAS[0], seed: 8 });
+    for (let x = 1; x < 14; x++) w.grid.set(x, 5, Cell.Floor);
+    const [a, b] = w.bombers;
+    b.x = tileCenter(8);
+    b.y = tileCenter(5);
+    a.x = tileCenter(4);
+    a.y = tileCenter(5);
+    w.giveItem(b, 'glove', true);
+    const own = w.placeBomb(b)!;
+    b.intent = { ...NO_INTENT, bomb: true, bombHeld: true };
+    w.update();
+    expect(b.carrying).toBe(own);
+    b.intent = { ...NO_INTENT, bombHeld: true };
+    const bomb = w.placeBomb(a)!;
+    w.throwTo(bomb, 8, 5);
+    expect(bomb.flight?.dir).toBe('right');
+    for (let t = 0; t < 60 && bomb.flight?.dir !== 'left'; t++) w.update();
+    expect(bomb.flight?.dir).toBe('left');
+    expect(b.stunned).toBe(0);
+    expect(b.collected).toContain('glove');
+    expect(b.carrying).toBe(own);
+  });
+
+  it('hatching Blue Roo gives Bomb Kick and switches Bomb Pass off', () => {
+    let found = false;
+    for (let seed = 1; seed < 80 && !found; seed++) {
+      const w = new BattleWorld({ cfg: config('normal', 2), arena: ARENAS.find((d) => d.level === 'normal')!, seed });
+      const b = w.bombers[0];
+      w.giveItem(b, 'bombpass', true);
+      w.giveItem(b, 'egg', true);
+      if (b.partner !== 'louieBlue') continue;
+      found = true;
+      expect(b.stats).toMatchObject({ kick: true, bombPass: false });
+    }
+    expect(found).toBe(true);
   });
 
   it('a blast inside a snow hut lifts the roof only for a while', () => {

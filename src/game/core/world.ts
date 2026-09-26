@@ -490,6 +490,11 @@ export class World {
     this.emit({ type: 'stun', who: victim.id });
   }
 
+  /** Hook: a flying bomb lands on a bomber who may knock it away (true = it flew on). */
+  protected batBack(_victim: Bomber, _bomb: Bomb, _dir: Dir): boolean {
+    return false;
+  }
+
   /** Hook: a bomb was just placed. */
   protected onBombPlaced(_b: Bomber, _bomb: Bomb): void {}
 
@@ -787,6 +792,7 @@ export class World {
     bomb.tx = tx;
     bomb.ty = ty;
     const victim = this.bombers.find((b) => b.alive && !b.airborne && b.tx === tx && b.ty === ty);
+    if (victim && this.batBack(victim, bomb, f.dir)) return;
     if (victim) this.onBombHit(victim, bomb);
     if (!victim && this.grid.get(tx, ty) === Cell.Void) {
       bomb.flight = null;

@@ -576,8 +576,22 @@ export class BattleWorld extends World {
     }
     const kinds = PARTNERS.filter((p) => p.level === this.cfg.level).map((p) => p.kind);
     b.partner = this.rng.pick(kinds);
-    b.stats.kick = b.stats.kick || b.partner === 'louieBlue';
+    if (b.partner === 'louieBlue') {
+      // "Using the Egg sometimes deactivates other items": Blue Roo kicks, and Bomb Kick
+      // and Bomb Pass never go together.
+      b.stats.kick = true;
+      b.stats.bombPass = false;
+    }
     this.emit({ type: 'item', tx: b.tx, ty: b.ty, item: `partner:${b.partner}`, who: b.id });
+  }
+
+  /** Holding a bomb overhead with the Power Glove, a bomber bats thrown bombs straight back. */
+  protected override batBack(victim: Bomber, bomb: Bomb, dir: Dir): boolean {
+    if (!victim.carrying || victim.stunned) return false;
+    bomb.flight = null;
+    this.launch(bomb, OPPOSITE[dir], 3, bomb.x, bomb.y);
+    this.emit({ type: 'punch', tx: bomb.tx, ty: bomb.ty });
+    return true;
   }
 
   /** Knock some collected power-ups out of a bomber onto the floor. */
@@ -1405,14 +1419,10 @@ export class BattleWorld extends World {
     this.endTimer = 0;
   }
 
-  /** Items spill out on hits (thrown bombs on heads). */
+  /** Rubber bombs bounce on after landing. (Hits on heads go through onBombHit.) */
   protected override updateFlight(bomb: Bomb): void {
     const f = bomb.flight!;
     const landing = f.t + 1 >= f.dur;
-    if (landing) {
-      const victim = this.bombers.find((b) => b.alive && b.airborne <= 0 && b.tx === f.ttx && b.ty === f.tty);
-      if (victim && bomb.owner && bomb.owner !== victim) this.scatterItems(victim, 1);
-    }
     super.updateFlight(bomb);
     // Rubber bombs keep bouncing in random directions.
     if (landing && !bomb.flight && bomb.kind === 'rubber' && !bomb.exploded && this.rng.chance(0.6)) {

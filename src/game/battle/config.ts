@@ -56,12 +56,15 @@ export const ITEM_NAMES: Record<BattleItem, string> = {
 };
 
 /**
- * Items the Custom Battle "Set Item" screen offers. Land Mine, Multi Bomb and Wall Pass
- * can't be placed there; Remote Control belongs to the Normal Game only; the Flak Jacket
- * appears in battle only through this screen.
+ * The 15 items the Custom Battle "Set Item" screen offers, column by column as on the
+ * original screen. Land Mine, Multi Bomb, Wall Pass, Egg and Steel Shoes can't be placed
+ * there; Remote Control belongs to the Normal Game only; the Flak Jacket appears in
+ * battle only through this screen.
  */
 export const CUSTOM_ITEMS: BattleItem[] = [
-  'bomb', 'fire', 'speed', 'geta', 'kick', 'bombpass', 'glove', 'punch', 'push', 'powerbomb', 'rubber', 'pierce', 'fullfire', 'heart', 'skull', 'flak',
+  'bomb', 'fire', 'speed', 'flak', 'bombpass',
+  'kick', 'glove', 'punch', 'push', 'pierce',
+  'rubber', 'powerbomb', 'fullfire', 'heart', 'skull',
 ];
 
 /** Hit points a Custom Battle handicap can give (1 = normal). */

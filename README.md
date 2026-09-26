@@ -84,8 +84,8 @@ letters directly.
 
 ### Battle Game (1–5 players, humans and CPUs)
 
-- **Modes:** Battle Royal and Custom Battle (item counts and hit points), in Single or
-  Tag (team) play.
+- **Modes:** Battle Royal and Custom Battle (the 15-item Set Item screen and hit
+  points), in Single or Tag (team) play.
 - **Rules** follow the PS1 options:
   - COM level, games per match and time.
   - Sudden Death and Random Position (Off, On or Random), and Skull.
@@ -99,7 +99,8 @@ letters directly.
   warps, a two-floor sky stage and snow huts. The Advanced stages add a stomping robot,
   jungle tunnels, the Super Power arena and the Seven Seas.
 - **Items:**
-  - Bomb, Fire, Full Fire, Speed, Kick, Bomb Pass, Power Glove, Punch, Push.
+  - Bomb, Fire, Full Fire (edge to edge), Speed, Kick, Bomb Pass, Punch, Push.
+  - Power Glove: throw bombs or other players, and bat thrown bombs back while holding one.
   - Multi Bomb, Power, Rubber and Metabomb (pierce) bombs, Land Mine.
   - Egg (a riding partner with its own ability), Skull (ten diseases, which spread by
     touch).

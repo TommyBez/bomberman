@@ -100,8 +100,17 @@ The stage table (enemies and item for all 50 stages) lives in `src/game/campaign
 - Items: Bomb, Fire, Speed, Steel Shoes (−speed), Kick, Bomb Pass, Power Glove, Punch,
   Push, Multi Bomb, Power Bomb, Rubber Bomb, Metabomb (pierce, also through items),
   Full Fire, Land Mine, Heart, Egg, Skull; Wall Pass on some alternate stages; Flak Jacket
-  only through Custom Battle. Steel Shoes and Hearts come from Hyper Bomber (or Custom).
-  Remote Control is Normal Game only. Kick and Bomb Pass replace each other.
+  only through Custom Battle. Steel Shoes come only from Hyper Bomber; Hearts from Hyper
+  Bomber or Custom. Remote Control is Normal Game only. Kick and Bomb Pass replace each
+  other (a Blue Louie's kick switches Bomb Pass off too).
+- Custom Battle "Set Item": 15 items in three columns of five (Bomb, Fire, Speed, Flak
+  Jacket, Bomb Pass / Kick, Power Glove, Punch, Push, Metabomb / Rubber, Power Bomb, Full
+  Fire, Heart, Skull), limited by the stage's soft blocks.
+- Full Fire, the first Power Bomb, snow huts, jungle leaves and the Super Power stage give
+  maximum fire: the blast reaches edge to edge. Fire items stop at 8.
+- Power Glove: lift and throw a bomb or another player (Bomber Throw); while holding a
+  bomb, a thrown bomb that lands on you is batted straight back.
+- Beginner stages hide only the most basic items.
 - A kicked Power Bomb, a bouncing Rubber Bomb or a thrown bomb that hits someone knocks
   their items loose.
 - Advanced characters: Bazooka (rocket: blocks, bombs, players), Lady (beam), Jet (boost

@@ -537,9 +537,12 @@ class CustomScene implements Scene {
   }
 }
 
-const ITEM_COLS = 4;
+/** The Set Item grid: three columns of five, filled column by column, as in the original. */
+const ITEM_ROWS = 5;
+const ITEM_COLS = 3;
 
 class ItemSetScene implements Scene {
+  /** Index into CUSTOM_ITEMS, or CUSTOM_ITEMS.length for END. */
   private sel = 0;
   /** Items hide under soft blocks, so the stage's block count is the limit. */
   private readonly capacity: number;
@@ -557,13 +560,33 @@ class ItemSetScene implements Scene {
     return Object.values(this.setup.cfg.customItems ?? {}).reduce((a, b) => a + (b ?? 0), 0);
   }
 
+  private get onEnd(): boolean {
+    return this.sel === CUSTOM_ITEMS.length;
+  }
+
+  private move(dc: number, dr: number): void {
+    const end = CUSTOM_ITEMS.length;
+    let col = this.onEnd ? ITEM_COLS - 1 : Math.floor(this.sel / ITEM_ROWS);
+    let row = this.onEnd ? ITEM_ROWS : this.sel % ITEM_ROWS;
+    if (dr) row = (row + dr + ITEM_ROWS + 1) % (ITEM_ROWS + 1);
+    if (dc && row < ITEM_ROWS) col = (col + dc + ITEM_COLS) % ITEM_COLS;
+    this.sel = row === ITEM_ROWS ? end : col * ITEM_ROWS + row;
+    this.app.audio.sfx('menuMove');
+  }
+
   update(): void {
     const pad = this.app.input.menu;
-    const n = CUSTOM_ITEMS.length;
-    if (pad.repeat('left')) this.sel = (this.sel + n - 1) % n;
-    if (pad.repeat('right')) this.sel = (this.sel + 1) % n;
-    if (pad.repeat('up')) this.sel = (this.sel + n - ITEM_COLS) % n;
-    if (pad.repeat('down')) this.sel = (this.sel + ITEM_COLS) % n;
+    if (pad.repeat('left')) this.move(-1, 0);
+    if (pad.repeat('right')) this.move(1, 0);
+    if (pad.repeat('up')) this.move(0, -1);
+    if (pad.repeat('down')) this.move(0, 1);
+    if (pad.pressed('start') || pad.pressed('select') || (this.onEnd && pad.pressed('a'))) {
+      pad.swallow();
+      this.app.audio.sfx('menuOk');
+      this.back();
+      return;
+    }
+    if (this.onEnd) return;
     const items = this.setup.cfg.customItems!;
     const kind = CUSTOM_ITEMS[this.sel];
     if (pad.repeat('a') && this.total() < this.capacity && (items[kind] ?? 0) < 9) {
@@ -574,28 +597,29 @@ class ItemSetScene implements Scene {
       items[kind] = (items[kind] ?? 0) - 1;
       this.app.audio.sfx('select');
     }
-    if (pad.pressed('start') || pad.pressed('select')) {
-      pad.swallow();
-      this.app.audio.sfx('menuOk');
-      this.back();
-    }
   }
 
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame, '#0c3a2a', '#11473a');
     drawTitleBar(g, 'SET ITEM', this.app.frame);
-    drawPanel(g, 16, 32, 224, 148, '#28a068', '#0c4028');
+    drawPanel(g, 16, 30, 224, 156, '#28a068', '#0c4028');
     const items = this.setup.cfg.customItems!;
     const s = sprites();
+    const txt = { color: '#ffffff', outline: '#000000' };
     CUSTOM_ITEMS.forEach((kind, i) => {
-      const x = 28 + (i % ITEM_COLS) * 52;
-      const y = 40 + Math.floor(i / ITEM_COLS) * 35;
+      const x = 36 + Math.floor(i / ITEM_ROWS) * 72;
+      const y = 38 + (i % ITEM_ROWS) * 24;
       if (i === this.sel) g.frame(x - 3, y - 3, 44, 22, '#ffe040');
       g.image(s.items[kind], x, y);
-      g.text(`×${items[kind] ?? 0}`, x + 20, y + 5, { color: '#ffffff', outline: '#000000' });
+      g.text(`×${items[kind] ?? 0}`, x + 20, y + 5, txt);
     });
-    g.text(ITEM_NAMES[CUSTOM_ITEMS[this.sel]], g.width / 2, 184, { align: 'center', color: '#ffe040', outline: '#000000' });
-    g.text(`A: MORE  B: LESS  START: OK   ${this.capacity - this.total()} LEFT`, g.width / 2, 198, { align: 'center', color: '#c8ffe0', outline: '#000000' });
+    const left = this.capacity - this.total();
+    g.text(`LEFT ${left}`, 36, 165, { ...txt, color: left > 0 ? '#c8ffe0' : '#ff8080' });
+    if (this.onEnd) g.frame(174, 159, 46, 18, '#ffe040');
+    g.text('END', 197, 165, { ...txt, align: 'center' });
+    const name = this.onEnd ? 'START THE BATTLE' : ITEM_NAMES[CUSTOM_ITEMS[this.sel]];
+    g.text(name, g.width / 2, 192, { align: 'center', color: '#ffe040', outline: '#000000' });
+    g.text('A: MORE  B: LESS  START: END', g.width / 2, 206, { align: 'center', color: '#c8ffe0', outline: '#000000' });
   }
 }
 

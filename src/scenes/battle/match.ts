@@ -44,9 +44,16 @@ export class BattleMatch {
     this.app.scenes.go(new BattleRoundScene(this.app, this, arena, prizes, gold));
   }
 
+  /** QUIT on the victory screen: back to the main menu, cursor on BATTLE GAME. */
   quit(): void {
     this.app.audio.stopMusic();
     goMainMenu(this.app, 1);
+  }
+
+  /** START → QUIT → YES during play is a soft reset: back to the title screen. */
+  abandon(): void {
+    this.app.audio.stopMusic();
+    goTitle(this.app);
   }
 
   /** Called by the round scene when a game is over. */
