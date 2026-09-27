@@ -14,7 +14,8 @@ sound in this project are original; only the game rules are reproduced.
 
 - Straight overhead view, 16×16 tiles, **256×224** display.
 - The top wall is drawn two tiles tall from the stage's own wall blocks, and the HUD is printed on it.
-- Title → **PRESS START BUTTON** → *Normal Game* / *Battle Game* / *Option*.
+- Title → **PRESS START BUTTON** → *Normal Game* / *Battle Game* / *Option*; *Normal Game*
+  turns the same menu into *New Game* / *Continue*.
 
 ## Normal Game (1 player)
 

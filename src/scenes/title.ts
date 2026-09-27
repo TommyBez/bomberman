@@ -6,7 +6,7 @@ import { sprites } from '../gfx/sprites';
 import { Menu } from '../render/ui';
 import { startDemo } from './battle/demo';
 import { BattleSetup } from './battle/setup';
-import { openNormalGame } from './mainMenu';
+import { openContinue, openNewGame } from './mainMenu';
 import { OptionScene } from './option';
 
 const DEMO_IDLE_TICKS = 20 * 60;
@@ -22,15 +22,23 @@ export class TitleScene implements Scene {
   private t = 0;
   /** Ticks without input; the demo starts after 20 seconds. */
   private idle = 0;
-  /** NORMAL GAME / BATTLE GAME / OPTION, once START has been pressed. */
+  /**
+   * NORMAL GAME / BATTLE GAME / OPTION once START has been pressed, and in its place
+   * NEW GAME / CONTINUE once NORMAL GAME has been chosen.
+   */
   private menu: Menu | null = null;
 
   constructor(
     private readonly app: App,
     /** Come back straight to the mode menu with this item selected. */
     private readonly menuIndex?: number,
+    /** ...or to the Normal Game's NEW GAME / CONTINUE with this one selected. */
+    normalIndex?: number,
   ) {
-    if (menuIndex !== undefined) this.openMenu(menuIndex);
+    if (normalIndex !== undefined) this.openNormal(normalIndex);
+    else if (menuIndex !== undefined) this.openMenu(menuIndex);
+    // Coming back to a menu, the logo is already in place.
+    if (this.menu) this.t = 90;
   }
 
   private openMenu(index: number): void {
@@ -38,7 +46,7 @@ export class TitleScene implements Scene {
     this.menu = new Menu(
       app,
       [
-        { label: 'NORMAL GAME', action: () => openNormalGame(app) },
+        { label: 'NORMAL GAME', action: () => this.openNormal(0) },
         { label: 'BATTLE GAME', action: () => new BattleSetup(app).start() },
         { label: 'OPTION', action: () => app.scenes.go(new OptionScene(app)) },
       ],
@@ -46,6 +54,19 @@ export class TitleScene implements Scene {
         this.menu = null;
         this.t = 30;
       },
+    );
+    this.menu.index = index;
+  }
+
+  private openNormal(index: number): void {
+    const app = this.app;
+    this.menu = new Menu(
+      app,
+      [
+        { label: 'NEW GAME', action: () => openNewGame(app) },
+        { label: 'CONTINUE', action: () => openContinue(app) },
+      ],
+      () => this.openMenu(0),
     );
     this.menu.index = index;
   }

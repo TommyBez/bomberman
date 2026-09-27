@@ -3,39 +3,19 @@ import type { Gfx } from '../engine/gfx';
 import type { Scene } from '../engine/scene';
 import { CampaignSession } from '../game/campaign/session';
 import { drawHand, drawMenuBackdrop, drawMenuWindow, drawWindow, Menu, MENU_TEXT } from '../render/ui';
-import { goMainMenu } from './nav';
+import { goNormalMenu } from './nav';
 import { startNormalGame } from './normal/flow';
 import { MemoryCardScene } from './normal/memoryCard';
 import { PasswordScene } from './normal/password';
 
-/** NORMAL GAME from the title's mode menu. */
-export function openNormalGame(app: App): void {
-  app.scenes.go(new NormalMenuScene(app));
+/** NEW GAME on the title: pick the version. */
+export function openNewGame(app: App): void {
+  app.scenes.go(new VersionSelectScene(app));
 }
 
-/** NORMAL GAME → NEW GAME / CONTINUE. */
-class NormalMenuScene implements Scene {
-  private readonly menu: Menu;
-
-  constructor(private readonly app: App) {
-    this.menu = new Menu(
-      app,
-      [
-        { label: 'NEW GAME', action: () => app.scenes.go(new VersionSelectScene(app)) },
-        { label: 'CONTINUE', action: () => app.scenes.go(new ContinueFromScene(app)) },
-      ],
-      () => goMainMenu(app, 0),
-    );
-  }
-
-  update(): void {
-    this.menu.update();
-  }
-
-  render(g: Gfx): void {
-    drawMenuBackdrop(g, this.app.frame);
-    drawMenuWindow(g, 'NORMAL GAME', this.menu, { style: 'card' });
-  }
+/** CONTINUE on the title: from a password or the memory card. */
+export function openContinue(app: App): void {
+  app.scenes.go(new ContinueFromScene(app));
 }
 
 /** "Which version?": Modern or Retro, then the memory card question. */
@@ -49,7 +29,7 @@ class VersionSelectScene implements Scene {
         { label: 'MODERN', action: () => app.scenes.go(new SaveQuestionScene(app, 'modern')) },
         { label: 'RETRO', action: () => app.scenes.go(new SaveQuestionScene(app, 'retro')) },
       ],
-      () => app.scenes.go(new NormalMenuScene(app)),
+      () => goNormalMenu(app, 0),
     );
   }
 
@@ -127,7 +107,7 @@ class ContinueFromScene implements Scene {
             ),
         },
       ],
-      () => app.scenes.go(new NormalMenuScene(app)),
+      () => goNormalMenu(app, 1),
     );
   }
 

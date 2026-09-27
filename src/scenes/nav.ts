@@ -11,3 +11,8 @@ export function goTitle(app: App): void {
 export function goMainMenu(app: App, index = 0): void {
   app.scenes.go(new TitleScene(app, index));
 }
+
+/** Back to the title's NEW GAME / CONTINUE choice for the Normal Game. */
+export function goNormalMenu(app: App, index = 0): void {
+  app.scenes.go(new TitleScene(app, 0, index));
+}
