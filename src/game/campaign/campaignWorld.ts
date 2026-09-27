@@ -4,8 +4,23 @@ import { overlaps } from '../core/movement';
 import { ALL_DIRS, Cell, DX, DY, tileCenter } from '../core/types';
 import { World, type Blast, type Bomb, type ItemCell } from '../core/world';
 import { Enemy, type EnemyEnv } from './enemy';
-import { ENEMY_ORDER, type EnemyKind } from './enemies';
+import type { EnemyKind } from './enemies';
 import { SECRET_POINTS, type BonusStageDef, type CampaignItem, type SecretPanel, type StageDef } from './stages';
+
+/**
+ * Each item has its monster, which pours out when the item or the exit of a stage holding it
+ * is bombed (the 1985 manual, pp. 6-7; the PlayStation manual shows Balloms leaving a door).
+ */
+const ITEM_MONSTER: Record<CampaignItem, EnemyKind> = {
+  bomb: 'balloom',
+  fire: 'oneal',
+  speed: 'doll',
+  wallpass: 'minvo',
+  remote: 'kondoria',
+  bombpass: 'ovapi',
+  fireman: 'pass',
+  flak: 'pontan',
+};
 
 export type { CampaignItem };
 
@@ -350,7 +365,7 @@ export class CampaignWorld extends World implements EnemyEnv {
     this.release(tx, ty, `item:${tx},${ty}`);
   }
 
-  /** A bombed door or item releases a pack of tougher monsters. */
+  /** A bombed door or item releases a pack of the monster that goes with the stage's item. */
   private release(tx: number, ty: number, key: string): void {
     if (this.bonus || this.spawnedFrom.has(key)) return;
     this.spawnedFrom.add(key);
@@ -364,14 +379,9 @@ export class CampaignWorld extends World implements EnemyEnv {
     this.emit({ type: 'spawn', tx, ty });
   }
 
-  /** Monster released as a penalty: one step tougher than the stage's toughest. */
+  /** Monster released as a penalty: the one that goes with the stage's item (Pontans once time is up). */
   penaltyKind(): EnemyKind {
-    if (this.timeUp) return 'pontan';
-    let top = 0;
-    for (const [kind, count] of Object.entries(this.stage.enemies) as [EnemyKind, number][]) {
-      if (count > 0) top = Math.max(top, ENEMY_ORDER.indexOf(kind));
-    }
-    return ENEMY_ORDER[Math.min(ENEMY_ORDER.length - 1, top + 1)];
+    return this.timeUp ? 'pontan' : ITEM_MONSTER[this.stage.item];
   }
 
   protected override onSoftHit(tx: number, ty: number, bomb: Bomb): void {

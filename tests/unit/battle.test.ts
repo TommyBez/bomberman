@@ -424,7 +424,7 @@ describe('battle world', () => {
     expect(w.grid.get(2, 5)).toBe(Cell.Soft);
   });
 
-  it('Brown Louie lays every bomb you carry in a line; the Multi Bomb item stops at four', () => {
+  it('Brown Louie and the Multi Bomb item both lay every bomb you carry in a line', () => {
     const { w, a } = advanced();
     a.character = 'bomberman';
     a.stats.bombs = 7;
@@ -438,7 +438,7 @@ describe('battle world', () => {
     a.partner = null;
     a.stats.lineBomb = true;
     press(w, a, { action: true }, 1);
-    expect(w.bombs.filter((b) => b.owner === a)).toHaveLength(4);
+    expect(w.bombs.filter((b) => b.owner === a)).toHaveLength(7);
   });
 
   it('Pink Louie hops a soft block or a bomb, never a pillar', () => {

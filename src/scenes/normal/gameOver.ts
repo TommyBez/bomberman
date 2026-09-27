@@ -4,7 +4,7 @@ import type { Scene } from '../../engine/scene';
 import { encodePassword } from '../../game/campaign/password';
 import type { CampaignSession } from '../../game/campaign/session';
 import { mix } from '../../engine/gfx';
-import { PixelCanvas } from '../../gfx/pixel';
+import { dizzySprite } from '../../gfx/poses';
 import { Menu } from '../../render/ui';
 import { goTitle } from '../nav';
 import type { NormalFlow } from './flow';
@@ -66,42 +66,4 @@ export class GameOverScene implements Scene {
     g.text('PASSWORD', 40, 193, { gradient: ['#ff6040', '#b01000'], outline: '#401000' });
     g.text(this.password.split('').join(' '), 176, 193, { align: 'center', gradient: ['#ffffff', '#80c0ff'], outline: '#102060' });
   }
-}
-
-let dizzy: HTMLCanvasElement[] | null = null;
-
-/** Bomberman sitting on the floor with swirling eyes (two frames). */
-function dizzySprite(frame: number): HTMLCanvasElement {
-  if (!dizzy) {
-    dizzy = [0, 1].map((f) => {
-      const p = new PixelCanvas(24, 24);
-      // Feet stuck out in front, body, arms.
-      p.ellipse(5.5, 20, 4.5, 3.2, '#000000');
-      p.ellipse(18.5, 20, 4.5, 3.2, '#000000');
-      p.ellipse(5.5, 19.6, 3.6, 2.4, '#f050a0');
-      p.ellipse(18.5, 19.6, 3.6, 2.4, '#f050a0');
-      p.ellipse(4.5, 18.8, 1.5, 0.8, '#ffb0d8');
-      p.ellipse(17.5, 18.8, 1.5, 0.8, '#ffb0d8');
-      p.rect(8, 15, 8, 6, '#000000');
-      p.rect(9, 15, 6, 5, '#3060e0');
-      p.rect(9, 19, 6, 1, '#202020');
-      p.circle(6.5, 16, 2.2, '#000000');
-      p.circle(17.5, 16, 2.2, '#000000');
-      p.circle(6.5, 16, 1.4, '#f050a0');
-      p.circle(17.5, 16, 1.4, '#f050a0');
-      // Head, antenna, face.
-      p.rect(11, 1, 2, 3, '#000000');
-      p.circle(12, 1.5, 1.6, '#f050a0');
-      p.roundRect(3, 3, 18, 13, '#000000', 5);
-      p.roundRect(4, 4, 16, 11, '#ffffff', 4);
-      p.roundRect(6, 6, 12, 8, '#000000', 2);
-      p.roundRect(7, 7, 10, 6, '#ffc890', 2);
-      // Swirling eyes (the spiral turns between frames).
-      const spiral = f ? ['.aaa', 'a...', 'a.a.', 'aaa.'] : ['aaa.', '...a', '.a.a', '.aaa'];
-      p.rows(spiral, { a: '#803010' }, 7, 8);
-      p.rows(spiral, { a: '#803010' }, 13, 8);
-      return p.canvas;
-    });
-  }
-  return dizzy[frame % 2];
 }

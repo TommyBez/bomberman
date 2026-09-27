@@ -44,14 +44,18 @@ const GOLD: BomberColors = {
 
 const charCache = new Map<string, BomberSprites>();
 
+/** A player's colours (or gold after winning Hyper Bomber). */
+export function bomberColors(color: number, gold = false): BomberColors {
+  return gold ? GOLD : BOMBER_COLORS[color % BOMBER_COLORS.length];
+}
+
 /** Sprites for a character in a player colour (or gold after winning Hyper Bomber). */
 export function characterSprites(character: string, color: number, gold = false): BomberSprites {
   const key = `${character}:${color}:${gold ? 1 : 0}`;
   let s = charCache.get(key);
   if (s) return s;
   const look = CHARACTERS[character]?.look ?? 'none';
-  const colors = gold ? GOLD : BOMBER_COLORS[color % BOMBER_COLORS.length];
-  s = buildBomber(colors, look === 'none' ? undefined : (p, dir) => drawAccessory(p, look, dir as Dir));
+  s = buildBomber(bomberColors(color, gold), look === 'none' ? undefined : (p, dir) => drawAccessory(p, look, dir as Dir));
   charCache.set(key, s);
   return s;
 }

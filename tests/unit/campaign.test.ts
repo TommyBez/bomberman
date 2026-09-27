@@ -88,6 +88,16 @@ describe('CampaignWorld generation', () => {
       expect(w.enemies.length).toBe(before + 8);
     }
   });
+
+  it("the monsters released go with the stage's item", () => {
+    const expected: Record<string, string> = { bomb: 'balloom', fire: 'oneal', speed: 'doll', wallpass: 'minvo', remote: 'kondoria', bombpass: 'ovapi', fireman: 'pass', flak: 'pontan' };
+    for (const stage of STAGES) {
+      const w = new CampaignWorld(stage, freshPowers(), 3);
+      expect(w.penaltyKind(), `stage ${stage.number}`).toBe(expected[stage.item]);
+    }
+    // Stage 2 hides a Bomb Up: Balloms come out, as in the manual's picture.
+    expect(new CampaignWorld(STAGES[1], freshPowers(), 3).penaltyKind()).toBe('balloom');
+  });
 });
 
 describe('hidden panels', () => {

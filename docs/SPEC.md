@@ -25,7 +25,7 @@ sound in this project are original; only the game rules are reproduced.
 | Field | 31×13 tiles incl. border (29×11 playable), pillars on even/even tiles, horizontal scrolling |
 | Objective | Kill every monster, then walk into the exit (a pair of doors hidden under a soft block) |
 | Timer | 3:00 per stage; at 0:00 a swarm of extra monsters (Pontans) appears |
-| Penalty | Bombing the revealed exit or item releases a pack of tougher monsters (the NES rule: 8, one grade above the stage's toughest; the PS1 count isn't documented) |
+| Penalty | Bombing the revealed exit or the item releases a pack of the monster that goes with the stage's item (the NES rule: Bomb Up → Ballom, Fire Up → Onil, Speed Up → Dahl, Wall Pass → Minvo, Remote → Doria, Bomb Pass → Ovapi, Fireman → Pass, Flak Jacket → Pontan; 8 of them, the PS1 count isn't documented) |
 | Lives | ×02 at the start (3 tries), **+1 for every stage cleared** |
 | Caps | Bombs 10, Fire 5 |
 | Bonus stage | After stages 5, 10, …, 45: invincible, endless monsters of one kind, 30 s of score attack |
@@ -122,8 +122,8 @@ The stage table (enemies and item for all 50 stages) lives in `src/game/campaign
   that runs players over), Hammer, Great (invincible), Honey (pistol sets off bombs),
   Kotetsu (sword shockwave). Bazooka, Jet and Great are at their weakest for 10 s after.
 - Partners (Eggs): Normal level Louies (Yellow block kick, Blue bomb kick over walls,
-  Green dash, Pink hop over one soft block or bomb, Brown every bomb you carry in a line;
-  the Multi Bomb item lays at most four); Advanced level Ptera (swallow a bomb),
+  Green dash, Pink hop over one soft block or bomb, Brown every bomb you carry in a line,
+  like the Multi Bomb item); Advanced level Ptera (swallow a bomb),
   Kicky (lift a block), Draco (jump and stomp), Shell (line bomb, shell against fire from
   behind), Dogyu (charge, rams blocks). An Advanced rider can stock one egg, which trails
   behind, can be burnt, and revives the same partner.
@@ -138,8 +138,10 @@ The stage table (enemies and item for all 50 stages) lives in `src/game/campaign
   Short-tempered, Slow Motion, Warp. Cured by another item or passed on by touch.
 - Bomber Cart: knocked-out players ride carts around the edge and lob bombs (Super: a hit
   swaps you back in).
-- Hyper Bomber: the round winner throws a yo-yo at moving item panels to start the next
-  game with that item (and turns gold).
+- Hyper Bomber: the round winner may take on the prize game, on a TV-show set: seven
+  panels (Fire, Bomb, Speed, Heart, Multi Bomb, Kick, Steel Shoes) circle a pillar, and a
+  yo-yo thrown as one passes in front grabs it for the start of the next game. Whoever
+  plays turns gold.
 - Results screen (trophies), Battle Report (who beat whom), VICTORY / DRAW.
 
 ### Stages

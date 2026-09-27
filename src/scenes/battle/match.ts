@@ -4,13 +4,14 @@ import type { Scene } from '../../engine/scene';
 import { arenaFor } from '../../game/battle/arenas';
 import { altUnlocked } from '../../game/battle/unlocks';
 import type { BattleWorld } from '../../game/battle/battleWorld';
-import { ITEM_NAMES, type BattleConfig, type BattleItem } from '../../game/battle/config';
+import type { BattleConfig, BattleItem } from '../../game/battle/config';
 import { characterSprites } from '../../gfx/battleSprites';
 import { PixelCanvas } from '../../gfx/pixel';
 import { BOMBER_COLORS, sprites } from '../../gfx/sprites';
 import { headSprite, hudIcons } from '../../render/hud';
-import { drawMenuBackdrop, drawPanel, drawTitleBar, drawWindow, Menu } from '../../render/ui';
+import { drawMenuBackdrop, drawPanel, drawWindow, Menu } from '../../render/ui';
 import { goMainMenu, goTitle } from '../nav';
+import { HyperBomberScene } from './hyperBomber';
 import { BattleRoundScene } from './round';
 
 /** A set of games: rounds until someone (or a team) reaches the required wins. */
@@ -384,150 +385,6 @@ class DrawScene implements Scene {
       const step = Math.floor((this.t + k * 7) / 16) % 4;
       g.image(sp.walk.down[step === 1 ? 0 : step], x - 8, 172);
     });
-  }
-}
-
-// ------------------------------------------------------------------ Hyper Bomber
-
-/** Hyper Bomber panels; Steel Shoes and Hearts are only won here (or set in Custom Battle). */
-const PRIZES: BattleItem[] = ['bomb', 'fire', 'speed', 'geta', 'kick', 'bombpass', 'glove', 'punch', 'fullfire', 'heart', 'line', 'pierce', 'push'];
-
-/** The winner throws a yo-yo at moving item panels to win an item for the next game. */
-class HyperBomberScene implements Scene {
-  private phase: 'ask' | 'play' | 'done' = 'ask';
-  private sel = 0;
-  private t = 0;
-  private panels: { item: BattleItem; x: number }[] = [];
-  private yoyo: { y: number; dir: number } | null = null;
-  private hit: BattleItem | null = null;
-  private throwsLeft = 3;
-  private readonly cpu: boolean;
-  private cpuDelay = 0;
-
-  constructor(
-    private readonly app: App,
-    private readonly match: BattleMatch,
-    private readonly slot: number,
-  ) {
-    this.cpu = match.cfg.players[slot].type === 'com';
-    const shuffled = [...PRIZES].sort(() => Math.random() - 0.5);
-    this.panels = shuffled.slice(0, 6).map((item, i) => ({ item, x: i * 44 }));
-    this.cpuDelay = 30 + Math.floor(Math.random() * 60);
-  }
-
-  enter(): void {
-    this.app.audio.music('bonus', { restart: true });
-  }
-
-  update(): void {
-    this.t++;
-    const pad = this.cpu ? null : this.app.input.players[this.slot];
-    const menu = this.app.input.menu;
-    if (this.phase === 'ask') {
-      if (this.cpu) {
-        if (this.t > 40) this.phase = 'play';
-        return;
-      }
-      if (menu.pressed('left') || menu.pressed('right') || menu.pressed('up') || menu.pressed('down')) {
-        this.sel = 1 - this.sel;
-        this.app.audio.sfx('menuMove');
-      }
-      if (menu.pressed('a') || menu.pressed('start')) {
-        menu.swallow();
-        this.app.audio.sfx('menuOk');
-        if (this.sel === 0) this.phase = 'play';
-        else this.match.continueAfterResults(null);
-      }
-      return;
-    }
-    // Panels glide across the screen.
-    for (const p of this.panels) p.x = (p.x + 1.4) % 264;
-    if (this.phase === 'done') {
-      if (this.t > 120 || menu.pressed('start')) {
-        // Win or miss, the challenger turns gold for the next game.
-        if (this.hit) this.match.prizes[this.slot] = this.hit;
-        this.match.gold[this.slot] = true;
-        this.match.playRound();
-      }
-      return;
-    }
-    const throwNow = this.cpu ? --this.cpuDelay <= 0 : !!pad && (pad.pressed('a') || pad.pressed('b') || menu.pressed('a'));
-    if (!this.yoyo && throwNow && this.throwsLeft > 0) {
-      this.yoyo = { y: 180, dir: -1 };
-      this.throwsLeft--;
-      this.cpuDelay = 40 + Math.floor(Math.random() * 60);
-      this.app.audio.sfx('punch');
-    }
-    if (this.yoyo) {
-      this.yoyo.y += this.yoyo.dir * 5;
-      if (this.yoyo.dir < 0 && this.yoyo.y <= 72) {
-        // Did it hit a panel?
-        const hitPanel = this.panels.find((p) => Math.abs(p.x - 8 - 120) < 12);
-        if (hitPanel) {
-          this.hit = hitPanel.item;
-          this.phase = 'done';
-          this.t = 0;
-          this.app.audio.sfx('bigItem');
-        }
-        this.yoyo.dir = 1;
-      }
-      if (this.yoyo.y >= 180) {
-        this.yoyo = null;
-        if (this.throwsLeft === 0 && this.phase === 'play') {
-          this.phase = 'done';
-          this.t = 0;
-          this.app.audio.sfx('menuBack');
-        }
-      }
-    }
-  }
-
-  render(g: Gfx): void {
-    drawMenuBackdrop(g, this.app.frame);
-    drawTitleBar(g, 'HYPER BOMBER', this.app.frame);
-    const p = this.match.cfg.players[this.slot];
-    const sp = characterSprites(p.character, this.slot, this.hit !== null);
-    if (this.phase === 'ask') {
-      drawPanel(g, 32, 60, 192, 100, '#a07820', '#402800');
-      g.text(`PLAYER ${this.slot + 1}`, g.width / 2, 70, { align: 'center', color: '#ffe040', outline: '#000000' });
-      g.text('CHALLENGE HYPER BOMBER?', g.width / 2, 88, { align: 'center', color: '#ffffff', outline: '#000000' });
-      g.image(sp.walk.down[Math.floor(this.app.frame / 8) % 4], g.width / 2 - 8, 100);
-      ['YES', 'NO'].forEach((o, i) => {
-        const x = g.width / 2 - 30 + i * 60;
-        g.text((i === this.sel ? '▶' : ' ') + o, x, 140, { align: 'center', color: i === this.sel ? '#ffe040' : '#ffffff', outline: '#000000' });
-      });
-      return;
-    }
-    // Panel rail
-    g.rect(0, 50, g.width, 30, '#201000');
-    const items = sprites().items;
-    for (const pn of this.panels) {
-      const x = pn.x - 8;
-      g.image(items[pn.item], x - 8, 56);
-      g.image(items[pn.item], x - 8 - 264, 56);
-    }
-    g.rect(120, 48, 16, 2, '#ff4040');
-    // Thrower
-    g.image(sp.walk.up[0], 120, 184);
-    if (this.yoyo) {
-      g.rect(128, this.yoyo.y, 1, 184 - this.yoyo.y, '#ffffff');
-      g.ctx.fillStyle = '#e02020';
-      g.ctx.beginPath();
-      g.ctx.arc(128.5, this.yoyo.y, 4, 0, Math.PI * 2);
-      g.ctx.fill();
-    }
-    g.text(`THROWS: ${this.throwsLeft}`, 8, 34, { color: '#ffffff', outline: '#000000' });
-    if (this.phase === 'done') {
-      drawPanel(g, 40, 100, 176, 50, '#a07820', '#402800');
-      if (this.hit) {
-        g.text('GOT IT!', g.width / 2, 108, { align: 'center', scale: 2, color: '#ffe040', outline: '#000000' });
-        g.text(ITEM_NAMES[this.hit], g.width / 2, 130, { align: 'center', color: '#ffffff', outline: '#000000' });
-      } else {
-        g.text('TOO BAD!', g.width / 2, 116, { align: 'center', scale: 2, color: '#ffffff', outline: '#000000' });
-      }
-    } else if (!this.cpu) {
-      g.text('A: THROW THE YO-YO!', g.width / 2, 160, { align: 'center', color: '#fff0a0', outline: '#000000' });
-    }
   }
 }
 

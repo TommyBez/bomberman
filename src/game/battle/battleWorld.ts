@@ -787,8 +787,7 @@ export class BattleWorld extends World {
         return true;
       }
       case 'louieBrown':
-        // Every bomb you carry, in a line (the Multi Bomb item stops at four).
-        return this.lineBomb(b, Infinity);
+        return this.lineBomb(b);
       case 'coney':
         return this.lineBomb(b);
       case 'pytera': {
@@ -955,14 +954,17 @@ export class BattleWorld extends World {
     if (b.stats.lineBomb) this.lineBomb(b);
   }
 
-  /** Lay bombs in a line ahead: the Multi Bomb item lays up to four. */
-  private lineBomb(b: Bomber, most = 4): boolean {
+  /**
+   * Lay every bomb you carry in a line ahead ("手持ちの爆弾をまとめて", Japanese manual p. 27),
+   * for the Multi Bomb item and the partners that do the same.
+   */
+  private lineBomb(b: Bomber): boolean {
     const d = b.facing;
     let x = b.tx;
     let y = b.ty;
     let placed = 0;
     if (this.placeBomb(b, x, y)) placed++;
-    while (placed < most && b.activeBombs < b.stats.bombs) {
+    while (b.activeBombs < b.stats.bombs) {
       x += DX[d];
       y += DY[d];
       if (!this.canPlaceBomb(b, x, y) || this.tileHasBlockingBody(x, y, null) || this.items[this.idx(x, y)]) break;
