@@ -3,17 +3,6 @@ import { mix, textWidth, type Gfx } from '../engine/gfx';
 import type { Controller } from '../engine/input';
 import { PixelCanvas } from '../gfx/pixel';
 
-/** Big outlined text on a dark band across the screen ("PLAYER 1 WINS!"). */
-export function drawBanner(g: Gfx, text: string, y: number, color = '#ffe040', scale = 2): void {
-  const h = 7 * scale + 10;
-  g.ctx.globalAlpha = 0.55;
-  g.rect(0, y - h / 2, g.width, h, '#000000');
-  g.ctx.globalAlpha = 1;
-  g.rect(0, y - h / 2, g.width, 1, mix(color, '#ffffff', 0.4));
-  g.rect(0, y + h / 2 - 1, g.width, 1, mix(color, '#000000', 0.4));
-  g.text(text, g.width / 2, y - (7 * scale) / 2, { align: 'center', scale, gradient: ['#ffffff', color], outline: '#000000' });
-}
-
 /** The original's big call-outs, each word with its own colours and outline. */
 export type WordStyle = 'ready' | 'hurry' | 'timeUp' | 'pause' | 'demo';
 

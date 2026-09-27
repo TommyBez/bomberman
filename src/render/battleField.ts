@@ -131,7 +131,9 @@ export class BattleRenderer {
     const blink = b.invincible > 0 && b.invincible < 100000 && Math.floor(frame / 3) % 2 === 0;
     const cycle = sp.walk[b.facing];
     let img = b.moving ? cycle[Math.floor(b.walkTick / 7) % 4] : cycle[0];
-    if (w.result && b.frozen && w.result.winner === b.id) img = sp.win[Math.floor(frame / 12) % 2];
+    // The winner (or the winning team's survivors) cheers once the game is decided.
+    const won = w.result && !w.result.draw && (w.result.winner === b.id || (w.result.winner === null && w.result.team === b.team));
+    if (won && b.frozen) img = sp.win[Math.floor(frame / 12) % 2];
     if (blink) img = sp.flash[b.facing];
     const partner = b.partner;
     const riderUp = partner ? 7 : 0;

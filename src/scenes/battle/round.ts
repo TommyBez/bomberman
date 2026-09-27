@@ -14,7 +14,7 @@ import { THEMES } from '../../gfx/tiles';
 import { BattleRenderer } from '../../render/battleField';
 import type { View } from '../../render/field';
 import { clockText, HUD_DIM, HUD_HURRY, HUD_TEXT, hudIcons, hudStrip } from '../../render/hud';
-import { drawBanner, drawWord, PauseMenu, type WordStyle } from '../../render/ui';
+import { drawWord, PauseMenu, type WordStyle } from '../../render/ui';
 import { goTitle } from '../nav';
 import { DEMO_TICKS } from './demo';
 import type { BattleMatch } from './match';
@@ -228,12 +228,9 @@ export class BattleRoundScene implements Scene {
     for (const p of this.popups) g.text(p.text, v.ox + p.x, v.oy + p.y - p.t / 3, { align: 'center', color: p.color, outline: '#000000' });
     if (this.phase === 'ready') drawWord(g, this.t < 60 ? 'READY' : 'START', g.height / 2 + 6, 'ready');
     if (this.banner && this.banner.t < 90) drawWord(g, this.banner.text, g.height / 2 + 6, this.banner.style);
-    if (this.phase === 'end' && w.result && this.t > 20) {
-      // A draw gets its own screen next; a time-up still says so here.
-      const r = w.result;
-      if (!r.draw) drawBanner(g, this.match.cfg.tag ? `TEAM ${r.team === 0 ? 'A' : 'B'} WINS!` : `PLAYER ${(r.winner ?? 0) + 1} WINS!`, g.height / 2 + 6, '#ffe040');
-      else if (r.timeUp) drawWord(g, "TIME'S UP!", g.height / 2 + 6, 'timeUp');
-    }
+    // The winner's cheer says it all (the results come next); a time-up says so, as the
+    // original does, and a draw gets its own screen.
+    if (this.phase === 'end' && w.result?.draw && w.result.timeUp && this.t > 20) drawWord(g, "TIME'S UP!", g.height / 2 + 6, 'timeUp');
     if (this.match.demo && Math.floor(this.app.frame / 30) % 2 === 0) {
       drawWord(g, 'DEMO PLAY', g.height - 14, 'demo');
     }
