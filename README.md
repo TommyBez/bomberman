@@ -76,7 +76,9 @@ letters directly.
   each with its original trigger condition. A panel is out only briefly, somewhere on
   the stage.
 - **Versions:**
-  - **Modern:** five world themes and "Bomberman Show Time" skits every ten stages.
+  - **Modern:** five world themes and "Bomberman Show Time" skits after stages 10, 20,
+    30 and 40: wordless gags on the original's four sets (a circus tent, a shopping
+    street, a hall with red doors, a forest) with its props.
   - **Retro:** NES-style tiles, sprites, flames and chiptune arrangements.
 - **Progress:**
   - Game Over offers Continue, Save or Quit.
@@ -156,7 +158,7 @@ letters directly.
   manual, checked against the stages' background art, and the alternates from their own
   background art. The alternates' soft blocks follow fixed patterns because the
   originals' placements aren't documented.
-- All music, Show Time skits, dialogue and artwork are new, written for this remake.
+- All music, the Show Time gags and all artwork are new, made for this remake.
 
 ## Development
 
@@ -192,6 +194,7 @@ Debug URLs:
 | `#battle=<id>` | You plus four CPUs on a battle stage |
 | `#demo=<id>` | Five CPUs on a battle stage |
 | `#demo=<id>x` | The same on the alternate layout (once that level is unlocked) |
+| `#show=N` | Bomberman Show Time skit N (1–4, after stages 10, 20, 30, 40) |
 
 Battle stage ids run `b1`–`b8`, `n1`–`n8` and `a1`–`a8`. In the browser, `window.__bomberman`
 exposes the running app for tests.
