@@ -118,8 +118,9 @@ letters directly.
   - "Hurry!" pressure-block spiral, TIME'S UP draws.
   - Bomber Carts for knocked-out players.
   - Hyper Bomber prize game, the results screen (a trophy per win), the Battle Report
-    (who knocked out whom), a draw screen (a drawn game doesn't count) and the victory
-    screen.
+    (Fragged / Fragged By columns under each portrait), a draw screen (a drawn game
+    doesn't count) and the victory screen, where the winner is tossed in the air in the
+    ring (Single) or inside a garland of heads (Tag).
 - **CPU players** read a danger map and use a time-aware escape search. They check that
   a bomb has an escape route before placing it, and they watch the stage: the trolley's
   route (through every warp hole), where the robot's feet will land, and bombs carried

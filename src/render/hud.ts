@@ -15,7 +15,8 @@ export interface HudIcons {
   trophy: Sprite;
 }
 
-function head(c: BomberColors, crying = false): Sprite {
+/** A bomber's small head icon in the given colours. */
+export function headSprite(c: BomberColors, crying = false): Sprite {
   const p = new PixelCanvas(10, 10);
   p.px(4, 0, '#000000');
   p.px(5, 0, '#000000');
@@ -74,9 +75,9 @@ export function hudIcons(): HudIcons {
   trophy.rect(2, 9, 6, 1, '#000000');
   const gold: BomberColors = { ...BOMBER_COLORS[0], helmet: ['#fff4b0', '#ffd040', '#c09000'] };
   icons = {
-    heads: BOMBER_COLORS.map((c) => head(c)),
-    crying: BOMBER_COLORS.map((c) => head(c, true)),
-    gold: head(gold),
+    heads: BOMBER_COLORS.map((c) => headSprite(c)),
+    crying: BOMBER_COLORS.map((c) => headSprite(c, true)),
+    gold: headSprite(gold),
     bomb: bomb.canvas,
     fire: fire.canvas,
     clock: clock.canvas,
