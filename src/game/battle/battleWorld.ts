@@ -399,10 +399,14 @@ export class BattleWorld extends World {
         if (b.alive && b.airborne <= 0 && b.tx === nx && b.ty === ny) this.onBombHit(b, bomb);
       }
     }
-    // Rubber bombs bounce back.
-    if (bomb.kind === 'rubber' && !bomb.conveyed && this.slideCheck(bomb, OPPOSITE[dir]) !== 'blocked') {
-      bomb.slide = OPPOSITE[dir];
-      this.emit({ type: 'bounce', tx: bomb.tx, ty: bomb.ty });
+    // Rubber bombs bounce off in a random open direction (the US manual: "bounces around
+    // randomly in different directions until it explodes").
+    if (bomb.kind === 'rubber' && !bomb.conveyed) {
+      const open = ALL_DIRS.filter((d) => d !== dir && this.slideCheck(bomb, d) !== 'blocked');
+      if (open.length) {
+        bomb.slide = this.rng.pick(open);
+        this.emit({ type: 'bounce', tx: bomb.tx, ty: bomb.ty });
+      }
     }
   }
 

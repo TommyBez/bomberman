@@ -43,7 +43,8 @@ them). Layouts are random every attempt; the enemy roster and the item are fixed
 
 **Movement / timing (NES logic):** fuse 159 frames; player 0.75 px/frame, 1.0 px/frame with
 Speed Up; Ballom 0.5 px/frame. Enemy speed classes: slowest 0.25, slow 0.5, normal 0.75,
-fast 1.0 px/frame.
+fast 1.0 px/frame. (The US manual calls Onil and Doria "slow"; the speeds here follow the
+NES tables, where Onil moves at the player's pace.)
 
 ### Monsters
 
@@ -125,7 +126,8 @@ The stage table (enemies and item for all 50 stages) lives in `src/game/campaign
 - Power Glove: lift and throw a bomb or another player (Bomber Throw); while holding a
   bomb, a thrown bomb that lands on you is batted straight back.
 - Beginner stages hide only the most basic items.
-- A kicked Power Bomb, a bouncing Rubber Bomb or a thrown bomb that hits someone knocks
+- A Rubber Bomb that is kicked into something, or lands after a throw, bounces off in a
+  random direction. A kicked Power Bomb, a bouncing Rubber Bomb or a thrown bomb that hits someone knocks
   their items loose.
 - Advanced characters: Bazooka (rocket: blocks, bombs, players), Lady (beam), Jet (boost
   that runs players over), Hammer, Great (invincible), Honey (pistol sets off bombs),
@@ -150,7 +152,7 @@ The stage table (enemies and item for all 50 stages) lives in `src/game/campaign
 - Hyper Bomber: the round winner may take on the prize game, on a TV-show set: seven
   panels (Fire, Bomb, Speed, Heart, Multi Bomb, Kick, Steel Shoes) circle a pillar, and a
   yo-yo thrown as one passes in front grabs it for the start of the next game. Whoever
-  plays turns gold.
+  plays turns gold. In a Tag match the rule is fixed Off (Japanese Wikipedia).
 - Results screen (trophies), Battle Report (who beat whom), VICTORY / DRAW.
 
 ### Stages

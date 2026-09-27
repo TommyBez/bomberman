@@ -54,7 +54,7 @@ export class MemoryCardScene implements Scene {
           this.app.audio.sfx('menuBack');
         }
       }
-    } else if (pad.pressed('b') || pad.pressed('select')) {
+    } else if (pad.pressed('b') || pad.pressed('d') || pad.pressed('select')) {
       pad.swallow();
       this.app.audio.sfx('menuBack');
       this.back();

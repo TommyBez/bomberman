@@ -314,7 +314,7 @@ class CharacterScene implements Scene {
     for (const i of this.humans) {
       const c = this.app.input.players[i];
       if (this.done[i]) {
-        if (c.pressed('b')) {
+        if (c.pressed('b') || c.pressed('d')) {
           this.done[i] = false;
           this.app.audio.sfx('menuBack');
         }
@@ -334,7 +334,7 @@ class CharacterScene implements Scene {
         cfg.players[i].character = this.roster[k].id;
         this.done[i] = true;
         this.app.audio.sfx('menuOk');
-      } else if (c.pressed('b')) {
+      } else if (c.pressed('b') || c.pressed('d')) {
         this.app.audio.sfx('menuBack');
         this.setup.backFromCharacters();
         return;
@@ -432,7 +432,7 @@ class TeamScene implements Scene {
         this.app.audio.sfx('menuOk');
         this.setup.selectStage();
       } else this.app.audio.sfx('menuBack');
-    } else if (pad.pressed('b')) {
+    } else if (pad.pressed('b') || pad.pressed('d')) {
       pad.swallow();
       this.setup.backFromCharacters();
     }
@@ -526,7 +526,7 @@ class StageSelectScene implements Scene {
       pad.swallow();
       this.app.audio.sfx('menuOk');
       this.setup.afterStage();
-    } else if (pad.pressed('b') || pad.pressed('select')) {
+    } else if (pad.pressed('b') || pad.pressed('d') || pad.pressed('select')) {
       pad.swallow();
       this.app.audio.sfx('menuBack');
       this.setup.backFromStage();

@@ -92,7 +92,7 @@ export class HyperBomberScene implements Scene {
         this.app.audio.sfx('menuOk');
         if (this.sel === 0) this.phase = 'play';
         else this.match.continueAfterResults(null);
-      } else if (menu.pressed('b') || menu.pressed('select')) {
+      } else if (menu.pressed('b') || menu.pressed('d') || menu.pressed('select')) {
         menu.swallow();
         this.app.audio.sfx('menuBack');
         this.match.continueAfterResults(null);

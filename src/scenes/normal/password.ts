@@ -82,7 +82,7 @@ export class PasswordScene implements Scene {
       } else this.submit();
     } else if (pad.pressed('start')) {
       this.submit();
-    } else if (pad.pressed('b')) {
+    } else if (pad.pressed('b') || pad.pressed('d')) {
       this.app.audio.sfx('menuBack');
       if (this.cursor > 0) this.cursor--;
       else this.back();
