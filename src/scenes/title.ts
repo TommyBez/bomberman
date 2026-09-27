@@ -10,6 +10,8 @@ import { openContinue, openNewGame } from './mainMenu';
 import { OptionScene } from './option';
 
 const DEMO_IDLE_TICKS = 20 * 60;
+/** Left alone this long, Bomberman nods off (a bubble at his nose) until the demo starts. */
+const DOZE_TICKS = 10 * 60;
 
 /** The title's big orange lettering. */
 const TITLE_TEXT = { scale: 2, gradient: ['#fff070', '#f07800'] as [string, string], outline: '#3c1400' };
@@ -22,6 +24,9 @@ export class TitleScene implements Scene {
   private t = 0;
   /** Ticks without input; the demo starts after 20 seconds. */
   private idle = 0;
+  /** Ticks left of the startled look (woken up) and of the happy one (menu opened). */
+  private startled = 0;
+  private pleased = 0;
   /**
    * NORMAL GAME / BATTLE GAME / OPTION once START has been pressed, and in its place
    * NEW GAME / CONTINUE once NORMAL GAME has been chosen.
@@ -39,6 +44,16 @@ export class TitleScene implements Scene {
     else if (menuIndex !== undefined) this.openMenu(menuIndex);
     // Coming back to a menu, the logo is already in place.
     if (this.menu) this.t = 90;
+  }
+
+  /** Which face Bomberman pulls. */
+  private expression(): Expression {
+    if (this.startled > 0) return 'wide';
+    if (this.idle > DOZE_TICKS) return 'sleep';
+    if (this.pleased > 0) return 'happy';
+    if (this.t % 1500 > 1460) return 'wink';
+    if (this.t % 260 > 252) return 'blink';
+    return 'determined';
   }
 
   private openMenu(index: number): void {
@@ -78,13 +93,18 @@ export class TitleScene implements Scene {
   update(): void {
     this.t++;
     const pad = this.app.input.menu;
+    const dozing = this.idle > DOZE_TICKS;
     this.idle = pad.anyPressed() ? 0 : this.idle + 1;
+    if (dozing && this.idle === 0) this.startled = 40;
+    if (this.startled > 0) this.startled--;
+    if (this.pleased > 0) this.pleased--;
     if (this.menu) {
       this.menu.update();
     } else if (this.t > 20 && (pad.pressed('start') || pad.pressed('a'))) {
       this.app.audio.sfx('menuOk');
       pad.swallow();
       this.openMenu(0);
+      this.pleased = 45;
       return;
     }
     if (this.idle === DEMO_IDLE_TICKS) startDemo(this.app);
@@ -154,7 +174,19 @@ export class TitleScene implements Scene {
     // Bomberman's big face.
     const bob = Math.round(Math.sin(this.t / 24) * 2);
     g.ctx.imageSmoothingEnabled = false;
-    g.ctx.drawImage(bigHead(), g.width / 2 - 40, 58 + bob, 80, 72);
+    g.ctx.drawImage(bigHead(this.expression()), g.width / 2 - 40, 58 + bob, 80, 72);
+    if (this.idle > DOZE_TICKS) {
+      // A bubble at his nose, swelling and shrinking as he breathes.
+      const r = 3 + 5 * (0.5 - 0.5 * Math.cos((this.idle - DOZE_TICKS) / 24));
+      const ctx = g.ctx;
+      ctx.globalAlpha = 0.75;
+      ctx.fillStyle = '#88d8ff';
+      ctx.beginPath();
+      ctx.arc(142 + r * 0.6, 108 + bob, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      g.rect(140 + r * 0.3, 105 + bob - r * 0.4, 2, 2, '#ffffff');
+    }
     if (this.menu) {
       // The modes in the title's orange lettering, straight on the wallpaper, with a bomb for a cursor.
       this.menu.items.forEach((it, i) => {
@@ -192,11 +224,14 @@ function drawStarburst(g: Gfx, cx: number, cy: number, t: number): void {
   layer(19, 10, '#fff040');
 }
 
-let head: HTMLCanvasElement | null = null;
+type Expression = 'determined' | 'blink' | 'wink' | 'happy' | 'wide' | 'sleep';
 
-/** Bomberman's face, big: white helmet, pink antenna ball, a determined look. */
-function bigHead(): HTMLCanvasElement {
-  if (head) return head;
+const heads = new Map<Expression, HTMLCanvasElement>();
+
+/** Bomberman's face, big: white helmet, pink antenna ball, and a look of his own. */
+function bigHead(look: Expression): HTMLCanvasElement {
+  const cached = heads.get(look);
+  if (cached) return cached;
   const p = new PixelCanvas(40, 36);
   p.rect(19, 2, 2, 5, '#000000');
   p.circle(19.5, 3, 3.4, '#000000');
@@ -209,17 +244,61 @@ function bigHead(): HTMLCanvasElement {
   p.roundRect(8, 13, 24, 17, '#000000', 5);
   p.roundRect(9, 14, 22, 15, '#ffc890', 4);
   p.rect(9, 26, 22, 3, '#f0a868');
-  // Eyes and eyebrows.
-  p.roundRect(13, 17, 4, 9, '#000000', 2);
-  p.roundRect(23, 17, 4, 9, '#000000', 2);
-  p.px(14, 18, '#ffffff');
-  p.px(24, 18, '#ffffff');
-  for (let i = 0; i < 5; i++) {
-    p.px(11 + i, 14 + (i >> 1), '#000000');
-    p.px(11 + i, 15 + (i >> 1), '#000000');
-    p.px(28 - i, 14 + (i >> 1), '#000000');
-    p.px(28 - i, 15 + (i >> 1), '#000000');
+  const brows = (): void => {
+    for (let i = 0; i < 5; i++) {
+      p.px(11 + i, 14 + (i >> 1), '#000000');
+      p.px(11 + i, 15 + (i >> 1), '#000000');
+      p.px(28 - i, 14 + (i >> 1), '#000000');
+      p.px(28 - i, 15 + (i >> 1), '#000000');
+    }
+  };
+  const open = (x: number): void => {
+    p.roundRect(x, 17, 4, 9, '#000000', 2);
+    p.px(x + 1, 18, '#ffffff');
+  };
+  const shut = (x: number): void => p.rect(x - 1, 21, 6, 2, '#000000');
+  switch (look) {
+    case 'determined':
+      open(13);
+      open(23);
+      brows();
+      break;
+    case 'blink':
+      shut(13);
+      shut(23);
+      brows();
+      break;
+    case 'wink':
+      open(13);
+      shut(23);
+      brows();
+      p.rect(24, 25, 4, 1, '#000000');
+      p.px(28, 24, '#000000');
+      break;
+    case 'happy':
+      // Eyes screwed up in two arches.
+      for (const x of [12, 22]) {
+        p.rect(x + 1, 18, 4, 2, '#000000');
+        p.rect(x, 20, 2, 4, '#000000');
+        p.rect(x + 4, 20, 2, 4, '#000000');
+      }
+      break;
+    case 'wide':
+      for (const x of [15, 25]) {
+        p.circle(x, 21, 4.2, '#000000');
+        p.circle(x, 21, 3.3, '#ffffff');
+        p.rect(x, 21, 2, 2, '#000000');
+      }
+      break;
+    case 'sleep':
+      // Eyes shut in two U shapes.
+      for (const x of [12, 22]) {
+        p.rect(x, 18, 2, 4, '#000000');
+        p.rect(x + 4, 18, 2, 4, '#000000');
+        p.rect(x + 1, 22, 4, 2, '#000000');
+      }
+      break;
   }
-  head = p.canvas;
-  return head;
+  heads.set(look, p.canvas);
+  return p.canvas;
 }
