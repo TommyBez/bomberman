@@ -133,8 +133,7 @@ test('Battle Game: the setup menus start a round with you and three CPUs', async
     await press(page, 'Enter');
   }
   await page.waitForTimeout(500);
-  await press(page, 'ArrowUp'); // wrap to OK on the rules screen
-  await press(page, 'Enter');
+  await press(page, 'Enter'); // rules: START goes on from any row
   await page.waitForTimeout(500);
   await press(page, 'Enter'); // players: P1 human, P2-P4 computer
   await page.waitForTimeout(500);
@@ -202,10 +201,9 @@ test('Battle Game: Custom Tag match through every setup screen, then draw, resul
   await press(page, 'ArrowDown');
   await press(page, 'Enter'); // TAG MATCH
   await page.waitForTimeout(400);
-  await press(page, 'ArrowUp');
-  await press(page, 'Enter'); // rules: OK
+  await press(page, 'Enter'); // rules
   await page.waitForTimeout(400);
-  await press(page, 'Enter'); // players: OK
+  await press(page, 'Enter'); // players
   await waitFor(page, 's && s.roster', 5_000);
   await press(page, 'KeyD', 2); // P1 moves their own cursor
   await press(page, 'Enter'); // START: everyone set

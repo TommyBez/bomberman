@@ -4,7 +4,7 @@ import type { Scene } from '../engine/scene';
 import { SONGS } from '../audio/songs';
 import { SFX } from '../audio/sfx';
 import { PAD_LAYOUTS } from '../engine/input';
-import { drawMenuBackdrop, drawPanel, drawTitleBar, Menu, type MenuItem } from '../render/ui';
+import { drawHand, drawMenuBackdrop, drawMenuWindow, drawWindow, Menu, MENU_TEXT, MENU_VALUE, type MenuItem } from '../render/ui';
 import { applyScreenOffset, loadSettings, saveSettings } from '../settings';
 import { goMainMenu } from './nav';
 import { PasswordScene } from './normal/password';
@@ -20,10 +20,10 @@ export class OptionScene implements Scene {
     this.menu = new Menu(
       app,
       [
-        { label: 'PASSWORD', action: () => app.scenes.go(new PasswordScene(app, () => app.scenes.go(new OptionScene(app)))), help: 'CONTINUE A NORMAL GAME' },
-        { label: 'SOUND OPTIONS', action: () => app.scenes.go(new SoundScene(app)), help: 'VOLUME, MUSIC TEST, SOUND TEST' },
-        { label: 'SCREEN OPTIONS', action: () => app.scenes.go(new ScreenScene(app)), help: 'ADJUST THE SCREEN POSITION' },
-        { label: 'CONTROLLER', action: () => app.scenes.go(new ControllerScene(app)), help: 'CONTROLS FOR ALL PLAYERS' },
+        { label: 'PASSWORD', action: () => app.scenes.go(new PasswordScene(app, () => app.scenes.go(new OptionScene(app)))) },
+        { label: 'SOUND OPTIONS', action: () => app.scenes.go(new SoundScene(app)) },
+        { label: 'SCREEN OPTIONS', action: () => app.scenes.go(new ScreenScene(app)) },
+        { label: 'CONTROLLER', action: () => app.scenes.go(new ControllerScene(app)) },
         { label: 'EXIT', action: () => goMainMenu(app, 2) },
       ],
       () => goMainMenu(app, 2),
@@ -36,9 +36,7 @@ export class OptionScene implements Scene {
 
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
-    drawTitleBar(g, 'OPTION', this.app.frame);
-    drawPanel(g, 48, 50, 160, 104);
-    this.menu.draw(g, 128, 62, { center: true, lineH: 18, width: 120 });
+    drawMenuWindow(g, 'OPTION', this.menu, { lineH: 24, style: 'option' });
   }
 }
 
@@ -54,7 +52,7 @@ class SoundScene implements Scene {
       app,
       [
         {
-          label: 'OUTPUT',
+          label: 'AUDIO',
           value: () => (this.settings.stereo ? 'STEREO' : 'MONO'),
           change: () => {
             this.settings.stereo = !this.settings.stereo;
@@ -81,17 +79,15 @@ class SoundScene implements Scene {
         },
         {
           label: 'MUSIC TEST',
-          value: () => SONG_LIST[this.song].toUpperCase(),
+          value: () => String(this.song).padStart(2, '0'),
           change: (d) => (this.song = (this.song + d + SONG_LIST.length) % SONG_LIST.length),
           action: () => a.music(SONG_LIST[this.song], { restart: true }),
-          help: 'A: PLAY',
         },
         {
           label: 'SE TEST',
-          value: () => SFX_LIST[this.fx].toUpperCase(),
+          value: () => String(this.fx).padStart(3, '0'),
           change: (d) => (this.fx = (this.fx + d + SFX_LIST.length) % SFX_LIST.length),
           action: () => a.sfx(SFX_LIST[this.fx]),
-          help: 'A: PLAY',
         },
         { label: 'EXIT', action: () => this.leave() },
       ],
@@ -110,39 +106,71 @@ class SoundScene implements Scene {
 
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
-    drawTitleBar(g, 'SOUND OPTIONS', this.app.frame);
-    drawPanel(g, 16, 44, 224, 124);
-    this.menu.draw(g, 34, 56, { lineH: 18, valueX: 176 });
+    drawMenuWindow(g, 'SOUND OPTION', this.menu, { lineH: 22, valueX: 186, style: 'option' });
   }
 }
 
+/**
+ * SCREEN OPTIONS: a banner along the very top edge of the picture, and a choice to move the
+ * picture up or down until all of it can be read.
+ */
 class ScreenScene implements Scene {
   private settings = loadSettings();
+  private row = 0;
 
   constructor(private readonly app: App) {}
 
   update(): void {
     const pad = this.app.input.menu;
-    if (pad.repeat('up')) this.settings.offsetY = Math.max(-16, this.settings.offsetY - 1);
-    if (pad.repeat('down')) this.settings.offsetY = Math.min(16, this.settings.offsetY + 1);
-    if (pad.pressed('a') || pad.pressed('b') || pad.pressed('start') || pad.pressed('select')) {
+    if (pad.repeat('up') || pad.repeat('down')) {
+      this.row = 1 - this.row;
+      this.app.audio.sfx('menuMove');
+    }
+    if (pad.repeat('a')) {
+      const y = Math.max(-16, Math.min(16, this.settings.offsetY + (this.row === 0 ? -1 : 1)));
+      if (y !== this.settings.offsetY) {
+        this.settings.offsetY = y;
+        applyScreenOffset(y);
+        this.app.audio.sfx('select');
+      }
+    } else if (pad.pressed('b') || pad.pressed('d') || pad.pressed('start') || pad.pressed('select')) {
+      pad.swallow();
       saveSettings(this.settings);
-      applyScreenOffset(this.settings.offsetY);
-      this.app.audio.sfx('menuOk');
+      this.app.audio.sfx('menuBack');
       this.app.scenes.go(new OptionScene(this.app));
     }
-    applyScreenOffset(this.settings.offsetY);
   }
 
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
-    drawTitleBar(g, 'SCREEN OPTIONS', this.app.frame);
-    drawPanel(g, 40, 70, 176, 70);
-    g.text('CAN YOU READ THIS?', g.width / 2, 86, { align: 'center', scale: 1, color: '#ffffff', outline: '#000000' });
-    g.text(`POSITION ${this.settings.offsetY > 0 ? '+' : ''}${this.settings.offsetY}`, g.width / 2, 106, { align: 'center', color: '#ffe040', outline: '#000000' });
-    g.text('↑ ↓ MOVE   A: OK', g.width / 2, 124, { align: 'center', color: '#c8d0ff', outline: '#000000' });
-    g.frame(0, 0, g.width, g.height, '#ffe040');
+    drawReadBanner(g);
+    drawWindow(g, 'SCREEN OPTIONS', 14, 46, 228, 158, 'option');
+    const text = { align: 'center' as const, ...MENU_TEXT };
+    g.text('PLEASE ADJUST THE', g.width / 2, 74, text);
+    g.text('STATUS DISPLAY.', g.width / 2, 88, text);
+    ['MOVE DISPLAY UP', 'MOVE DISPLAY DOWN'].forEach((label, i) => {
+      const y = 126 + i * 24;
+      g.text(label, 72, y, MENU_TEXT);
+      if (i === this.row) drawHand(g, 56, y - 1, this.app.frame);
+    });
   }
+}
+
+/** The red-lettered scroll along the top edge of the screen options. */
+function drawReadBanner(g: Gfx): void {
+  const x = 20;
+  const w = g.width - 40;
+  const y = 1;
+  const h = 15;
+  // Rolled ends, then the paper between them.
+  for (const ex of [x - 6, x + w]) {
+    g.rect(ex, y + 1, 6, h - 2, '#a04010');
+    g.rect(ex + 1, y + 2, 4, h - 4, '#f09838');
+    g.rect(ex + 2, y + 3, 1, h - 6, '#ffd890');
+  }
+  g.rect(x, y, w, h, '#803008');
+  for (let i = 1; i < h - 1; i++) g.rect(x, y + i, w, 1, i < 3 ? '#fff0c8' : i > h - 4 ? '#f0b060' : '#ffdc98');
+  g.text('● CAN YOU READ THIS? ●', g.width / 2, y + 4, { align: 'center', color: '#e02010', outline: '#fff8e8' });
 }
 
 /** Colours of the bottom, right, left and top face buttons in the diagram. */
@@ -164,7 +192,6 @@ class ControllerScene implements Scene {
         input.padLayouts = [...this.settings.padLayouts];
         saveSettings(this.settings);
       },
-      help: () => (input.connectedPads()[i] ? 'CONNECTED' : 'NOT CONNECTED'),
     });
     this.menu = new Menu(
       app,
@@ -182,9 +209,8 @@ class ControllerScene implements Scene {
             input.vibration = this.settings.vibration;
             if (this.settings.vibration) input.rumble(input.menu.devices, 0.8, 250);
           },
-          help: 'RUMBLES ON EXPLOSIONS AND KNOCK-OUTS',
         },
-        { label: 'KEYBOARD', action: () => (this.keys = true), help: 'SHOW THE KEYBOARD CONTROLS' },
+        { label: 'KEYBOARD', action: () => (this.keys = true) },
         { label: 'EXIT', action: () => this.leave() },
       ],
       () => this.leave(),
@@ -210,10 +236,9 @@ class ControllerScene implements Scene {
 
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
-    drawTitleBar(g, 'CONTROLLER', this.app.frame);
     if (this.keys) return this.renderKeys(g);
-    drawPanel(g, 12, 34, 232, 126);
-    this.menu.draw(g, 26, 44, { lineH: 16, valueX: 128 });
+    drawWindow(g, 'CONTROLLER OPTIONS', 12, 22, 232, 136);
+    this.menu.draw(g, 30, 42, { lineH: 16, valueX: 128 });
     // The selected gamepad's face buttons (bottom, right, left, top).
     const sel = this.menu.index;
     if (sel <= 3) {
@@ -227,12 +252,12 @@ class ControllerScene implements Scene {
         g.rect(cx + dx - 5, cy + dy - 5, 11, 11, FACE_COLORS[k]);
         g.text(fn.toUpperCase(), cx + dx + 1, cy + dy - 3, { align: 'center', color: '#ffffff', outline: '#000000' });
       });
-      g.text('A BOMB  B SPECIAL  C PUNCH  D STOP', g.width / 2, 168, { align: 'center', color: '#c8d0ff', outline: '#000000' });
+      g.text('A BOMB  B SPECIAL  C PUNCH  D STOP', g.width / 2, 174, { align: 'center', ...MENU_TEXT });
     }
   }
 
   private renderKeys(g: Gfx): void {
-    drawPanel(g, 8, 34, 240, 176);
+    drawWindow(g, 'CONTROLLER OPTIONS', 8, 22, 240, 190);
     const lines: [string, string][] = [
       ['ONE PLAYER / MENUS', ''],
       ['MOVE', 'ARROWS / WASD'],
@@ -247,10 +272,9 @@ class ControllerScene implements Scene {
       ['TOUCH', 'ON-SCREEN PAD'],
     ];
     lines.forEach(([a, b], i) => {
-      const y = 42 + i * 14;
-      g.text(a, 16, y, { color: b ? '#ffe040' : '#ffffff', outline: '#000000' });
-      if (b) g.text(b, 240, y, { color: '#ffffff', outline: '#000000', align: 'right' });
+      const y = 44 + i * 15;
+      g.text(a, 18, y, { color: b ? MENU_TEXT.color : MENU_VALUE, outline: MENU_TEXT.outline });
+      if (b) g.text(b, 238, y, { color: MENU_VALUE, outline: MENU_TEXT.outline, align: 'right' });
     });
-    g.text('A: BACK', g.width / 2, 198, { align: 'center', color: '#a8c0ff', outline: '#000000' });
   }
 }

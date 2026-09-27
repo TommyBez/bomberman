@@ -34,9 +34,9 @@ export class TitleScene implements Scene {
     this.menu = new Menu(
       app,
       [
-        { label: 'NORMAL GAME', action: () => openNormalGame(app), help: 'THE CLASSIC 50-STAGE GAME (1 PLAYER)' },
-        { label: 'BATTLE GAME', action: () => new BattleSetup(app).start(), help: 'UP TO 5 PLAYERS BATTLE IT OUT' },
-        { label: 'OPTION', action: () => app.scenes.go(new OptionScene(app)), help: 'PASSWORD, SOUND, SCREEN AND CONTROLLERS' },
+        { label: 'NORMAL GAME', action: () => openNormalGame(app) },
+        { label: 'BATTLE GAME', action: () => new BattleSetup(app).start() },
+        { label: 'OPTION', action: () => app.scenes.go(new OptionScene(app)) },
       ],
       () => {
         this.menu = null;

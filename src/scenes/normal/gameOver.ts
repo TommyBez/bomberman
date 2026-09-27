@@ -28,15 +28,14 @@ export class GameOverScene implements Scene {
       modern: session.version === 'modern',
     });
     this.menu = new Menu(app, [
-      { label: 'CONTINUE', action: () => this.flow.continueGame(), help: 'RESTART THIS STAGE' },
+      { label: 'CONTINUE', action: () => this.flow.continueGame() },
       {
         label: 'SAVE',
         action: () =>
           this.app.scenes.go(new MemoryCardScene(this.app, 'save', this.session.toSave(), () => this.app.scenes.go(new GameOverScene(this.app, this.flow, this.session)))),
-        help: 'SAVE TO THE MEMORY CARD',
         disabled: () => !this.session.cardSave,
       },
-      { label: 'QUIT', action: () => goTitle(this.app), help: 'BACK TO THE TITLE SCREEN' },
+      { label: 'QUIT', action: () => goTitle(this.app) },
     ]);
   }
 

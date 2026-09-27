@@ -129,10 +129,12 @@ letters directly.
 ### Everything else
 
 - **Title and menus:** the title screen opens the mode menu under the logo, with a
-  **Demo Play** attract mode after 20 s idle. The menus use the original's pastel
-  wallpaper, framed windows and pointing-glove cursor (all redrawn), and the password
-  screen is a character roller.
-- **Options:** stereo/mono, music and SE volume, music and SE test, screen position,
+  **Demo Play** attract mode after 20 s idle. The menus follow the original's look (all
+  redrawn): pastel wallpaper, purple-and-olive checked windows with a name plate across
+  the top edge, pale-green lettering and a pointing-glove cursor. The password screen is
+  a character roller.
+- **Options:** stereo/mono audio, music and SE volume, numbered music and SE tests,
+  screen position (move the picture until the "Can you read this?" banner shows),
   gamepad button layouts, vibration and a keyboard reference.
 - **Audio:** a small WebAudio synthesiser plays every tune and effect from note data.
   It includes pulse, saw and triangle voices, noise drums, reverb and NES-style voices

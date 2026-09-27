@@ -2,7 +2,7 @@ import type { App } from '../../app';
 import type { Gfx } from '../../engine/gfx';
 import type { Scene } from '../../engine/scene';
 import { loadSlots, saveSlot, type SaveData } from '../../game/campaign/session';
-import { drawMenuBackdrop, drawPanel, drawTitleBar } from '../../render/ui';
+import { drawHand, drawMenuBackdrop, drawPanel, drawWindow, MENU_TEXT } from '../../render/ui';
 
 /**
  * The MEMORY CARD screen (3 files), backed by browser storage.
@@ -63,23 +63,23 @@ export class MemoryCardScene implements Scene {
 
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
-    drawTitleBar(g, this.mode === 'save' ? 'SAVE' : 'LOAD', this.app.frame);
-    g.text('MEMORY CARD SLOT 1', g.width / 2, 36, { align: 'center', color: '#c0c0c0', outline: '#000000' });
+    // The question, with the two button hints in the corner.
+    drawWindow(g, this.mode === 'save' ? 'SAVE' : 'LOAD', 14, 24, 228, 82, 'card');
+    const ask = this.msgT > 0 ? [this.msg] : this.mode === 'save' ? ['WHICH FILE DO YOU', 'WANT TO SAVE TO?'] : ['WHICH DATA DO YOU', 'WANT TO LOAD?'];
+    ask.forEach((l, i) => g.text(l, 28, 44 + i * 13, MENU_TEXT));
+    g.text('A: OK', 232, 84, { align: 'right', color: '#ff6878', outline: '#300818' });
+    g.text('B: CANCEL', 232, 94, { align: 'right', color: '#88a0ff', outline: '#101840' });
+    // The three files.
+    drawPanel(g, 14, 116, 228, 86);
     for (let i = 0; i < 3; i++) {
-      const y = 52 + i * 48;
-      const sel = i === this.sel;
-      drawPanel(g, 28, y, 200, 40, sel ? '#4868e0' : '#303860', sel ? '#182070' : '#101428');
-      g.text(`FILE ${i + 1}`, 38, y + 6, { color: sel ? '#ffe040' : '#ffffff', outline: '#000000' });
+      const y = 132 + i * 22;
+      if (i === this.sel) drawHand(g, 26, y - 1, this.app.frame);
+      g.text(`FILE ${i + 1}`, 44, y, MENU_TEXT);
       const d = this.slots[i];
       if (d) {
-        g.text(`STAGE ${String(d.stage).padStart(2, '0')}  ${d.version === 'retro' ? 'RETRO' : 'MODERN'}`, 38, y + 18, { color: '#ffffff', outline: '#000000' });
-        g.text(`SCORE ${d.score}`, 38, y + 28, { color: '#a8c0ff', outline: '#000000' });
-        g.text(d.date, 220, y + 6, { color: '#a8c0ff', outline: '#000000', align: 'right' });
-      } else {
-        g.text('NO DATA', 38, y + 22, { color: '#808098', outline: '#000000' });
-      }
+        g.text('STAGE', 120, y, MENU_TEXT);
+        g.text(String(d.stage), 204, y, { align: 'right', color: '#ffb050', outline: MENU_TEXT.outline });
+      } else g.text('NO DATA', 120, y, MENU_TEXT);
     }
-    if (this.msgT > 0) g.text(this.msg, g.width / 2, 204, { align: 'center', scale: 2, color: '#ffe040', outline: '#000000' });
-    else g.text('A: SELECT   B: BACK', g.width / 2, 208, { align: 'center', color: '#c8d0ff', outline: '#000000' });
   }
 }

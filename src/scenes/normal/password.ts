@@ -9,7 +9,7 @@ import { CampaignSession } from '../../game/campaign/session';
 import { STAGES } from '../../game/campaign/stages';
 import { PixelCanvas } from '../../gfx/pixel';
 import { sprites } from '../../gfx/sprites';
-import { drawMenuBackdrop, drawPanel, drawTitleBar } from '../../render/ui';
+import { drawMenuBackdrop, drawPanel, drawWindow } from '../../render/ui';
 import { startNormalGame } from './flow';
 
 /**
@@ -130,27 +130,24 @@ export class PasswordScene implements Scene {
 
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
-    drawPanel(g, 12, 44, 232, 104, '#403070', '#201040');
-    drawTitleBar(g, 'PASSWORD', this.app.frame);
+    drawWindow(g, 'PASSWORD', 12, 50, 232, 104, 'option');
     // The characters in their own inner frame, with the hand over the one being set.
-    drawPanel(g, 58, 66, 140, 60, '#303880', '#101848');
+    drawPanel(g, 58, 72, 140, 60, '#303880', '#101848');
     const x0 = 128 - (PASSWORD_LENGTH * 16) / 2;
     for (let i = 0; i < PASSWORD_LENGTH; i++) {
       const x = x0 + i * 16 + 8;
-      g.text(this.chars[i], x, 98, { align: 'center', scale: 2, gradient: ['#ffffff', '#88c8ff'], outline: '#102050' });
+      g.text(this.chars[i], x, 104, { align: 'center', scale: 2, gradient: ['#ffffff', '#88c8ff'], outline: '#102050' });
     }
     const hx = x0 + this.cursor * 16 + 3;
     const bob = Math.floor(this.app.frame / 10) % 2;
-    g.image(handSprite(), hx, 76 + bob);
+    g.image(handSprite(), hx, 82 + bob);
     // Bomberman and a rival stand either side.
     const s = sprites();
     const wave = Math.floor(this.app.frame / 20) % 2;
-    g.image(s.bombers[0].walk.down[wave], 24, 88);
-    g.image(s.bombers[2].walk.down[wave ? 0 : 1], 216, 88);
-    if (this.noticeT > 0) g.text(this.notice, g.width / 2, 162, { align: 'center', color: '#ffe040', outline: '#000000' });
-    else if (this.error > 0) g.text('INVALID PASSWORD', g.width / 2, 162, { align: 'center', color: '#ff6060', outline: '#000000' });
-    g.text('\u2191\u2193: CHANGE  \u2190\u2192: MOVE', g.width / 2, 184, { align: 'center', color: '#ffffff', outline: '#401030' });
-    g.text('A: NEXT  B: BACK  START: OK', g.width / 2, 198, { align: 'center', color: '#ffffff', outline: '#401030' });
+    g.image(s.bombers[0].walk.down[wave], 24, 94);
+    g.image(s.bombers[2].walk.down[wave ? 0 : 1], 216, 94);
+    if (this.noticeT > 0) g.text(this.notice, g.width / 2, 172, { align: 'center', color: '#ffe040', outline: '#000000' });
+    else if (this.error > 0) g.text('INVALID PASSWORD', g.width / 2, 172, { align: 'center', color: '#ff6060', outline: '#000000' });
   }
 }
 

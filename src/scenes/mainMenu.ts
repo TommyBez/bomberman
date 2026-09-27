@@ -2,7 +2,7 @@ import type { App } from '../app';
 import type { Gfx } from '../engine/gfx';
 import type { Scene } from '../engine/scene';
 import { CampaignSession } from '../game/campaign/session';
-import { drawMenuBackdrop, drawPanel, drawTitleBar, Menu } from '../render/ui';
+import { drawHand, drawMenuBackdrop, drawMenuWindow, drawWindow, Menu, MENU_TEXT } from '../render/ui';
 import { goMainMenu } from './nav';
 import { startNormalGame } from './normal/flow';
 import { MemoryCardScene } from './normal/memoryCard';
@@ -21,8 +21,8 @@ class NormalMenuScene implements Scene {
     this.menu = new Menu(
       app,
       [
-        { label: 'NEW GAME', action: () => app.scenes.go(new VersionSelectScene(app)), help: 'START FROM STAGE 1' },
-        { label: 'CONTINUE', action: () => app.scenes.go(new ContinueFromScene(app)), help: 'PASSWORD OR MEMORY CARD' },
+        { label: 'NEW GAME', action: () => app.scenes.go(new VersionSelectScene(app)) },
+        { label: 'CONTINUE', action: () => app.scenes.go(new ContinueFromScene(app)) },
       ],
       () => goMainMenu(app, 0),
     );
@@ -34,9 +34,7 @@ class NormalMenuScene implements Scene {
 
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
-    drawTitleBar(g, 'NORMAL GAME', this.app.frame);
-    drawPanel(g, 58, 80, 140, 52);
-    this.menu.draw(g, 128, 94, { center: true, lineH: 18, width: 100 });
+    drawMenuWindow(g, 'NORMAL GAME', this.menu, { style: 'card' });
   }
 }
 
@@ -48,8 +46,8 @@ class VersionSelectScene implements Scene {
     this.menu = new Menu(
       app,
       [
-        { label: 'MODERN', action: () => app.scenes.go(new SaveQuestionScene(app, 'modern')), help: 'NEW LOOK AND MUSIC, SHOW TIME SKITS' },
-        { label: 'RETRO', action: () => app.scenes.go(new SaveQuestionScene(app, 'retro')), help: 'THE CLASSIC 1985 LOOK AND SOUND' },
+        { label: 'MODERN', action: () => app.scenes.go(new SaveQuestionScene(app, 'modern')) },
+        { label: 'RETRO', action: () => app.scenes.go(new SaveQuestionScene(app, 'retro')) },
       ],
       () => app.scenes.go(new NormalMenuScene(app)),
     );
@@ -61,9 +59,7 @@ class VersionSelectScene implements Scene {
 
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
-    drawPanel(g, 40, 64, 176, 76, '#503080', '#281040');
-    drawTitleBar(g, 'WHICH VERSION?', this.app.frame);
-    this.menu.draw(g, 104, 88, { lineH: 20 });
+    drawMenuWindow(g, 'SELECT VERSION', this.menu);
   }
 }
 
@@ -92,16 +88,25 @@ class SaveQuestionScene implements Scene {
   }
 
   update(): void {
+    // YES and NO sit side by side.
+    const pad = this.app.input.menu;
+    if (pad.repeat('left') || pad.repeat('right')) {
+      this.menu.index = 1 - this.menu.index;
+      this.app.audio.sfx('menuMove');
+    }
     this.menu.update();
   }
 
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
-    drawPanel(g, 20, 56, 216, 112, '#503080', '#281040');
-    drawTitleBar(g, 'MEMORY CARD CHECK', this.app.frame);
+    drawWindow(g, 'MEMORY CARD CHECK', 14, 58, 228, 112, 'card');
     const lines = ['TO SAVE THIS GAME YOU NEED', 'A MEMORY CARD (THIS BROWSER).', 'SAVE THIS GAME?'];
-    lines.forEach((l, i) => g.text(l, 36, 72 + i * 13, { color: '#ffffff', outline: '#000000' }));
-    this.menu.draw(g, 72, 128, { lineH: 16 });
+    lines.forEach((l, i) => g.text(l, g.width / 2, 80 + i * 14, { align: 'center', ...MENU_TEXT }));
+    this.menu.items.forEach((it, i) => {
+      const x = 96 + i * 64;
+      g.text(it.label, x, 142, MENU_TEXT);
+      if (i === this.menu.index) drawHand(g, x - 16, 141, this.app.frame);
+    });
   }
 }
 
@@ -113,14 +118,13 @@ class ContinueFromScene implements Scene {
     this.menu = new Menu(
       app,
       [
-        { label: 'PASSWORD', action: () => app.scenes.go(new PasswordScene(app, () => app.scenes.go(new ContinueFromScene(app)))), help: 'ENTER YOUR 8-CHARACTER PASSWORD' },
+        { label: 'PASSWORD', action: () => app.scenes.go(new PasswordScene(app, () => app.scenes.go(new ContinueFromScene(app)))) },
         {
           label: 'MEMORY CARD',
           action: () =>
             app.scenes.go(
               new MemoryCardScene(app, 'load', null, () => app.scenes.go(new ContinueFromScene(app)), (d) => startNormalGame(app, CampaignSession.fromSave(d))),
             ),
-          help: 'LOAD A SAVED GAME',
         },
       ],
       () => app.scenes.go(new NormalMenuScene(app)),
@@ -133,8 +137,6 @@ class ContinueFromScene implements Scene {
 
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
-    drawTitleBar(g, 'CONTINUE FROM:', this.app.frame);
-    drawPanel(g, 58, 80, 140, 52);
-    this.menu.draw(g, 128, 94, { center: true, lineH: 18, width: 110 });
+    drawMenuWindow(g, 'CONTINUE FROM:', this.menu, { style: 'option' });
   }
 }

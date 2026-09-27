@@ -5,12 +5,12 @@ import type { Scene } from '../../engine/scene';
 import { arenaFor, arenasFor, type ArenaDef } from '../../game/battle/arenas';
 import { altUnlocked } from '../../game/battle/unlocks';
 import { type CharacterDef, charactersFor, CHARACTERS } from '../../game/battle/characters';
-import { CUSTOM_ITEMS, defaultConfig, ITEM_NAMES, LEVEL_NAMES, MAX_HP, type BattleConfig, type Level } from '../../game/battle/config';
+import { CUSTOM_ITEMS, defaultConfig, LEVEL_NAMES, MAX_HP, type BattleConfig, type Level } from '../../game/battle/config';
 import { customCounts, softBlockCount, stageItems } from '../../game/battle/battleWorld';
 import { load, save } from '../../engine/storage';
 import { characterSprites } from '../../gfx/battleSprites';
 import { sprites } from '../../gfx/sprites';
-import { drawMenuBackdrop, drawPanel, drawTitleBar, Menu, type MenuItem } from '../../render/ui';
+import { drawHand, drawMenuBackdrop, drawMenuWindow, drawPanel, drawTitleBar, drawWindow, Menu, MENU_TEXT, MENU_VALUE, type MenuItem } from '../../render/ui';
 import { goMainMenu } from '../nav';
 import { drawArenaPreview, drawBomberIcon } from './preview';
 import { BattleMatch } from './match';
@@ -38,7 +38,7 @@ class MenuScene implements Scene {
     private readonly app: App,
     private readonly title: string,
     readonly menu: Menu,
-    private readonly opts: { x?: number; y?: number; w?: number; h?: number; valueX?: number; center?: boolean; lineH?: number; footer?: string } = {},
+    private readonly opts: { valueX?: number; lineH?: number } = {},
   ) {}
 
   update(): void {
@@ -47,17 +47,7 @@ class MenuScene implements Scene {
 
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
-    drawTitleBar(g, this.title, this.app.frame);
-    const o = this.opts;
-    const lh = o.lineH ?? 18;
-    const h = o.h ?? this.menu.items.length * lh + 20;
-    const w = o.w ?? 160;
-    const x = o.x ?? (g.width - w) / 2;
-    const y = o.y ?? Math.max(36, (g.height - h) / 2 + 6);
-    drawPanel(g, x, y, w, h, '#28a068', '#0c4028');
-    if (o.center ?? !o.valueX) this.menu.draw(g, x + w / 2, y + 12, { center: true, lineH: lh, width: w - 40 });
-    else this.menu.draw(g, x + 16, y + 12, { lineH: lh, valueX: o.valueX ?? x + w - 50 });
-    if (o.footer) g.text(o.footer, g.width / 2, g.height - 14, { align: 'center', color: '#c8ffe0', outline: '#000000' });
+    drawMenuWindow(g, this.title, this.menu, this.opts);
   }
 }
 
@@ -86,8 +76,8 @@ export class BattleSetup {
     const menu = new Menu(
       this.app,
       [
-        { label: 'BATTLE ROYAL', action: () => ((this.cfg.mode = 'royal'), this.selectLevel()), help: 'THE STANDARD BATTLE GAME' },
-        { label: 'CUSTOM BATTLE', action: () => ((this.cfg.mode = 'custom'), this.selectLevel()), help: 'CHOOSE ITEMS AND HANDICAPS' },
+        { label: 'BATTLE ROYAL', action: () => ((this.cfg.mode = 'royal'), this.selectLevel()) },
+        { label: 'CUSTOM BATTLE', action: () => ((this.cfg.mode = 'custom'), this.selectLevel()) },
       ],
       () => goMainMenu(this.app, 1),
     );
@@ -98,16 +88,10 @@ export class BattleSetup {
   // 2. Select Level
   private selectLevel(): void {
     const levels: Level[] = ['beginner', 'normal', 'advanced'];
-    const help: Record<Level, string> = {
-      beginner: 'SIMPLE STAGES, BASIC ITEMS',
-      normal: 'TRAPS, EGGS AND PARTNERS',
-      advanced: 'SPECIAL MOVES, TRICKY STAGES',
-    };
     const menu = new Menu(
       this.app,
       levels.map((l) => ({
         label: LEVEL_NAMES[l],
-        help: help[l],
         action: () => {
           if (this.cfg.level !== l) this.cfg.stage = 0;
           this.cfg.level = l;
@@ -126,8 +110,8 @@ export class BattleSetup {
     const menu = new Menu(
       this.app,
       [
-        { label: 'SINGLE MATCH', action: () => ((this.cfg.tag = false), this.rules()), help: 'EVERYONE FOR THEMSELVES' },
-        { label: 'TAG MATCH', action: () => ((this.cfg.tag = true), this.rules()), help: 'TWO TEAMS' },
+        { label: 'SINGLE MATCH', action: () => ((this.cfg.tag = false), this.rules()) },
+        { label: 'TAG MATCH', action: () => ((this.cfg.tag = true), this.rules()) },
       ],
       () => this.selectLevel(),
     );
@@ -144,29 +128,27 @@ export class BattleSetup {
     const carts = ['off', 'on', 'super'] as const;
     const tri = ['off', 'on', 'random'] as const;
     const offOn = ['off', 'on'] as const;
-    const suddenHelp = (): string => ({ off: 'BLOCKS FALL AROUND THE EDGE', on: 'BLOCKS FILL THE WHOLE ARENA' })[r.suddenDeath];
-    const shuffleHelp = (): string =>
-      ({ off: 'FIXED STARTING SPOTS', on: 'SHUFFLE THE STARTING SPOTS', random: 'SHUFFLE OR NOT, EACH GAME' })[r.randomPosition];
     const cycle = <T,>(list: readonly T[], v: T, d: number): T => list[(list.indexOf(v) + d + list.length) % list.length];
     const items: MenuItem[] = [
-      { label: 'COMPUTER', value: () => r.com.toUpperCase(), change: (d) => (r.com = cycle(coms, r.com, d)), help: 'CPU PLAYER STRENGTH' },
-      { label: 'GAMES PER MATCH', value: () => String(r.wins), change: (d) => (r.wins = Math.max(1, Math.min(5, r.wins + d))), help: 'WINS NEEDED FOR THE SET' },
-      { label: "TIME'S UP!", value: () => (r.time === 0 ? '∞' : `${r.time}:00`), change: (d) => (r.time = (r.time + d + 6) % 6), help: 'TIME LIMIT PER GAME' },
-      { label: 'SUDDEN DEATH', value: () => r.suddenDeath.toUpperCase(), change: (d) => (r.suddenDeath = cycle(offOn, r.suddenDeath, d)), disabled: () => beginner, help: suddenHelp },
-      { label: 'RANDOM POSITION', value: () => r.randomPosition.toUpperCase(), change: (d) => (r.randomPosition = cycle(tri, r.randomPosition, d)), disabled: () => beginner, help: shuffleHelp },
-      { label: 'SKULL BOMB', value: () => onOff(r.skullBomb), change: () => (r.skullBomb = !r.skullBomb), disabled: () => beginner, help: 'SKULLS CAN BE BURNT BY BLASTS' },
+      { label: 'COMPUTER', value: () => r.com.toUpperCase(), change: (d) => (r.com = cycle(coms, r.com, d)) },
+      { label: 'GAMES PER MATCH', value: () => String(r.wins), change: (d) => (r.wins = Math.max(1, Math.min(5, r.wins + d))) },
+      { label: "TIME'S UP!", value: () => (r.time === 0 ? '∞' : `${r.time}:00`), change: (d) => (r.time = (r.time + d + 6) % 6) },
+      { label: 'SUDDEN DEATH', value: () => r.suddenDeath.toUpperCase(), change: (d) => (r.suddenDeath = cycle(offOn, r.suddenDeath, d)), disabled: () => beginner },
+      { label: 'RANDOM POSITION', value: () => r.randomPosition.toUpperCase(), change: (d) => (r.randomPosition = cycle(tri, r.randomPosition, d)), disabled: () => beginner },
+      { label: 'SKULL BOMB', value: () => onOff(r.skullBomb), change: () => (r.skullBomb = !r.skullBomb), disabled: () => beginner },
       // Tag matches never have Hyper Bomber; the Single setting is kept for later.
-      { label: 'HYPER BOMBER', value: () => onOff(r.hyperBomber && !this.cfg.tag), change: () => (r.hyperBomber = !r.hyperBomber), disabled: () => this.cfg.tag, help: 'WINNER PLAYS FOR A BONUS ITEM' },
-      { label: 'BOMBER CART', value: () => r.cart.toUpperCase(), change: (d) => (r.cart = cycle(carts, r.cart, d)), help: 'KNOCKED-OUT PLAYERS FIGHT ON' },
-      { label: 'OK', action: () => (this.persist(), this.players()) },
+      { label: 'HYPER BOMBER', value: () => onOff(r.hyperBomber && !this.cfg.tag), change: () => (r.hyperBomber = !r.hyperBomber), disabled: () => this.cfg.tag },
+      { label: 'BOMBER CART', value: () => r.cart.toUpperCase(), change: (d) => (r.cart = cycle(carts, r.cart, d)) },
     ];
+    // No OK row: A or START on any row goes on.
+    for (const it of items) it.action = () => (this.persist(), this.players());
     if (beginner) {
       r.suddenDeath = 'off';
       r.randomPosition = 'off';
       r.skullBomb = false;
     }
     const menu = new Menu(this.app, items, () => this.singleTag());
-    this.go(new MenuScene(this.app, 'RULES OPTIONS', menu, { w: 232, valueX: 190, lineH: 16, x: 12 }));
+    this.go(new MenuScene(this.app, 'RULES OPTIONS', menu, { valueX: 186, lineH: 20 }));
   }
 
   // 5. How many players?
@@ -211,6 +193,10 @@ export class BattleSetup {
 
 // ------------------------------------------------------------------ players
 
+/**
+ * How many players?: each of the five is a human, a computer or off. A or START goes on
+ * (with at least two playing); C picks which controller a human uses.
+ */
 class PlayersScene implements Scene {
   private row = 0;
 
@@ -223,35 +209,31 @@ class PlayersScene implements Scene {
   update(): void {
     const pad = this.app.input.menu;
     const players = this.setup.cfg.players;
-    const rows = players.length + 1;
-    if (pad.repeat('up')) this.row = (this.row + rows - 1) % rows;
-    if (pad.repeat('down')) this.row = (this.row + 1) % rows;
-    if (pad.repeat('up') || pad.repeat('down')) this.app.audio.sfx('menuMove');
-    if (this.row < players.length) {
-      const p = players[this.row];
-      const types = ['human', 'com', 'off'] as const;
-      if (pad.repeat('left') || pad.repeat('right')) {
-        const d = pad.repeat('left') ? -1 : 1;
-        p.type = types[(types.indexOf(p.type) + d + 3) % 3];
-        this.app.audio.sfx('select');
-      }
-      if (pad.pressed('c') && p.type === 'human') {
-        // Cycle the controller for this human player.
-        const cur = DEVICE_OPTIONS.findIndex((o) => o.join() === p.devices.join());
-        p.devices = [...DEVICE_OPTIONS[(cur + 1) % DEVICE_OPTIONS.length]];
-        this.app.audio.sfx('select');
-      }
+    const rows = players.length;
+    if (pad.repeat('up') || pad.repeat('down')) {
+      this.row = (this.row + (pad.repeat('up') ? rows - 1 : 1)) % rows;
+      this.app.audio.sfx('menuMove');
+    }
+    const p = players[this.row];
+    const types = ['human', 'com', 'off'] as const;
+    if (pad.repeat('left') || pad.repeat('right')) {
+      const d = pad.repeat('left') ? -1 : 1;
+      p.type = types[(types.indexOf(p.type) + d + 3) % 3];
+      this.app.audio.sfx('select');
+    }
+    if (pad.pressed('c') && p.type === 'human') {
+      // Cycle the controller for this human player.
+      const cur = DEVICE_OPTIONS.findIndex((o) => o.join() === p.devices.join());
+      p.devices = [...DEVICE_OPTIONS[(cur + 1) % DEVICE_OPTIONS.length]];
+      this.app.audio.sfx('select');
     }
     if (pad.pressed('a') || pad.pressed('start')) {
-      const active = players.filter((p) => p.type !== 'off').length;
-      if (this.row === players.length || pad.pressed('start')) {
-        if (active >= 2) {
-          this.app.audio.sfx('menuOk');
-          pad.swallow();
-          this.setup.afterPlayers();
-        } else this.app.audio.sfx('menuBack');
-      }
-    } else if (pad.pressed('b') || pad.pressed('select')) {
+      pad.swallow();
+      if (players.filter((q) => q.type !== 'off').length >= 2) {
+        this.app.audio.sfx('menuOk');
+        this.setup.afterPlayers();
+      } else this.app.audio.sfx('menuBack');
+    } else if (pad.pressed('b') || pad.pressed('d') || pad.pressed('select')) {
       pad.swallow();
       this.app.audio.sfx('menuBack');
       this.back();
@@ -260,27 +242,16 @@ class PlayersScene implements Scene {
 
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
-    drawTitleBar(g, 'HOW MANY PLAYERS?', this.app.frame);
-    drawPanel(g, 12, 34, 232, 150, '#28a068', '#0c4028');
-    const players = this.setup.cfg.players;
-    players.forEach((p, i) => {
-      const y = 44 + i * 24;
-      const sel = i === this.row;
-      if (sel) {
-        g.ctx.globalAlpha = 0.25;
-        g.rect(16, y - 4, 224, 22, '#ffffff');
-        g.ctx.globalAlpha = 1;
-      }
-      drawBomberIcon(g, i, p.type === 'off' ? -1 : i, 24, y - 2, this.app.frame, p.character);
-      g.text(`P${i + 1}`, 44, y + 4, { color: '#ffe040', outline: '#000000' });
-      const label = p.type === 'human' ? 'HUMAN' : p.type === 'com' ? 'COMPUTER' : 'OFF';
-      g.text(sel ? `← ${label} →` : label, 120, y + 4, { color: p.type === 'off' ? '#80a090' : '#ffffff', outline: '#000000', align: 'center' });
-      if (p.type === 'human') g.text(deviceLabel(p.devices), 234, y + 4, { color: '#a8ffc8', outline: '#000000', align: 'right' });
+    drawWindow(g, 'HOW MANY PLAYERS?', 14, 30, 228, 172);
+    const colors = { human: '#a8d8ff', com: '#ffb050', off: MENU_VALUE };
+    this.setup.cfg.players.forEach((p, i) => {
+      const y = 60 + i * 28;
+      if (i === this.row) drawHand(g, 42, y - 1, this.app.frame);
+      g.text(`${i + 1} PLAYER`, 58, y, MENU_TEXT);
+      g.text(p.type === 'human' ? 'HUMAN' : p.type === 'com' ? 'COMPUTER' : 'OFF', 178, y, { align: 'center', color: colors[p.type], outline: MENU_TEXT.outline });
+      // Which controller a human answers, small and quiet under the choice.
+      if (p.type === 'human' && i === this.row) g.text(deviceLabel(p.devices), 178, y + 11, { align: 'center', color: '#98a890', outline: MENU_TEXT.outline });
     });
-    const okSel = this.row === players.length;
-    g.text((okSel ? '▶ ' : '') + 'OK', g.width / 2, 168, { align: 'center', color: okSel ? '#ffe040' : '#ffffff', outline: '#000000' });
-    g.text('← →: HUMAN/COMPUTER/OFF   C: CONTROLLER', g.width / 2, 194, { align: 'center', color: '#c8ffe0', outline: '#000000' });
-    g.text('AT LEAST 2 PLAYERS', g.width / 2, 206, { align: 'center', color: '#c8ffe0', outline: '#000000' });
   }
 }
 
@@ -388,8 +359,7 @@ class CharacterScene implements Scene {
   render(g: Gfx): void {
     const cfg = this.setup.cfg;
     drawMenuBackdrop(g, this.app.frame);
-    drawPanel(g, 10, 24, 236, 172, '#503080', '#281040');
-    drawTitleBar(g, 'SELECT CHARACTER', this.app.frame);
+    drawWindow(g, 'SELECT CHARACTER', 10, 22, 236, 176);
     // The display case: everybody's current pick.
     g.rect(16, 32, 224, 50, '#2a8a3c');
     for (let y = 32; y < 60; y += 4) g.rect(16, y, 224, 1, '#33983f');
@@ -584,7 +554,7 @@ class CustomScene implements Scene {
     this.menu = new Menu(
       app,
       [
-        { label: 'ITEM SELECTION', action: () => app.scenes.go(new ItemSetScene(app, setup, () => app.scenes.go(new CustomScene(app, setup)))) },
+        { label: 'ITEM SELECT', action: () => app.scenes.go(new ItemSetScene(app, setup, () => app.scenes.go(new CustomScene(app, setup)))) },
         { label: 'HANDICAP', action: () => app.scenes.go(new HitPointScene(app, setup, () => app.scenes.go(new CustomScene(app, setup)))) },
         { label: 'START BATTLE', action: () => setup.launch() },
       ],
@@ -598,9 +568,7 @@ class CustomScene implements Scene {
 
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
-    drawTitleBar(g, 'CUSTOM SETTING', this.app.frame);
-    drawPanel(g, 48, 70, 160, 72, '#28a068', '#0c4028');
-    this.menu.draw(g, 128, 84, { center: true, lineH: 18, width: 120 });
+    drawMenuWindow(g, 'CUSTOM SETTING', this.menu);
   }
 }
 
@@ -668,25 +636,22 @@ class ItemSetScene implements Scene {
 
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
-    drawTitleBar(g, 'ITEM SELECTION', this.app.frame);
-    drawPanel(g, 16, 30, 224, 156, '#28a068', '#0c4028');
+    drawWindow(g, 'SET ITEM', 14, 30, 228, 172);
     const items = this.setup.cfg.customItems!;
     const s = sprites();
-    const txt = { color: '#ffffff', outline: '#000000' };
+    const count = { color: MENU_VALUE, outline: MENU_TEXT.outline };
     CUSTOM_ITEMS.forEach((kind, i) => {
-      const x = 36 + Math.floor(i / ITEM_ROWS) * 72;
-      const y = 38 + (i % ITEM_ROWS) * 24;
-      if (i === this.sel) g.frame(x - 3, y - 3, 44, 22, '#ffe040');
+      const x = 44 + Math.floor(i / ITEM_ROWS) * 70;
+      const y = 50 + (i % ITEM_ROWS) * 24;
+      if (i === this.sel) drawHand(g, x - 16, y + 4, this.app.frame);
       g.image(s.items[kind], x, y);
-      g.text(`×${items[kind] ?? 0}`, x + 20, y + 5, txt);
+      g.text(`×${items[kind] ?? 0}`, x + 20, y + 5, count);
     });
+    // "n more" to place, and END.
     const left = this.capacity - this.total();
-    g.text(`LEFT ${left}`, 36, 165, { ...txt, color: left > 0 ? '#c8ffe0' : '#ff8080' });
-    if (this.onEnd) g.frame(174, 159, 46, 18, '#ffe040');
-    g.text('END', 197, 165, { ...txt, align: 'center' });
-    const name = this.onEnd ? 'START THE BATTLE' : ITEM_NAMES[CUSTOM_ITEMS[this.sel]];
-    g.text(name, g.width / 2, 192, { align: 'center', color: '#ffe040', outline: '#000000' });
-    g.text('A: MORE  B: LESS  START: END', g.width / 2, 206, { align: 'center', color: '#c8ffe0', outline: '#000000' });
+    g.text(`${left} MORE`, 44, 180, { ...MENU_TEXT, color: left > 0 ? MENU_TEXT.color : '#ff9080' });
+    if (this.onEnd) drawHand(g, 170, 179, this.app.frame);
+    g.text('END', 186, 180, MENU_TEXT);
   }
 }
 
@@ -704,7 +669,7 @@ class HitPointScene implements Scene {
       change: (d: -1 | 1) => (p.hp = Math.max(1, Math.min(MAX_HP, p.hp + d))),
       disabled: () => p.type === 'off',
     }));
-    items.push({ label: 'EXIT', action: () => this.back() });
+    items.push({ label: 'END', action: () => this.back() });
     this.menu = new Menu(app, items, () => this.back());
   }
 
@@ -714,9 +679,7 @@ class HitPointScene implements Scene {
 
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
-    drawTitleBar(g, 'HANDICAP', this.app.frame);
-    drawPanel(g, 28, 48, 200, 130, '#28a068', '#0c4028');
-    this.menu.draw(g, 44, 62, { lineH: 18, valueX: 170 });
+    drawMenuWindow(g, 'SET HIT POINTS', this.menu, { lineH: 20, valueX: 170 });
   }
 }
 

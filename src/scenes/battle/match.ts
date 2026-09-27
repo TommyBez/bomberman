@@ -156,7 +156,7 @@ class ResultsScene implements Scene {
     }
     drawMenuBackdrop(g, this.app.frame);
     const cfg = this.match.cfg;
-    drawPanel(g, 14, 20, 228, 172, '#503080', '#281040');
+    drawPanel(g, 14, 20, 228, 172);
     drawTitleBar(g, `${cfg.rules.wins} POINT MATCH`, this.app.frame);
     const slots = cfg.players.map((p, i) => ({ p, i })).filter(({ p }) => p.type !== 'off');
     const floor = 170;
@@ -568,7 +568,7 @@ class VictoryScene implements Scene {
     g.text(`${this.match.games} GAMES PLAYED`, g.width / 2, 136, { align: 'center', color: '#fff0c0', outline: '#000000' });
     if (this.t > 90) {
       drawPanel(g, 64, 150, 128, 62, '#6040a0', '#201040');
-      this.menu.draw(g, 128, 160, { center: true, lineH: 16, width: 100 });
+      this.menu.draw(g, 128, 160, { center: true, lineH: 16 });
     }
   }
 }
