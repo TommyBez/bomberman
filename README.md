@@ -131,7 +131,8 @@ letters directly.
 ### Everything else
 
 - **Title and menus:** the title screen opens the mode menu under the logo, with a
-  **Demo Play** attract mode after 20 s idle. The menus follow the original's look (all
+  **Demo Play** attract mode after 20 s idle (Normal and Advanced characters mixed, as in
+  the original's demo). The menus follow the original's look (all
   redrawn): pastel wallpaper, purple-and-olive checked windows with a name plate across
   the top edge, pale-green lettering and a pointing-glove cursor. The password screen is
   a character roller.

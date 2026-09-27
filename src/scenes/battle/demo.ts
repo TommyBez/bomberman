@@ -8,7 +8,10 @@ import { BattleMatch } from './match';
 /** Length of the attract-mode game before it returns to the title. */
 export const DEMO_TICKS = 40 * 60;
 
-/** Title-screen attract mode: five computer players fight on a random stage. */
+/**
+ * Title-screen attract mode: five computer players fight on a random stage. As in the
+ * original's demo, the Normal and Advanced characters are mixed together.
+ */
 export function startDemo(app: App): void {
   const cfg = defaultConfig();
   const levels: Level[] = ['beginner', 'normal', 'advanced'];
@@ -16,13 +19,11 @@ export function startDemo(app: App): void {
   cfg.stage = Math.floor(Math.random() * arenasFor(cfg.level).length);
   cfg.rules.com = 'strong';
   cfg.rules.cart = 'off';
-  const chars = charactersFor(cfg.level)
-    .map((c) => c.id)
-    .sort(() => Math.random() - 0.5);
+  const chars = [...new Set([...charactersFor('normal'), ...charactersFor('advanced')].map((c) => c.id))].sort(() => Math.random() - 0.5);
   cfg.players.forEach((p, i) => {
     p.type = 'com';
     p.devices = [];
-    p.character = cfg.level === 'beginner' ? 'bomberman' : chars[i % chars.length];
+    p.character = chars[i % chars.length];
   });
   new BattleMatch(app, cfg, () => goTitle(app), true).start();
 }
