@@ -5,10 +5,10 @@ import { arenaFor } from '../../game/battle/arenas';
 import { altUnlocked } from '../../game/battle/unlocks';
 import type { BattleWorld } from '../../game/battle/battleWorld';
 import type { BattleConfig, BattleItem } from '../../game/battle/config';
-import { characterSprites } from '../../gfx/battleSprites';
+import { characterHead, characterSprites } from '../../gfx/battleSprites';
 import { PixelCanvas } from '../../gfx/pixel';
 import { BOMBER_COLORS, sprites } from '../../gfx/sprites';
-import { headSprite, hudIcons } from '../../render/hud';
+import { headSprite } from '../../render/hud';
 import { drawMenuBackdrop, drawPanel, drawWindow, Menu } from '../../render/ui';
 import { goMainMenu, goTitle } from '../nav';
 import { HyperBomberScene } from './hyperBomber';
@@ -207,7 +207,6 @@ class ResultsScene implements Scene {
     g.frame(6, 6, g.width - 12, g.height - 12, '#e05a80');
     g.frame(9, 9, g.width - 18, g.height - 18, '#f4b0c4');
     const slots = cfg.players.map((p, i) => ({ p, i })).filter(({ p }) => p.type !== 'off');
-    const icons = hudIcons();
     const colW = 46;
     const x0 = 128 - (slots.length * colW) / 2;
     const rows = 4;
@@ -241,7 +240,7 @@ class ResultsScene implements Scene {
           g.frame(cx, y, 20, 22, edge);
           if (r === rows - 1 && faces.length > rows) {
             g.text(`+${faces.length - rows + 1}`, cx + 10, y + 8, { align: 'center', color: '#e03050', outline: '#ffffff' });
-          } else if (faces[r] !== undefined) g.image(icons.heads[faces[r]], cx + 5, y + 6);
+          } else if (faces[r] !== undefined) g.image(characterHead(cfg.players[faces[r]].character, faces[r]), cx + 2, y + 4);
         }
       };
       list(beat, x + 2, '#fce4ee', '#f0a8c4');
