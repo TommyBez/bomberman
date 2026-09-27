@@ -515,6 +515,9 @@ export class CpuPlayer {
     for (const d of w.rng.shuffle([...ALL_DIRS])) {
       const [x, y] = w.gim.wrapTile(me.tx + DX[d] * 2, me.ty + DY[d] * 2);
       if (!w.grid.inside(x, y) || w.grid.get(x, y) !== Cell.Floor || w.bombAt[this.idx(x, y)]) continue;
+      // Pink Roo hops a soft block or a bomb, not a pillar (Dogyu jumps anything).
+      const [mx, my] = w.gim.wrapTile(me.tx + DX[d], me.ty + DY[d]);
+      if (me.partner === 'louiePink' && w.grid.get(mx, my) !== Cell.Floor && w.grid.get(mx, my) !== Cell.Soft) continue;
       if (this.danger[this.idx(x, y)] < INF) continue;
       if (attack && !w.alive().some((o) => o !== me && o.team !== me.team && o.tx === x && o.ty === y)) continue;
       if (attack && !w.rng.chance(0.3 + this.pers.aggression * 0.4)) return false;

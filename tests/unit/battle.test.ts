@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../../src/engine/rng';
 import { alternateArena, ARENAS } from '../../src/game/battle/arenas';
-import { BATTLE_FIRE_CAP, BATTLE_MAX_FIRE, BattleWorld, customCounts, HURRY_TICKS, perimeterPath, PRESSURE_PATTERNS, pressureOrder, spiralOrder, stageItems } from '../../src/game/battle/battleWorld';
+import { BATTLE_FIRE_CAP, BATTLE_MAX_FIRE, BattleWorld, customCounts, HURRY_TICKS, perimeterPath, spiralOrder, stageItems } from '../../src/game/battle/battleWorld';
 import { defaultConfig, type BattleConfig } from '../../src/game/battle/config';
 import { NO_INTENT, type Bomber } from '../../src/game/core/bomber';
 import { ALL_DIRS, Cell, tileCenter } from '../../src/game/core/types';
@@ -424,6 +424,58 @@ describe('battle world', () => {
     expect(w.grid.get(2, 5)).toBe(Cell.Soft);
   });
 
+  it('Brown Louie lays every bomb you carry in a line; the Multi Bomb item stops at four', () => {
+    const { w, a } = advanced();
+    a.character = 'bomberman';
+    a.stats.bombs = 7;
+    a.facing = 'right';
+    a.x = tileCenter(1);
+    a.y = tileCenter(5);
+    a.partner = 'louieBrown';
+    press(w, a, { special: true }, 1);
+    expect(w.bombs.filter((b) => b.owner === a)).toHaveLength(7);
+    for (const b of [...w.bombs]) w.removeBomb(b);
+    a.partner = null;
+    a.stats.lineBomb = true;
+    press(w, a, { action: true }, 1);
+    expect(w.bombs.filter((b) => b.owner === a)).toHaveLength(4);
+  });
+
+  it('Pink Louie hops a soft block or a bomb, never a pillar', () => {
+    const { w, a } = advanced();
+    a.character = 'bomberman';
+    a.partner = 'louiePink';
+    a.x = tileCenter(3);
+    a.y = tileCenter(4);
+    a.facing = 'right';
+    // (4, 4) is a pillar: no hop.
+    press(w, a, { special: true }, 1);
+    expect(a.airborne).toBe(0);
+    // Over a soft block at (4, 3) to (5, 3).
+    a.y = tileCenter(3);
+    w.grid.set(4, 3, Cell.Soft);
+    press(w, a, { special: true }, 1);
+    expect(a.airborne).toBeGreaterThan(0);
+  });
+
+  it('a Land Mine shows itself when stepped on and goes off a couple of seconds later', () => {
+    const { w, a, b } = advanced();
+    a.mineNext = true;
+    const mine = w.placeBomb(a, 7, 5)!;
+    expect(mine.hidden).toBe(true);
+    for (let t = 0; t < 40; t++) w.update();
+    b.x = tileCenter(7);
+    b.y = tileCenter(5);
+    b.intent = NO_INTENT;
+    w.update();
+    expect(mine.hidden).toBe(false);
+    expect(mine.exploded).toBe(false);
+    for (let t = 0; t < 60; t++) w.update();
+    expect(mine.exploded).toBe(false);
+    for (let t = 0; t < 70; t++) w.update();
+    expect(mine.exploded).toBe(true);
+  });
+
   it('a trapped CPU on Pink Roo jumps over the blocks to safety', () => {
     const { w, a } = advanced();
     a.partner = 'louiePink';
@@ -503,27 +555,33 @@ describe('battle world', () => {
     expect(perimeterPath(15, 13)).toHaveLength(2 * 13 + 2 * 11);
   });
 
-  it('every Sudden Death fall pattern covers the arena exactly once', () => {
-    for (let p = 0; p < PRESSURE_PATTERNS; p++) {
-      const order = pressureOrder(15, 13, p);
-      expect(order).toHaveLength(13 * 11);
-      expect(new Set(order.map(([x, y]) => `${x},${y}`)).size).toBe(13 * 11);
-      for (const [x, y] of order) expect(x >= 1 && x <= 13 && y >= 1 && y <= 11).toBe(true);
-    }
-  });
-
-  it('Sudden Death: Off drops blocks round the edge, On and Random fill the arena', () => {
-    const order = (mode: 'off' | 'on' | 'random', seed = 3): [number, number][] => {
+  it('Sudden Death: Off drops blocks round the edge, On fills the arena', () => {
+    const order = (mode: 'off' | 'on', seed = 3): [number, number][] => {
       const cfg = config('normal', 2);
       cfg.rules.suddenDeath = mode;
       return new BattleWorld({ cfg, arena: ARENAS.find((a) => a.id === 'n5')!, seed })['pressureOrder'];
     };
     const off = order('off');
     expect(off.every(([x, y]) => x <= 2 || y <= 2 || x >= 12 || y >= 10)).toBe(true);
-    const full = order('on').length;
-    expect(full).toBeGreaterThan(off.length);
-    expect(order('random', 1).length).toBe(full);
-    expect(order('random', 2).length).toBe(full);
+    expect(order('on').length).toBeGreaterThan(off.length);
+  });
+
+  it('pressure blocks come down fast: several along the top within two seconds of Hurry', () => {
+    for (const mode of ['off', 'on'] as const) {
+      const cfg = config('normal', 2);
+      cfg.rules.suddenDeath = mode;
+      cfg.rules.time = 1;
+      const w = new BattleWorld({ cfg, arena: ARENAS.find((a) => a.id === 'n5')!, seed: 3 });
+      // Out of the blocks' way in the middle.
+      w.bombers.forEach((b, i) => {
+        b.x = tileCenter(5 + 4 * i);
+        b.y = tileCenter(5);
+      });
+      while (!w['hurry']) w.update();
+      for (let t = 0; t < 120; t++) w.update();
+      const down = w.falling.length + [...Array(13).keys()].filter((i) => w.grid.get(i + 1, 1) === Cell.Hard).length;
+      expect(down, mode).toBeGreaterThanOrEqual(6);
+    }
   });
 
   it('spirals the pressure blocks from the outer ring inward', () => {

@@ -77,7 +77,8 @@ export interface Rules {
   /** Minutes per game (1–5), 0 = unlimited. */
   time: number;
   /** Pressure blocks: off = outer rings only, on = whole arena, random = a random fall pattern. */
-  suddenDeath: Tristate;
+  /** Pressure blocks fill the whole arena (on) or just its edge (off). */
+  suddenDeath: 'off' | 'on';
   /** Shuffle the starting spots. */
   randomPosition: Tristate;
   /** Skull items can be burnt by blasts. */

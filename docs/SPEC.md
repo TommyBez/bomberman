@@ -85,21 +85,25 @@ The stage table (enemies and item for all 50 stages) lives in `src/game/campaign
 - Levels: **Beginner / Normal / Advanced**, eight stages each.
 - **Single** or **Tag** (two teams).
 - Rules: Computer (Weak/Normal/Strong), Games per match 1–5 (3), Time 1–5 min or ∞ (3:00),
-  Sudden Death Off/On/Random (Off; Random = one of several fall patterns), Random Position
-  Off/On/Random (Off), Skull Bomb (Off), Hyper Bomber (On),
+  Sudden Death Off/On (Off), Random Position Off/On/Random (Off), Skull Bomb (Off), Hyper
+  Bomber (On),
   Bomber Cart Off/On/Super (Off). Beginner locks Sudden Death, Random Position and Skull.
 - Arena 15×13 (13×11 playable), whole arena on screen. Starts: P1 white top-left,
   P2 black bottom-right, P3 red top-right, P4 blue bottom-left, P5 green centre.
 - Controls (PlayStation): ○ = bomb / Power Glove, × = specials and partner abilities
   (× + direction for an Advanced character's special), △ = stop a kicked bomb / back,
   □ = Push → Punch → Multi Bomb.
-- "Hurry!" at 1:00 left: pressure blocks spiral in from the top-left (fill everything
-  with Sudden Death on). "Time's UP!" at 0:00 → draw.
+- "Hurry!" at 1:00 left: pressure blocks spiral in from the top-left, one every 16
+  frames (the manual's screenshot has seven down by 0:58). With Sudden Death off they
+  cover the edge; with it on they fill everything. "Time's UP!" at 0:00 → draw. Both
+  manuals list Sudden Death as On/Off and Random Position as On/Off/Random (Japanese
+  Wikipedia has the two the other way round).
 - Two kicked bombs colliding make a **Dangerous Bomb** (5×5 blast); two Power Bombs (or
   two Dangerous Bombs) make a **Super Dangerous Bomb** (7×7).
 - Items: Bomb, Fire, Speed, Steel Shoes (−speed), Kick, Bomb Pass, Power Glove, Punch,
   Push, Multi Bomb, Power Bomb, Rubber Bomb, Metabomb (pierce, also through items),
-  Full Fire, Land Mine, Heart, Egg, Skull; Wall Pass on some alternate stages; Flak Jacket
+  Full Fire, Land Mine (hidden; it shows itself when stepped on and goes off two seconds
+  later), Heart, Egg, Skull; Wall Pass on some alternate stages; Flak Jacket
   only through Custom Battle. Steel Shoes come only from Hyper Bomber; Hearts from Hyper
   Bomber or Custom. Remote Control is Normal Game only. Kick and Bomb Pass replace each
   other (a Blue Louie's kick switches Bomb Pass off too).
@@ -117,7 +121,8 @@ The stage table (enemies and item for all 50 stages) lives in `src/game/campaign
   that runs players over), Hammer, Great (invincible), Honey (pistol sets off bombs),
   Kotetsu (sword shockwave). Bazooka, Jet and Great are at their weakest for 10 s after.
 - Partners (Eggs): Normal level Louies (Yellow block kick, Blue bomb kick over walls,
-  Green dash, Pink jump, Brown line of bombs); Advanced level Ptera (swallow a bomb),
+  Green dash, Pink hop over one soft block or bomb, Brown every bomb you carry in a line;
+  the Multi Bomb item lays at most four); Advanced level Ptera (swallow a bomb),
   Kicky (lift a block), Draco (jump and stomp), Shell (line bomb, shell against fire from
   behind), Dogyu (charge, rams blocks). An Advanced rider can stock one egg, which trails
   behind, can be burnt, and revives the same partner.

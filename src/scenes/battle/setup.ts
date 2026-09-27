@@ -143,8 +143,8 @@ export class BattleSetup {
     const coms = ['weak', 'normal', 'strong'] as const;
     const carts = ['off', 'on', 'super'] as const;
     const tri = ['off', 'on', 'random'] as const;
-    const suddenHelp = (): string =>
-      ({ off: 'BLOCKS FALL AROUND THE EDGE', on: 'BLOCKS FILL THE WHOLE ARENA', random: 'BLOCKS FALL IN A RANDOM PATTERN' })[r.suddenDeath];
+    const offOn = ['off', 'on'] as const;
+    const suddenHelp = (): string => ({ off: 'BLOCKS FALL AROUND THE EDGE', on: 'BLOCKS FILL THE WHOLE ARENA' })[r.suddenDeath];
     const shuffleHelp = (): string =>
       ({ off: 'FIXED STARTING SPOTS', on: 'SHUFFLE THE STARTING SPOTS', random: 'SHUFFLE OR NOT, EACH GAME' })[r.randomPosition];
     const cycle = <T,>(list: readonly T[], v: T, d: number): T => list[(list.indexOf(v) + d + list.length) % list.length];
@@ -152,7 +152,7 @@ export class BattleSetup {
       { label: 'COMPUTER', value: () => r.com.toUpperCase(), change: (d) => (r.com = cycle(coms, r.com, d)), help: 'CPU PLAYER STRENGTH' },
       { label: 'GAMES PER MATCH', value: () => String(r.wins), change: (d) => (r.wins = Math.max(1, Math.min(5, r.wins + d))), help: 'WINS NEEDED FOR THE SET' },
       { label: "TIME'S UP!", value: () => (r.time === 0 ? '∞' : `${r.time}:00`), change: (d) => (r.time = (r.time + d + 6) % 6), help: 'TIME LIMIT PER GAME' },
-      { label: 'SUDDEN DEATH', value: () => r.suddenDeath.toUpperCase(), change: (d) => (r.suddenDeath = cycle(tri, r.suddenDeath, d)), disabled: () => beginner, help: suddenHelp },
+      { label: 'SUDDEN DEATH', value: () => r.suddenDeath.toUpperCase(), change: (d) => (r.suddenDeath = cycle(offOn, r.suddenDeath, d)), disabled: () => beginner, help: suddenHelp },
       { label: 'RANDOM POSITION', value: () => r.randomPosition.toUpperCase(), change: (d) => (r.randomPosition = cycle(tri, r.randomPosition, d)), disabled: () => beginner, help: shuffleHelp },
       { label: 'SKULL BOMB', value: () => onOff(r.skullBomb), change: () => (r.skullBomb = !r.skullBomb), disabled: () => beginner, help: 'SKULLS CAN BE BURNT BY BLASTS' },
       // Tag matches never have Hyper Bomber; the Single setting is kept for later.
@@ -730,13 +730,15 @@ function restoreConfig(saved: Partial<BattleConfig> | null): BattleConfig {
   if (Number.isInteger(saved.stage) && saved.stage! >= 0 && saved.stage! < 8) cfg.stage = saved.stage!;
   if (saved.rules && typeof saved.rules === 'object') {
     const rules = { ...saved.rules } as Record<string, unknown>;
-    // Older saves stored these two as booleans.
+    // Older saves stored these two as booleans, and Sudden Death once had a Random setting.
     for (const k of ['suddenDeath', 'randomPosition']) if (typeof rules[k] === 'boolean') rules[k] = rules[k] ? 'on' : 'off';
+    if (rules.suddenDeath === 'random') rules.suddenDeath = 'on';
     for (const k of Object.keys(cfg.rules) as (keyof typeof cfg.rules)[]) {
       const v = rules[k];
       if (typeof v === typeof cfg.rules[k]) (cfg.rules as unknown as Record<string, unknown>)[k] = v;
     }
-    for (const k of ['suddenDeath', 'randomPosition'] as const) if (!['off', 'on', 'random'].includes(cfg.rules[k])) cfg.rules[k] = 'off';
+    if (!['off', 'on', 'random'].includes(cfg.rules.randomPosition)) cfg.rules.randomPosition = 'off';
+    if (!['off', 'on'].includes(cfg.rules.suddenDeath)) cfg.rules.suddenDeath = 'off';
   }
   if (Array.isArray(saved.players)) {
     cfg.players.forEach((p, i) => {

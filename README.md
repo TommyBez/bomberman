@@ -88,7 +88,7 @@ letters directly.
   hit-point Handicap), in Single or Tag (team) play.
 - **Rules** follow the PS1 options:
   - COM level, games per match and time.
-  - Sudden Death and Random Position (Off, On or Random), and Skull.
+  - Sudden Death (Off or On), Random Position (Off, On or Random), and Skull.
   - Hyper Bomber.
   - Bomber Cart: off, on or Super.
 - **24 stages**, eight each for Beginner, Normal and Advanced, with their gimmicks. Each

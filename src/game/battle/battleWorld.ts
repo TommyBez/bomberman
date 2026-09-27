@@ -20,6 +20,10 @@ export const BATTLE_FIRE_CAP = 8;
 export const BATTLE_MAX_FIRE = BATTLE_W - 3;
 /** Hurry! starts with one minute left. */
 export const HURRY_TICKS = 60 * 60;
+/** A pressure block falls this often (the manual's screenshot has seven down by 0:58). */
+const PRESSURE_TICKS = 16;
+/** A land mine goes off this long after it is stepped on. */
+const MINE_FUSE = 120;
 export const DISEASES: Curse[] = ['superspeed', 'superslow', 'diarrhea', 'impotent', 'feeble', 'streaking', 'confusion', 'shortFuse', 'slowFuse', 'warp'];
 export const DISEASE_NAMES: Record<Curse, string> = {
   superspeed: 'SUPERSPEED',
@@ -69,65 +73,6 @@ export function spiralOrder(w: number, h: number): [number, number][] {
     for (let y = y0 + 1; y <= y1; y++) out.push([x1, y]);
     if (y1 > y0) for (let x = x1 - 1; x >= x0; x--) out.push([x, y1]);
     if (x1 > x0) for (let y = y1 - 1; y > y0; y--) out.push([x0, y]);
-    x0++;
-    y0++;
-    x1--;
-    y1--;
-  }
-  return out;
-}
-
-/** Number of pressure-block fall patterns Sudden Death "Random" picks from. */
-export const PRESSURE_PATTERNS = 6;
-
-/**
- * Order in which pressure blocks fill the playable interior:
- * 0 clockwise spiral from the top-left, 1 anticlockwise spiral, 2 clockwise spiral from
- * the bottom-right, 3 rows snaking down, 4 columns snaking across, 5 both ends of the
- * spiral at once.
- */
-export function pressureOrder(w: number, h: number, pattern: number): [number, number][] {
-  const spiral = spiralOrder(w, h);
-  switch (pattern) {
-    case 1:
-      return anticlockwise(w, h);
-    case 2:
-      return spiral.map(([x, y]) => [w - 1 - x, h - 1 - y] as [number, number]);
-    case 3: {
-      const out: [number, number][] = [];
-      for (let y = 1; y < h - 1; y++) for (let k = 1; k < w - 1; k++) out.push([y % 2 ? k : w - 1 - k, y]);
-      return out;
-    }
-    case 4: {
-      const out: [number, number][] = [];
-      for (let x = 1; x < w - 1; x++) for (let k = 1; k < h - 1; k++) out.push([x, x % 2 ? k : h - 1 - k]);
-      return out;
-    }
-    case 5: {
-      const out: [number, number][] = [];
-      for (let i = 0, j = spiral.length - 1; i <= j; i++, j--) {
-        out.push(spiral[i]);
-        if (j !== i) out.push(spiral[j]);
-      }
-      return out;
-    }
-    default:
-      return spiral;
-  }
-}
-
-/** Anticlockwise spiral from the top-left (down the left side first). */
-function anticlockwise(w: number, h: number): [number, number][] {
-  const out: [number, number][] = [];
-  let x0 = 1;
-  let y0 = 1;
-  let x1 = w - 2;
-  let y1 = h - 2;
-  while (x0 <= x1 && y0 <= y1) {
-    for (let y = y0; y <= y1; y++) out.push([x0, y]);
-    for (let x = x0 + 1; x <= x1; x++) out.push([x, y1]);
-    if (x1 > x0) for (let y = y1 - 1; y >= y0; y--) out.push([x1, y]);
-    if (y1 > y0) for (let x = x1 - 1; x > x0; x--) out.push([x, y0]);
     x0++;
     y0++;
     x1--;
@@ -295,18 +240,17 @@ export class BattleWorld extends World {
       if (b && prize) this.giveItem(b, prize, false);
     });
 
-    // Sudden death plan: off = the outer rings only, on = the whole arena in a clockwise
-    // spiral, random = the whole arena in one of several fall patterns.
+    // Sudden death plan: off = the outer rings only, on = the whole arena, in a clockwise
+    // spiral.
     const refuge = arena.refuge;
     const sudden = cfg.level === 'beginner' ? 'off' : cfg.rules.suddenDeath;
-    const pattern = sudden === 'random' ? this.rng.int(PRESSURE_PATTERNS) : 0;
-    this.pressureOrder = pressureOrder(BATTLE_W, BATTLE_H, pattern).filter(([x, y]) => {
+    this.pressureOrder = spiralOrder(BATTLE_W, BATTLE_H).filter(([x, y]) => {
       if (grid.get(x, y) === Cell.Hard) return false;
       if (refuge && x >= refuge[0] && x <= refuge[2] && y >= refuge[1] && y <= refuge[3]) return false;
       if (sudden === 'off') return x <= 2 || y <= 2 || x >= BATTLE_W - 3 || y >= BATTLE_H - 3;
       return true;
     });
-    this.pressureInterval = Math.max(6, Math.floor((HURRY_TICKS - 8 * 60) / Math.max(1, this.pressureOrder.length)));
+    this.pressureInterval = Math.max(6, Math.min(PRESSURE_TICKS, Math.floor((HURRY_TICKS - 8 * 60) / Math.max(1, this.pressureOrder.length))));
   }
 
   alive(): Bomber[] {
@@ -464,12 +408,15 @@ export class BattleWorld extends World {
 
   protected override updateBombs(): void {
     super.updateBombs();
-    // Land mines go off when somebody steps on them.
-    for (const bomb of [...this.bombs]) {
+    // Land mines show themselves when somebody steps on them, and go off a few seconds
+    // later (Japanese Wikipedia).
+    for (const bomb of this.bombs) {
       if (!bomb.hidden || bomb.exploded || bomb.age < 30) continue;
       if (this.bombers.some((b) => b.alive && b.airborne <= 0 && b.tx === bomb.tx && b.ty === bomb.ty && (b !== bomb.owner || bomb.age > 90))) {
         bomb.hidden = false;
-        this.explode(bomb);
+        bomb.remote = false;
+        bomb.fuse = MINE_FUSE;
+        this.emit({ type: 'bomb', tx: bomb.tx, ty: bomb.ty });
       }
     }
   }
@@ -828,6 +775,9 @@ export class BattleWorld extends World {
         this.emit({ type: 'jump', tx: b.tx, ty: b.ty });
         return true;
       case 'louiePink': {
+        // A hop over one soft block or bomb (never a pillar) to the tile beyond.
+        const [mx, my] = this.gim.wrapTile(b.tx + DX[d], b.ty + DY[d]);
+        if (!this.grid.inside(mx, my) || (this.grid.get(mx, my) !== Cell.Floor && this.grid.get(mx, my) !== Cell.Soft)) return false;
         const lx = b.tx + DX[d] * 2;
         const ly = b.ty + DY[d] * 2;
         const [wx, wy] = this.gim.wrapTile(lx, ly);
@@ -837,6 +787,8 @@ export class BattleWorld extends World {
         return true;
       }
       case 'louieBrown':
+        // Every bomb you carry, in a line (the Multi Bomb item stops at four).
+        return this.lineBomb(b, Infinity);
       case 'coney':
         return this.lineBomb(b);
       case 'pytera': {
@@ -1004,13 +956,14 @@ export class BattleWorld extends World {
   }
 
   /** Multi Bomb: lay the remaining bombs (up to four) in a row ahead. */
-  private lineBomb(b: Bomber): boolean {
+  /** Lay bombs in a line ahead: the Multi Bomb item lays up to four. */
+  private lineBomb(b: Bomber, most = 4): boolean {
     const d = b.facing;
     let x = b.tx;
     let y = b.ty;
     let placed = 0;
     if (this.placeBomb(b, x, y)) placed++;
-    while (placed < 4 && b.activeBombs < b.stats.bombs) {
+    while (placed < most && b.activeBombs < b.stats.bombs) {
       x += DX[d];
       y += DY[d];
       if (!this.canPlaceBomb(b, x, y) || this.tileHasBlockingBody(x, y, null) || this.items[this.idx(x, y)]) break;
