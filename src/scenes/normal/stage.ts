@@ -62,7 +62,9 @@ export class StageScene implements Scene {
 
   private get music(): string {
     if (this.bonus) return this.retro ? 'bonusRetro' : 'bonus';
-    return this.retro ? 'stageRetro' : 'stage';
+    if (this.retro) return 'stageRetro';
+    // Each area of ten stages has its own theme.
+    return ['stage', 'world2', 'world3', 'world4', 'world5'][Math.min(4, Math.floor((this.session.stageNumber - 1) / 10))];
   }
 
   update(): void {

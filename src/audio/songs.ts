@@ -1,15 +1,13 @@
+import { battleMachine, battlePark, battleRails, battleSea, battleSky, battleWild, hyperBomber } from './battleSongs';
+import { DRUM_BEAT, DRUM_FILL, ROCK_BEAT, ROCK_FILL } from './grooves';
 import type { SongDef } from './sequencer';
+import { showTime, world2, world3, world4, world5 } from './worldSongs';
 
 /**
  * Original compositions for this remake (written for this project; no melodies are
  * taken from the commercial games). Notation is documented in sequencer.ts.
  * Every track is a whole number of 16-step bars; tests/unit/songs.test.ts checks it.
  */
-
-const DRUM_BEAT = 'k:2 h:2 s:2 h:2 k:2 h:2 s:2 h:2';
-const DRUM_FILL = 'k:2 h:2 s:2 h:2 k:2 s:1 s:1 t:2 m:1 f:1';
-const ROCK_BEAT = 'k:2 h:2 s:2 h:1 k:1 k:2 h:2 s:2 h:2';
-const ROCK_FILL = 'k:2 h:2 s:2 h:1 k:1 s:1 s:1 s:1 s:1 t:1 t:1 m:1 f:1';
 
 // ------------------------------------------------------------------ TITLE (C major)
 const title: SongDef = {
@@ -68,7 +66,7 @@ const stage: SongDef = {
   tracks: [
     {
       inst: 'lead',
-      vol: 0.3,
+      vol: 0.33,
       pan: 0.12,
       data: `
         G4:2 r:1 G4:1 B4:2 D5:2 G5:2 D5:2 B4:2 D5:2 | C5:2 B4:2 A4:2 G4:2 A4:4 r:4 |
@@ -82,7 +80,7 @@ const stage: SongDef = {
     },
     {
       inst: 'pluck',
-      vol: 0.16,
+      vol: 0.18,
       pan: -0.3,
       data: `
         [r:2 B3+D4:2]4 | [r:2 B3+D4:2]4 | [r:2 C4+E4:2]4 | [r:2 D4+F#4:2]4 |
@@ -92,7 +90,7 @@ const stage: SongDef = {
     },
     {
       inst: 'slap',
-      vol: 0.4,
+      vol: 0.48,
       data: `
         G2:2 r:2 G3:2 G2:2 D3:2 r:2 G3:2 D3:2 | G2:2 r:2 G3:2 G2:2 B2:2 r:2 D3:2 B2:2 |
         C3:2 r:2 C4:2 C3:2 G2:2 r:2 C3:2 G2:2 | D3:2 r:2 D4:2 D3:2 A2:2 r:2 D3:2 F#3:2 |
@@ -105,7 +103,7 @@ const stage: SongDef = {
     },
     {
       inst: 'kick',
-      vol: 0.45,
+      vol: 0.5,
       data: `[${DRUM_BEAT}]7 ${DRUM_FILL} | [${DRUM_BEAT}]7 ${DRUM_FILL}`,
     },
   ],
@@ -351,11 +349,23 @@ function retro(song: SongDef): SongDef {
 
 export const SONGS: Record<string, SongDef> = {
   title,
-  stage,
-  battle,
   select,
+  stage,
+  world2,
+  world3,
+  world4,
+  world5,
   bonus,
+  showTime,
   ending,
+  battle,
+  battlePark,
+  battleRails,
+  battleMachine,
+  battleSea,
+  battleWild,
+  battleSky,
+  hyperBomber,
   stageStart,
   stageClear,
   death,

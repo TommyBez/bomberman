@@ -1,4 +1,5 @@
 import type { App } from '../../app';
+import { BATTLE_STAGE_MUSIC } from '../../audio/battleSongs';
 import { HUD_H } from '../../config';
 import type { Gfx } from '../../engine/gfx';
 import type { Scene } from '../../engine/scene';
@@ -68,7 +69,7 @@ export class BattleRoundScene implements Scene {
   }
 
   enter(): void {
-    this.app.audio.music('battle', { restart: true });
+    this.app.audio.music(BATTLE_STAGE_MUSIC[this.world.arena.id] ?? 'battle', { restart: true });
     for (const c of this.app.input.players) c.swallow();
     this.app.input.takeFocusLoss();
   }

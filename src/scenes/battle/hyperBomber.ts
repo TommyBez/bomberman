@@ -47,7 +47,7 @@ export class HyperBomberScene implements Scene {
   }
 
   enter(): void {
-    this.app.audio.music('bonus', { restart: true });
+    this.app.audio.music('hyperBomber', { restart: true });
   }
 
   private angle(k: number): number {

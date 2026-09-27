@@ -16,6 +16,12 @@ sound in this project are original; only the game rules are reproduced.
 - The top wall is drawn two tiles tall from the stage's own wall blocks, and the HUD is printed on it.
 - Title → **PRESS START BUTTON** → *Normal Game* / *Battle Game* / *Option*; *Normal Game*
   turns the same menu into *New Game* / *Continue*.
+- Music (all newly composed): the PS1 disc's soundtrack rip lists 42 "Arrange" pieces (about
+  26 loops and 16 jingles) and 8 "Original" ones, so the Arrange side clearly has many
+  themes; which piece plays where isn't documented. The remake gives each Normal Game area
+  (10 stages) its own theme, and each battle stage family its own (the families follow the
+  stage names: Trocco, Belcon, Dokan, Seesaw; Japanese Wikipedia also groups them). Show
+  Time and Hyper Bomber have their own tunes. Retro keeps one stage tune, like the NES.
 
 ## Normal Game (1 player)
 

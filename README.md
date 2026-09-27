@@ -153,7 +153,11 @@ letters directly.
   vibration and face buttons for each gamepad, and a keyboard reference.
 - **Audio:** a small WebAudio synthesiser plays every tune and effect from note data.
   It includes pulse, saw and triangle voices, noise drums, reverb and NES-style voices
-  for the Retro version.
+  for the Retro version. Like the original's large Arrange soundtrack, each Normal Game
+  area has its own theme, and so does each battle stage family (standard, seesaw park,
+  trolleys, belts and robots, pipes and seas, desert and jungle, sky and snow). Show
+  Time and Hyper Bomber have their own tunes too. The Retro version keeps a single stage
+  tune, as on the NES.
 - **Display:** pixel-perfect integer scaling, keyboard, gamepads (with rumble) and a
   touch layout for phones.
 

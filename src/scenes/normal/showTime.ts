@@ -215,7 +215,7 @@ export class ShowTimeScene implements Scene {
   }
 
   enter(): void {
-    this.app.audio.music('select', { restart: true });
+    this.app.audio.music('showTime', { restart: true });
   }
 
   update(): void {
