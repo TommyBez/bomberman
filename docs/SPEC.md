@@ -78,6 +78,9 @@ Several monsters caught in one blast double in value one after another.
 | Nakamoto-san | 10,000,000 | 3, 11, 19, 27, 35, 43 | kill every monster, then break 16 more soft blocks |
 | Tekuteku Angel | 20,000,000 | 5, 13, 21, 29, 37, 45 | break every soft block without killing anything |
 
+A panel shows on a random free floor tile and stays out only briefly (10 s, blinking for
+the last 3; the sources only say "a short time"); missed, it's gone for the stage.
+
 The stage table (enemies and item for all 50 stages) lives in `src/game/campaign/stages.ts`.
 
 ## Battle Game (1–5 players)

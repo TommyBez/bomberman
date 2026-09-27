@@ -36,6 +36,8 @@ export const MAX_FIRE = 5;
 export const FUSE_TICKS = 159;
 /** Monsters released when the exit door or the stage item is caught in a blast. */
 export const PENALTY_SPAWN = 8;
+/** How long a hidden panel stays out once it shows (the sources only say "a short time"). */
+export const SECRET_TICKS = 10 * 60;
 export const TIMEOUT_SPAWN = 10;
 /** Bombs needed for the Golden Bomberman panel. */
 export const GOLDEN_BOMBS = 248;
@@ -75,6 +77,8 @@ export interface SecretState {
   panel: SecretPanel;
   /** Panel is on the field waiting to be collected. */
   shown: boolean;
+  /** Ticks before a shown panel vanishes again. */
+  left: number;
   tx: number;
   ty: number;
   collected: boolean;
@@ -142,7 +146,7 @@ export class CampaignWorld extends World implements EnemyEnv {
     s.wallPass = powers.wallpass;
     s.flamePass = powers.fireman;
     this.bombers.push(this.player);
-    this.secret = { panel: stage.secret, shown: false, tx: 0, ty: 0, collected: false, failed: !!bonus };
+    this.secret = { panel: stage.secret, shown: false, left: 0, tx: 0, ty: 0, collected: false, failed: !!bonus };
     for (let y = 1; y < this.grid.h - 1; y++) {
       for (let x = 1; x < this.grid.w - 1; x++) if (this.isRing(x, y)) this.ringTotal++;
     }
@@ -481,6 +485,10 @@ export class CampaignWorld extends World implements EnemyEnv {
         const pts = SECRET_POINTS[s.panel];
         this.addScore(pts, tileCenter(s.tx), tileCenter(s.ty));
         this.emit({ type: 'item', tx: s.tx, ty: s.ty, item: `secret:${s.panel}`, who: 0 });
+      } else if (--s.left <= 0) {
+        // Out only briefly: missed, it's gone for this stage.
+        s.shown = false;
+        s.failed = true;
       }
       return;
     }
@@ -507,28 +515,26 @@ export class CampaignWorld extends World implements EnemyEnv {
     }
   }
 
+  /**
+   * Put the panel out on an empty floor tile anywhere in the stage, for a short while ("if it
+   * doesn't appear near you, you often can't get it", as the 1985 game's players put it).
+   */
   private showSecret(): void {
     const s = this.secret;
-    if (s.shown || s.collected) return;
-    // Appear on an empty floor tile close to Bomberman.
+    if (s.shown || s.collected || s.failed) return;
     const p = this.player;
-    let best: [number, number] | null = null;
-    let bestD = Infinity;
+    const free: [number, number][] = [];
     for (let y = 1; y < this.grid.h - 1; y++) {
       for (let x = 1; x < this.grid.w - 1; x++) {
         if (this.grid.get(x, y) !== Cell.Floor || this.bombAt[this.idx(x, y)] || this.items[this.idx(x, y)]) continue;
-        if (x === this.exitTx && y === this.exitTy) continue;
-        const d = Math.abs(x - p.tx) + Math.abs(y - p.ty);
-        if (d >= 3 && d < bestD) {
-          bestD = d;
-          best = [x, y];
-        }
+        if ((x === this.exitTx && y === this.exitTy) || (x === p.tx && y === p.ty)) continue;
+        free.push([x, y]);
       }
     }
-    if (!best) return;
-    s.tx = best[0];
-    s.ty = best[1];
+    if (!free.length) return;
+    [s.tx, s.ty] = this.rng.pick(free);
     s.shown = true;
+    s.left = SECRET_TICKS;
     this.emit({ type: 'door', tx: s.tx, ty: s.ty });
   }
 

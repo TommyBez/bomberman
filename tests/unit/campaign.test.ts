@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CampaignWorld, freshPowers, powersAfterDeath, STAGE_TICKS } from '../../src/game/campaign/campaignWorld';
+import { CampaignWorld, SECRET_TICKS, freshPowers, powersAfterDeath, STAGE_TICKS } from '../../src/game/campaign/campaignWorld';
 import { CLASSIC_CODES, decodePassword, encodePassword, PASSWORD_ALPHABET, PASSWORD_LENGTH } from '../../src/game/campaign/password';
 import { CampaignSession, START_LIVES } from '../../src/game/campaign/session';
 import { bonusAfter, BONUS_STAGES, STAGES } from '../../src/game/campaign/stages';
@@ -102,6 +102,19 @@ describe('CampaignWorld generation', () => {
 
 describe('hidden panels', () => {
   const stageWith = (panel: string) => STAGES.find((s) => s.secret === panel)!;
+
+  it('a panel is out only briefly, on some free floor tile, then gone for the stage', () => {
+    const w = new CampaignWorld(stageWith('b'), freshPowers(), 21);
+    w.player.invincible = 1e9;
+    for (const e of w.enemies) e.alive = false;
+    (w as unknown as { showSecret(): void }).showSecret();
+    expect(w.secret.shown).toBe(true);
+    expect(w.grid.get(w.secret.tx, w.secret.ty)).toBe(Cell.Floor);
+    for (let t = 0; t < SECRET_TICKS + 1 && w.secret.shown; t++) w.update();
+    expect(w.secret.shown).toBe(false);
+    expect(w.secret.failed).toBe(true);
+    expect(w.secret.collected).toBe(false);
+  });
 
   it('B: uncover the exit without killing anything, then stand on it', () => {
     const w = new CampaignWorld(stageWith('b'), freshPowers(), 21);

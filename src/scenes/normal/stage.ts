@@ -205,7 +205,8 @@ export class StageScene implements Scene {
       g.image(img, v.ox + w.exitTx * TILE, v.oy + w.exitTy * TILE);
     }
     this.field.drawItems(g, w, v, this.app.frame, this.retro);
-    if (w.secret.shown) {
+    // A hidden panel blinks for its last three seconds.
+    if (w.secret.shown && (w.secret.left > 180 || Math.floor(this.app.frame / 4) % 2 === 0)) {
       const items = this.retro ? s.retroItems : s.items;
       const flash = this.retro ? s.retroItemsFlash : s.itemsFlash;
       const key = `secret_${w.secret.panel}`;

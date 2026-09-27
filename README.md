@@ -73,7 +73,8 @@ letters directly.
   Flak Jacket. Some are lost when you lose a life.
 - **Bonus stages** after every fifth stage: 30 s, invincible, endless monsters.
 - **Six hidden score panels**, from B (10,000 points) to Tekuteku Angel (20,000,000),
-  each with its original trigger condition.
+  each with its original trigger condition. A panel is out only briefly, somewhere on
+  the stage.
 - **Versions:**
   - **Modern:** five world themes and "Bomberman Show Time" skits every ten stages.
   - **Retro:** NES-style tiles, sprites, flames and chiptune arrangements.
