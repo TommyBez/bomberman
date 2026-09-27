@@ -4,7 +4,7 @@ import type { Scene } from '../../engine/scene';
 import { ALT_CODES } from '../../game/battle/arenas';
 import { LEVEL_NAMES } from '../../game/battle/config';
 import { unlockAlt } from '../../game/battle/unlocks';
-import { CLASSIC_CODES, decodePassword, PASSWORD_ALPHABET, PASSWORD_LENGTH } from '../../game/campaign/password';
+import { CLASSIC_CODES, decodePassword, PASSWORD_GLYPHS, PASSWORD_LENGTH } from '../../game/campaign/password';
 import { CampaignSession } from '../../game/campaign/session';
 import { STAGES } from '../../game/campaign/stages';
 import { PixelCanvas } from '../../gfx/pixel';
@@ -18,7 +18,7 @@ import { startNormalGame } from './flow';
  * works too.
  */
 export class PasswordScene implements Scene {
-  private chars: string[] = Array.from({ length: PASSWORD_LENGTH }, () => PASSWORD_ALPHABET[0]);
+  private chars: string[] = Array.from({ length: PASSWORD_LENGTH }, () => PASSWORD_GLYPHS[0]);
   private cursor = 0;
   private error = 0;
   private notice = '';
@@ -48,7 +48,7 @@ export class PasswordScene implements Scene {
       return;
     }
     const k = e.key.toUpperCase();
-    if (k.length === 1 && PASSWORD_ALPHABET.includes(k)) {
+    if (k.length === 1 && PASSWORD_GLYPHS.includes(k)) {
       this.chars[this.cursor] = k;
       this.cursor = Math.min(PASSWORD_LENGTH - 1, this.cursor + 1);
       this.app.audio.sfx('select');
@@ -56,9 +56,9 @@ export class PasswordScene implements Scene {
   };
 
   private turn(step: 1 | -1): void {
-    const n = PASSWORD_ALPHABET.length;
-    const i = PASSWORD_ALPHABET.indexOf(this.chars[this.cursor]);
-    this.chars[this.cursor] = PASSWORD_ALPHABET[(i + step + n) % n];
+    const n = PASSWORD_GLYPHS.length;
+    const i = PASSWORD_GLYPHS.indexOf(this.chars[this.cursor]);
+    this.chars[this.cursor] = PASSWORD_GLYPHS[(i + step + n) % n];
     this.app.audio.sfx('menuMove');
   }
 
@@ -99,7 +99,7 @@ export class PasswordScene implements Scene {
       unlockAlt(level);
       this.notice = `${LEVEL_NAMES[level]} ALTERNATE STAGES!`;
       this.noticeT = 150;
-      this.chars = this.chars.map(() => PASSWORD_ALPHABET[0]);
+      this.chars = this.chars.map(() => PASSWORD_GLYPHS[0]);
       this.cursor = 0;
       this.app.audio.sfx('bigItem');
       return;

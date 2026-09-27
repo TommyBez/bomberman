@@ -25,7 +25,6 @@ export class OptionScene implements Scene {
         { label: 'SOUND OPTIONS', action: () => app.scenes.go(new SoundScene(app)) },
         { label: 'SCREEN OPTIONS', action: () => app.scenes.go(new ScreenScene(app)) },
         { label: 'CONTROLLER', action: () => app.scenes.go(new ControllerScene(app)) },
-        { label: 'EXIT', action: () => goMainMenu(app, 2) },
       ],
       () => goMainMenu(app, 2),
     );
@@ -49,6 +48,7 @@ class SoundScene implements Scene {
 
   constructor(private readonly app: App) {
     const a = app.audio;
+    // Audio, music test and sound-effect test as in the original; volumes come after them.
     this.menu = new Menu(
       app,
       [
@@ -60,6 +60,18 @@ class SoundScene implements Scene {
             saveSettings(this.settings);
             a.setStereo(this.settings.stereo);
           },
+        },
+        {
+          label: 'MUSIC TEST',
+          value: () => String(this.song).padStart(2, '0'),
+          change: (d) => (this.song = (this.song + d + SONG_LIST.length) % SONG_LIST.length),
+          action: () => a.music(SONG_LIST[this.song], { restart: true }),
+        },
+        {
+          label: 'SE TEST',
+          value: () => String(this.fx).padStart(3, '0'),
+          change: (d) => (this.fx = (this.fx + d + SFX_LIST.length) % SFX_LIST.length),
+          action: () => a.sfx(SFX_LIST[this.fx]),
         },
         {
           label: 'MUSIC VOLUME',
@@ -78,19 +90,6 @@ class SoundScene implements Scene {
             a.sfx('place');
           },
         },
-        {
-          label: 'MUSIC TEST',
-          value: () => String(this.song).padStart(2, '0'),
-          change: (d) => (this.song = (this.song + d + SONG_LIST.length) % SONG_LIST.length),
-          action: () => a.music(SONG_LIST[this.song], { restart: true }),
-        },
-        {
-          label: 'SE TEST',
-          value: () => String(this.fx).padStart(3, '0'),
-          change: (d) => (this.fx = (this.fx + d + SFX_LIST.length) % SFX_LIST.length),
-          action: () => a.sfx(SFX_LIST[this.fx]),
-        },
-        { label: 'EXIT', action: () => this.leave() },
       ],
       () => this.leave(),
     );
@@ -123,17 +122,18 @@ class ScreenScene implements Scene {
 
   update(): void {
     const pad = this.app.input.menu;
-    if (pad.repeat('up') || pad.repeat('down')) {
-      this.row = 1 - this.row;
-      this.app.audio.sfx('menuMove');
-    }
-    if (pad.repeat('a')) {
-      const y = Math.max(-16, Math.min(16, this.settings.offsetY + (this.row === 0 ? -1 : 1)));
+    // Up and down move the picture straight away (the glove shows which way); A moves it again.
+    let d = 0;
+    if (pad.repeat('up')) [this.row, d] = [0, -1];
+    else if (pad.repeat('down')) [this.row, d] = [1, 1];
+    else if (pad.repeat('a')) d = this.row === 0 ? -1 : 1;
+    if (d) {
+      const y = Math.max(-16, Math.min(16, this.settings.offsetY + d));
       if (y !== this.settings.offsetY) {
         this.settings.offsetY = y;
         applyScreenOffset(y);
-        this.app.audio.sfx('select');
       }
+      this.app.audio.sfx('select');
     } else if (pad.pressed('b') || pad.pressed('d') || pad.pressed('start') || pad.pressed('select')) {
       pad.swallow();
       saveSettings(this.settings);
@@ -188,7 +188,6 @@ class ControllerScene implements Scene {
       [
         ...[0, 1, 2, 3].map((i) => ({ label: `CONTROLLER ${i + 1}`, action: () => app.scenes.go(new PadScene(app, i)) })),
         { label: 'KEYBOARD', action: () => (this.keys = true) },
-        { label: 'EXIT', action: () => this.leave() },
       ],
       () => this.leave(),
     );

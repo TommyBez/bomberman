@@ -248,9 +248,6 @@ export class StageScene implements Scene {
     this.renderHud(g);
     if (this.phase === 'ready') drawWord(g, this.timer < 55 ? 'READY' : 'START', g.height / 2 + 6, 'ready');
     if (this.phase === 'clear' && this.bonus) drawWord(g, "TIME'S UP!", g.height / 2 + 6, 'timeUp');
-    if (this.world.timeUp && this.phase === 'play' && this.world.tick % 60 < 40 && this.timer < 600) {
-      // flashing warning after the clock ran out
-    }
     if (this.paused) this.pauseMenu.draw(g);
   }
 

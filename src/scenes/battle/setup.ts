@@ -699,7 +699,7 @@ class ItemSetScene implements Scene {
       items[kind] = (items[kind] ?? 0) + 1;
       this.app.audio.sfx('select');
     }
-    if ((pad.repeat('b') || pad.repeat('c')) && (items[kind] ?? 0) > 0) {
+    if ((pad.repeat('b') || pad.repeat('c') || pad.repeat('d')) && (items[kind] ?? 0) > 0) {
       items[kind] = (items[kind] ?? 0) - 1;
       this.app.audio.sfx('select');
     }

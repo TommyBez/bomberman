@@ -4,6 +4,8 @@
  * 14-bit checksum, so consecutive passwords look unrelated and typos are caught.
  */
 export const PASSWORD_ALPHABET = '0123456789ABCDEFG';
+/** The characters the password roller turns through: the original's set runs to I. */
+export const PASSWORD_GLYPHS = '0123456789ABCDEFGHI';
 export const PASSWORD_LENGTH = 8;
 const BASE = PASSWORD_ALPHABET.length;
 

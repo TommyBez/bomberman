@@ -235,6 +235,8 @@ describe('passwords', () => {
     const { ALT_CODES } = await import('../../src/game/battle/arenas');
     const special = new Set([...Object.keys(CLASSIC_CODES), ...Object.keys(ALT_CODES)]);
     expect(PASSWORD_ALPHABET).toBe('0123456789ABCDEFG');
+    // H and I are on the roller, as in the original, but no password uses them.
+    expect(decodePassword('0000000H')).toBeNull();
     for (let stage = 1; stage <= 50; stage++) {
       for (let bombs = 1; bombs <= 10; bombs++) {
         for (let fire = 1; fire <= 5; fire++) {
