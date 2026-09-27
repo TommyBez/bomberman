@@ -9,7 +9,7 @@ import type { BattleItem } from '../../game/battle/config';
 import { NO_INTENT } from '../../game/core/bomber';
 import type { GameEvent } from '../../game/core/events';
 import { TILE } from '../../game/core/types';
-import { characterSprites, gimmickSprites } from '../../gfx/battleSprites';
+import { characterHead, characterSprites, gimmickSprites } from '../../gfx/battleSprites';
 import { THEMES } from '../../gfx/tiles';
 import { BattleRenderer } from '../../render/battleField';
 import type { View } from '../../render/field';
@@ -247,16 +247,16 @@ export class BattleRoundScene implements Scene {
     const hurry = w.hurry && Math.floor(this.app.frame / 15) % 2 === 0;
     g.text(w.unlimited ? '∞' : clockText(w.timeLeft), 20, 10, hurry ? HUD_HURRY : HUD_TEXT);
     const cfg = this.match.cfg;
-    let x = 60;
+    // Each player's own character, then their wins.
+    let x = 56;
     for (let i = 0; i < 5; i++) {
       if (cfg.players[i].type === 'off') continue;
       const b = w.bomber(i);
       const dead = !b || !b.alive;
-      const head = b?.gold ? icons.gold : dead ? icons.crying[i] : icons.heads[i];
-      g.image(head, x, 8);
+      g.image(characterHead(cfg.players[i].character, i, !!b?.gold, dead), x, 4);
       const wins = cfg.tag ? this.match.teamWins[cfg.players[i].team] : this.match.wins[i];
-      g.text(String(wins), x + 12, 10, dead ? HUD_DIM : HUD_TEXT);
-      if (cfg.tag) g.rect(x, 19, 10, 2, cfg.players[i].team === 0 ? '#ff5050' : '#5080ff');
+      g.text(String(wins), x + 18, 10, dead ? HUD_DIM : HUD_TEXT);
+      if (cfg.tag) g.rect(x + 2, 19, 12, 2, cfg.players[i].team === 0 ? '#ff5050' : '#5080ff');
       x += 38;
     }
   }

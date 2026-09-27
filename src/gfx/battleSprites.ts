@@ -60,6 +60,34 @@ export function characterSprites(character: string, color: number, gold = false)
   return s;
 }
 
+const headCache = new Map<string, HTMLCanvasElement>();
+
+/**
+ * A character's head for the battle HUD: the top of their front-facing sprite, hat, bow or
+ * mohawk and all; greyed out once they're knocked out.
+ */
+export function characterHead(character: string, color: number, gold = false, out = false): HTMLCanvasElement {
+  const key = `${character}:${color}:${gold ? 1 : 0}:${out ? 1 : 0}`;
+  let c = headCache.get(key);
+  if (c) return c;
+  const src = characterSprites(character, color, gold).walk.down[0];
+  c = document.createElement('canvas');
+  c.width = 16;
+  c.height = 14;
+  const ctx = c.getContext('2d')!;
+  ctx.drawImage(src, 0, 0, 16, 14, 0, 0, 16, 14);
+  if (out) {
+    const img = ctx.getImageData(0, 0, 16, 14);
+    for (let i = 0; i < img.data.length; i += 4) {
+      const v = Math.round((img.data[i] * 0.3 + img.data[i + 1] * 0.59 + img.data[i + 2] * 0.11) * 0.7);
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+  headCache.set(key, c);
+  return c;
+}
+
 export interface GimmickSprites {
   belt: Record<Dir, Sprite[]>;
   arrow: Record<Dir, Sprite>;
