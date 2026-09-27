@@ -3,7 +3,7 @@ import { mix, textWidth, type Gfx } from '../engine/gfx';
 import type { Controller } from '../engine/input';
 import { PixelCanvas } from '../gfx/pixel';
 
-/** Big outlined banner text across the screen ("READY", "PAUSE!", "HURRY!"…). */
+/** Big outlined banner text across the screen ("HURRY!", "TIME'S UP!"…). */
 export function drawBanner(g: Gfx, text: string, y: number, color = '#ffe040', scale = 2): void {
   const h = 7 * scale + 10;
   g.ctx.globalAlpha = 0.55;
@@ -12,6 +12,13 @@ export function drawBanner(g: Gfx, text: string, y: number, color = '#ffe040', s
   g.rect(0, y - h / 2, g.width, 1, mix(color, '#ffffff', 0.4));
   g.rect(0, y + h / 2 - 1, g.width, 1, mix(color, '#000000', 0.4));
   g.text(text, g.width / 2, y - (7 * scale) / 2, { align: 'center', scale, gradient: ['#ffffff', color], outline: '#000000' });
+}
+
+/** The big READY / START call-outs: yellow letters in a thick blue outline. */
+export function drawCallout(g: Gfx, text: string, y: number): void {
+  const top = y - 14;
+  g.text(text, g.width / 2 + 3, top + 3, { align: 'center', scale: 4, color: '#0a1850', outline: '#0a1850' });
+  g.text(text, g.width / 2, top, { align: 'center', scale: 4, gradient: ['#fffc98', '#f8b800'], outline: '#1838a0' });
 }
 
 /** Greedy word wrap for the fixed-width font. */
@@ -277,7 +284,7 @@ export class Menu {
   }
 }
 
-/** In-game pause: CONTINUE / QUIT, and QUIT asks YES / NO first (as on PlayStation). */
+/** In-game pause: RESUME / QUIT, and QUIT asks YES / NO first (as on PlayStation). */
 export class PauseMenu {
   private sel = 0;
   private confirming = false;
@@ -321,16 +328,16 @@ export class PauseMenu {
     return null;
   }
 
+  /** Just the words, as in the original: the chosen one white, the other grey. */
   draw(g: Gfx): void {
-    g.ctx.globalAlpha = 0.55;
+    g.ctx.globalAlpha = 0.5;
     g.rect(0, 0, g.width, g.height, '#000000');
     g.ctx.globalAlpha = 1;
-    drawBanner(g, 'PAUSE!', 86, '#ffe040');
-    if (this.confirming) g.text('QUIT THIS GAME?', g.width / 2, 108, { align: 'center', color: '#ffb0b0', outline: '#000000' });
     const options = this.confirming ? ['YES', 'NO'] : ['RESUME', 'QUIT'];
     options.forEach((o, i) => {
       const sel = i === this.sel;
-      g.text((sel ? '▶ ' : '  ') + o, g.width / 2 - 30, (this.confirming ? 122 : 116) + i * 14, { color: sel ? '#ffe040' : '#ffffff', outline: '#000000' });
+      const style = sel ? { gradient: ['#ffffff', '#b8ccff'] as [string, string], outline: '#1838a0' } : { color: '#808898', outline: '#282c38' };
+      g.text(o, g.width / 2, 92 + i * 24, { align: 'center', scale: 2, ...style });
     });
   }
 }

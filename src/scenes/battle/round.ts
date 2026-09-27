@@ -14,7 +14,7 @@ import { THEMES } from '../../gfx/tiles';
 import { BattleRenderer } from '../../render/battleField';
 import type { View } from '../../render/field';
 import { clockText, HUD_DIM, HUD_HURRY, HUD_TEXT, hudIcons, hudStrip } from '../../render/hud';
-import { drawBanner, PauseMenu } from '../../render/ui';
+import { drawBanner, drawCallout, PauseMenu } from '../../render/ui';
 import { goTitle } from '../nav';
 import { DEMO_TICKS } from './demo';
 import type { BattleMatch } from './match';
@@ -226,7 +226,7 @@ export class BattleRoundScene implements Scene {
     this.renderHud(g);
     this.renderer.drawCarts(g, v, this.app.frame);
     for (const p of this.popups) g.text(p.text, v.ox + p.x, v.oy + p.y - p.t / 3, { align: 'center', color: p.color, outline: '#000000' });
-    if (this.phase === 'ready') drawBanner(g, this.t < 60 ? 'READY' : 'START!', g.height / 2 + 6, this.t < 60 ? '#ffe040' : '#ff6040');
+    if (this.phase === 'ready') drawCallout(g, this.t < 60 ? 'READY' : 'START', g.height / 2 + 6);
     if (this.banner && this.banner.t < 90) drawBanner(g, this.banner.text, g.height / 2 + 6, this.banner.color);
     if (this.phase === 'end' && w.result && this.t > 20) {
       // A draw gets its own screen next; a time-up still says so here.
