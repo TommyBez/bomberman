@@ -1,80 +1,71 @@
-import { mix, silhouette, type Gfx } from '../../engine/gfx';
-import { RAIL_ORIGIN, type ArenaDef } from '../../game/battle/arenas';
-import { characterSprites } from '../../gfx/battleSprites';
-import { THEMES } from '../../gfx/tiles';
+import { Gfx } from '../../engine/gfx';
+import type { ArenaDef } from '../../game/battle/arenas';
+import { BattleWorld } from '../../game/battle/battleWorld';
+import { defaultConfig } from '../../game/battle/config';
+import { TILE } from '../../game/core/types';
+import { BattleRenderer } from '../../render/battleField';
 
-const previewCache = new Map<string, HTMLCanvasElement>();
+const snapshots = new Map<string, HTMLCanvasElement>();
 
-/** Mini-map of a battle stage for the stage-select carousel. */
-/** Scenery standing in for pillars ('Y'), by stage. */
-const PROP_COLORS: Record<string, string> = { warp: '#40a030', flowers: '#2a7a28', jungle: '#7a4a20', incoming: '#ffc830' };
-
-export function drawArenaPreview(g: Gfx, a: ArenaDef, x: number, y: number, scale: number): void {
-  const key = `${a.id}:${scale}`;
-  let c = previewCache.get(key);
-  if (!c) {
-    c = document.createElement('canvas');
-    c.width = 15 * scale;
-    c.height = 13 * scale;
-    const ctx = c.getContext('2d')!;
-    const t = THEMES[a.theme] ?? THEMES.battle;
-    let seed = a.id.charCodeAt(1) * 31;
-    const rnd = (): number => {
-      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-      return seed / 0x7fffffff;
-    };
-    // Rails laid by the stage's first layout, and the cloud floor, show on the map too.
-    const rails = new Map<string, string>();
-    a.railLayouts?.[0]?.forEach((row, dy) => [...row].forEach((ch, dx) => ch !== '.' && rails.set(`${RAIL_ORIGIN + dx},${RAIL_ORIGIN + dy}`, ch)));
-    const cloud = (x: number, y: number): boolean => (a.cloud ?? []).some(([x0, y0, x1, y1]) => x >= x0 && x <= x1 && y >= y0 && y <= y1);
-    a.map.forEach((row, ty) => {
-      for (let tx = 0; tx < row.length; tx++) {
-        let ch = row[tx];
-        const rail = rails.get(`${tx},${ty}`);
-        if (rail && ch === '.') ch = rail;
-        let col = cloud(tx, ty) ? '#f4f8ff' : t.floor;
-        if (ch === '#') col = tx === 0 || ty === 0 || tx === 14 || ty === 12 ? t.wall : t.hard;
-        else if (ch === 'Y') col = PROP_COLORS[a.gimmick ?? ''] ?? t.hard;
-        else if (ch === 'B') col = t.soft;
-        else if (ch === 'k') col = '#ff5030';
-        else if (ch === 'x' || (ch === '.' && rnd() < a.density)) col = t.soft;
-        else if ('><^v'.includes(ch)) col = '#e0c040';
-        else if ('RLUD@'.includes(ch)) col = '#e05050';
-        else if (ch === 'W') col = '#8060ff';
-        else if (ch === 'T') col = '#ff4040';
-        else if (ch === 'S') col = '#c08850';
-        else if ('abcde!'.includes(ch) && a.gimmick === 'signs') col = '#4080ff';
-        else if (ch === '=') col = '#a0a0b0';
-        else if (ch === 's') col = '#2060ff';
-        else if (ch === 'p' && a.gimmick === 'flowers') col = '#f070b0';
-        else if (ch === 'P' || ch === 'p') col = t.pipe ?? '#30a040';
-        else if (ch === 'J') col = '#e07a28';
-        else if (ch === 'H') col = '#f0f8ff';
-        else if (ch === 'F') col = '#2c7020';
-        else if (ch === '~') col = '#1c58b0';
-        else if (ch === 'b') col = '#b07a48';
-        else if (ch === 'i') col = '#b8e0f8';
-        else if (ch === 'G') col = '#f070b0';
-        else if (ch === 'O') col = '#303030';
-        else if ('12345'.includes(ch)) col = mix(t.floor, '#ffffff', 0.35);
-        ctx.fillStyle = col;
-        ctx.fillRect(tx * scale, ty * scale, scale, scale);
-        ctx.fillStyle = 'rgba(0,0,0,0.18)';
-        ctx.fillRect(tx * scale, ty * scale + scale - 1, scale, 1);
-      }
-    });
-    previewCache.set(key, c);
-  }
-  g.image(c, x, y);
+/**
+ * A picture of a stage for the stage-select cards: the stage as it looks in play, drawn by
+ * the game's own renderer with nobody on it and only its fixed blocks, at half size.
+ */
+export function stageSnapshot(a: ArenaDef): HTMLCanvasElement {
+  const key = `${a.id}${a.alternate ? 'x' : ''}`;
+  const cached = snapshots.get(key);
+  if (cached) return cached;
+  const cfg = defaultConfig();
+  cfg.level = a.level;
+  cfg.players.forEach((p) => (p.type = 'off'));
+  const world = new BattleWorld({ cfg, arena: { ...a, density: 0 }, seed: 1 });
+  const full = document.createElement('canvas');
+  full.width = world.grid.w * TILE;
+  full.height = world.grid.h * TILE;
+  const g = new Gfx(full.getContext('2d')!, full.width, full.height);
+  new BattleRenderer(world).draw(g, { ox: 0, oy: 0, x0: 0, x1: full.width }, 0, false);
+  const c = document.createElement('canvas');
+  c.width = full.width / 2;
+  c.height = full.height / 2;
+  const ctx = c.getContext('2d')!;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(full, 0, 0, c.width, c.height);
+  snapshots.set(key, c);
+  return c;
 }
 
-/** A player's bomber (character + colour); colour -1 draws a dim silhouette for OFF slots. */
-export function drawBomberIcon(g: Gfx, _player: number, color: number, x: number, y: number, frame: number, character = 'bomberman', big = false): void {
-  const sp = characterSprites(character, Math.max(0, color));
-  let img = sp.walk.down[frame ? Math.floor(frame / 8) % 4 : 0];
-  if (color < 0) img = silhouette(img, '#304038');
-  if (big) {
-    g.ctx.imageSmoothingEnabled = false;
-    g.ctx.drawImage(img, x - 4, y - 8, 24, 36);
-  } else g.image(img, x, y);
+/**
+ * The character-select display case: a shallow box seen from the front, with a pale ceiling
+ * and floor, green back and side walls and a hedge along the back.
+ */
+export function drawDisplayCase(g: Gfx, x: number, y: number, w: number, h: number): void {
+  const side = 10;
+  g.rect(x, y, w, h, '#50bc60');
+  // Back wall with faint stripes, and the hedge at its foot.
+  const wallTop = y + 10;
+  const wallBottom = y + h - 18;
+  g.rect(x + side, wallTop, w - side * 2, wallBottom - wallTop, '#2e9a3e');
+  for (let yy = wallTop + 2; yy < wallBottom - 2; yy += 4) g.rect(x + side, yy, w - side * 2, 1, '#34a646');
+  g.rect(x + side, wallBottom - 3, w - side * 2, 3, '#1c6a28');
+  for (let xx = x + side + 2; xx < x + w - side - 2; xx += 5) g.rect(xx, wallBottom - 2, 1, 1, '#f0d848');
+  // Ceiling, narrowing into the back.
+  g.rect(x, y, w, 6, '#eef4fa');
+  for (let r = 0; r < 4; r++) g.rect(x + Math.round(r * 2.5), y + 6 + r, w - Math.round(r * 5), 1, r === 3 ? '#b8c8d8' : '#e0eaf4');
+  // Floor, widening towards the front.
+  for (let r = 0; r < 6; r++) {
+    const inset = Math.round(side - (r * side) / 6);
+    g.rect(x + inset, wallBottom + r, w - inset * 2, 1, r === 0 ? '#b0c4d8' : '#d4e4f2');
+  }
+  g.rect(x, y + h - 12, w, 12, '#dceaf6');
+  for (let xx = x + 3; xx < x + w; xx += 8) g.rect(xx, y + h - 6, 4, 1, '#b8cce0');
+  // Edges where the side walls meet the ceiling, back and floor.
+  for (let r = 0; r < 4; r++) {
+    g.rect(x + Math.round(r * 2.5), y + 6 + r, 1, 1, '#ffffff');
+    g.rect(x + w - 1 - Math.round(r * 2.5), y + 6 + r, 1, 1, '#ffffff');
+  }
+  g.rect(x + side, wallTop, 1, wallBottom - wallTop, '#88d890');
+  g.rect(x + w - side - 1, wallTop, 1, wallBottom - wallTop, '#88d890');
+  g.frame(x - 1, y - 1, w + 2, h + 2, '#7898c0');
+  g.rect(x - 1, y - 1, w + 2, 1, '#ffffff');
 }

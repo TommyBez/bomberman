@@ -1,5 +1,5 @@
 import type { App } from '../../app';
-import type { Gfx } from '../../engine/gfx';
+import { textWidth, type Gfx } from '../../engine/gfx';
 import type { DeviceId } from '../../engine/input';
 import type { Scene } from '../../engine/scene';
 import { arenaFor, arenasFor, type ArenaDef } from '../../game/battle/arenas';
@@ -10,9 +10,9 @@ import { customCounts, softBlockCount, stageItems } from '../../game/battle/batt
 import { load, save } from '../../engine/storage';
 import { characterSprites } from '../../gfx/battleSprites';
 import { sprites } from '../../gfx/sprites';
-import { drawHand, drawMenuBackdrop, drawMenuWindow, drawPanel, drawTitleBar, drawWindow, Menu, MENU_TEXT, MENU_VALUE, type MenuItem } from '../../render/ui';
+import { drawHand, drawMenuBackdrop, drawMenuWindow, drawWindow, Menu, MENU_TEXT, MENU_VALUE, type MenuItem } from '../../render/ui';
 import { goMainMenu } from '../nav';
-import { drawArenaPreview, drawBomberIcon } from './preview';
+import { drawDisplayCase, stageSnapshot } from './preview';
 import { BattleMatch } from './match';
 
 const DEVICE_NAMES: Record<string, string> = {
@@ -361,52 +361,46 @@ class CharacterScene implements Scene {
     drawMenuBackdrop(g, this.app.frame);
     drawWindow(g, 'SELECT CHARACTER', 10, 22, 236, 176);
     // The display case: everybody's current pick.
-    g.rect(16, 32, 224, 50, '#2a8a3c');
-    for (let y = 32; y < 60; y += 4) g.rect(16, y, 224, 1, '#33983f');
-    g.rect(16, 66, 224, 2, '#8a5a20');
-    for (let x = 18; x < 240; x += 6) g.rect(x, 60, 1, 6, '#a06a28');
-    g.rect(16, 68, 224, 14, '#cce8f8');
-    g.rect(16, 68, 224, 1, '#ffffff');
-    g.frame(15, 31, 226, 52, '#80c0e8');
-    g.rect(15, 31, 226, 3, '#e8f4ff');
+    drawDisplayCase(g, 16, 34, 224, 56);
     const slots = cfg.players.map((p, i) => ({ p, i })).filter(({ p }) => p.type !== 'off');
     slots.forEach(({ p, i }, k) => {
-      const x = 128 + (k - (slots.length - 1) / 2) * 44;
+      const x = 128 + (k - (slots.length - 1) / 2) * 42;
       const sp = characterSprites(p.character, i);
       const img = this.done[i] && p.type === 'human' ? sp.win[Math.floor(this.t / 12) % 2] : sp.walk.down[0];
-      g.image(img, x - 8, 44);
-      g.text(p.type === 'com' ? 'COM' : `${i + 1}P`, x, 72, { align: 'center', color: CURSOR_COLORS[i], outline: '#000000' });
+      g.image(img, x - 8, 54);
     });
-    // The roster, with each human's cursor.
+    // The roster stands on the window's squares; each human's badge floats over their pick.
     const cellW = 54;
-    const cellH = 42;
+    const cellH = 46;
     const x0 = 128 - (Math.min(4, this.roster.length) * cellW) / 2;
     this.roster.forEach((ch, k) => {
       const x = x0 + (k % 4) * cellW;
-      const y = 90 + Math.floor(k / 4) * cellH;
-      g.rect(x + 2, y + 2, cellW - 4, cellH - 4, (k + Math.floor(k / 4)) % 2 ? 'rgba(90,60,120,0.55)' : 'rgba(120,80,40,0.55)');
-      g.image(characterSprites(ch.id, 0).walk.down[0], x + cellW / 2 - 8, y + 10);
+      const y = 104 + Math.floor(k / 4) * cellH;
+      g.image(characterSprites(ch.id, 0).walk.down[0], x + cellW / 2 - 8, y + 16);
     });
     this.humans.forEach((i, h) => {
       const k = this.cursor[i];
-      const x = x0 + (k % 4) * cellW;
-      const y = 90 + Math.floor(k / 4) * cellH;
-      const inset = h * 2;
-      const blink = this.done[i] || Math.floor((this.t + h * 5) / 8) % 2 === 0;
-      if (blink) g.frame(x + 1 + inset, y + 1 + inset, cellW - 2 - inset * 2, cellH - 2 - inset * 2, CURSOR_COLORS[i]);
-      g.text(`${i + 1}P`, x + 4 + h * 12, y + 3, { color: CURSOR_COLORS[i], outline: '#000000' });
+      const same = this.humans.filter((j) => this.cursor[j] === k);
+      const x = x0 + (k % 4) * cellW + cellW / 2 + (same.indexOf(i) - (same.length - 1) / 2) * 20;
+      const y = 104 + Math.floor(k / 4) * cellH;
+      if (this.done[i] || Math.floor((this.t + h * 5) / 8) % 2 === 0) drawBadge(g, `${i + 1}P`, x, y + 2, CURSOR_COLORS[i]);
     });
-    // What the first human is pointing at.
-    const lead = this.humans[0] ?? 0;
-    const sel = this.roster[this.cursor[lead]];
-    g.text(sel.name, 128, 178, { align: 'center', color: '#ffe040', outline: '#000000' });
-    const info = sel.special ? `SPECIAL: ${sel.specialName} (B + DIRECTION)` : 'A: CHOOSE  B: BACK  START: ALL SET';
-    g.text(info, 128, 202, { align: 'center', color: '#ffffff', outline: '#401030' });
   }
 }
 
-/** Cursor and label colour for each player slot. */
-const CURSOR_COLORS = ['#ffffff', '#a0a0b0', '#ff5050', '#50a0ff', '#60e060'];
+/** A player's rounded badge ("1P") over the character they point at. */
+function drawBadge(g: Gfx, text: string, x: number, y: number, color: string): void {
+  const w = textWidth(text) + 6;
+  const left = Math.round(x - w / 2);
+  g.rect(left + 1, y, w - 2, 11, '#101828');
+  g.rect(left, y + 1, w, 9, '#101828');
+  g.rect(left + 1, y + 1, w - 2, 9, color);
+  g.rect(left + 2, y + 1, w - 4, 1, '#ffffff');
+  g.text(text, x, y + 2, { align: 'center', color: '#ffffff', outline: '#101828' });
+}
+
+/** Badge colour for each player slot. */
+const CURSOR_COLORS = ['#48b8f0', '#f070c0', '#f05848', '#f0b030', '#50c850'];
 
 // ------------------------------------------------------------------ teams
 
@@ -446,21 +440,43 @@ class TeamScene implements Scene {
 
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
-    drawTitleBar(g, 'SELECT TEAM MEMBERS', this.app.frame);
-    drawPanel(g, 12, 36, 232, 70, '#c04040', '#401010');
-    drawPanel(g, 12, 112, 232, 70, '#4060d0', '#101850');
-    g.text('TEAM A', 20, 42, { color: '#ffd0d0', outline: '#000000' });
-    g.text('TEAM B', 20, 118, { color: '#d0e0ff', outline: '#000000' });
+    drawWindow(g, 'SELECT TEAM MEMBERS', 8, 20, 240, 190);
+    // One display case per team, with the VS badge between them.
+    drawDisplayCase(g, 16, 34, 224, 60);
+    drawDisplayCase(g, 16, 132, 224, 60);
+    drawVsBadge(g, 128, 113);
     const act = this.active();
     act.forEach((i, k) => {
       const p = this.setup.cfg.players[i];
-      const x = 30 + k * 44;
-      const y = p.team === 0 ? 60 : 136;
-      drawBomberIcon(g, i, i, x, y, this.app.frame, p.character);
-      g.text(`P${i + 1}`, x + 8, y + 30, { align: 'center', color: k === this.sel ? '#ffe040' : '#ffffff', outline: '#000000' });
-      if (k === this.sel && Math.floor(this.app.frame / 8) % 2 === 0) g.text('↑↓', x + 8, y - 10, { align: 'center', color: '#ffe040', outline: '#000000' });
+      const x = Math.round(16 + (224 * (k + 0.5)) / act.length);
+      const y = p.team === 0 ? 58 : 156;
+      g.image(characterSprites(p.character, i).walk.down[0], x - 8, y);
+      if (k === this.sel && Math.floor(this.app.frame / 8) % 2 === 0) drawBrackets(g, x - 13, y - 4, 26, 32);
     });
-    g.text('← → PLAYER   ↑ ↓ TEAM   A: OK', g.width / 2, 196, { align: 'center', color: '#c8ffe0', outline: '#000000' });
+  }
+}
+
+/** The big VS between the two teams. */
+function drawVsBadge(g: Gfx, cx: number, cy: number): void {
+  const w = 56;
+  const h = 28;
+  const x = cx - w / 2;
+  const y = cy - h / 2;
+  g.rect(x + 2, y, w - 4, h, '#6a4008');
+  g.rect(x, y + 2, w, h - 4, '#6a4008');
+  g.rect(x + 2, y + 1, w - 4, h - 2, '#f8c828');
+  g.rect(x + 1, y + 2, w - 2, h - 4, '#f8c828');
+  g.rect(x + 3, y + 2, w - 6, 2, '#fff0a0');
+  g.rect(x + 3, y + h - 4, w - 6, 2, '#d89818');
+  g.text('VS', cx + 1, cy - 6, { align: 'center', scale: 2, color: '#e02818', outline: '#fff8e0' });
+}
+
+/** Four corner marks round the player being moved. */
+function drawBrackets(g: Gfx, x: number, y: number, w: number, h: number): void {
+  for (const [bx, by, sx, sy] of [[x, y, 1, 1], [x + w - 1, y, -1, 1], [x, y + h - 1, 1, -1], [x + w - 1, y + h - 1, -1, -1]]) {
+    g.rect(sx > 0 ? bx : bx - 4, by, 5, 1, '#ffffff');
+    g.rect(bx, sy > 0 ? by : by - 4, 1, 5, '#ffffff');
+    g.rect(sx > 0 ? bx + 1 : bx - 4, by + sy, 4, 1, '#506070');
   }
 }
 
@@ -519,19 +535,68 @@ class StageSelectScene implements Scene {
 
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
-    drawTitleBar(g, 'SELECT STAGE', this.app.frame);
-    const a = this.arena;
-    const ox = 53 + this.slide;
-    drawPanel(g, ox - 5, 33, 160, 138, '#28a068', '#0c4028');
-    drawArenaPreview(g, a, ox, 38, 10);
-    g.text('◀', 20, 96, { scale: 2, color: '#ffe040', outline: '#000000' });
-    g.text('▶', 224, 96, { scale: 2, color: '#ffe040', outline: '#000000' });
-    // Name banner
-    drawPanel(g, 24, 173, 208, 17, '#1c6848', '#082818');
-    g.text(`${this.setup.cfg.stage + 1}/8  ${a.name}${a.alternate ? ' ALT' : ''}`, g.width / 2, 178, { align: 'center', color: a.alternate ? '#ff9ad0' : '#ffe040', outline: '#000000' });
-    g.text(a.blurb, g.width / 2, 196, { align: 'center', color: '#ffffff', outline: '#000000' });
-    g.text(LEVEL_NAMES[this.setup.cfg.level] + (this.altOpen ? '   ↑↓ ALTERNATE' : ''), g.width / 2, 210, { align: 'center', color: '#a8ffc8', outline: '#000000' });
+    drawWindow(g, 'SELECT STAGE', 8, 20, 240, 196);
+    const cfg = this.setup.cfg;
+    const n = this.stages.length;
+    const alt = this.altOpen && !!cfg.alternate;
+    const at = (k: number): ArenaDef => arenaFor(cfg.level, (cfg.stage + k + n * 2) % n, alt);
+    const dx = this.slide * 3;
+    // The next-but-one stage far behind, then the two neighbours, then the chosen one raised.
+    drawCard(g, stageSnapshot(at(2)), 78 + dx / 2, 38, 100, 87, 0.45);
+    drawCard(g, stageSnapshot(at(-1)), 14 + dx, 70, 88, 76, 0.2);
+    drawCard(g, stageSnapshot(at(1)), 154 + dx, 70, 88, 76, 0.2);
+    g.ctx.globalAlpha = 0.35;
+    g.rect(69 + dx, 64, 126, 110, '#200818');
+    g.ctx.globalAlpha = 1;
+    drawCard(g, stageSnapshot(this.arena), 65 + dx, 58, 120, 104, 0);
+    drawScroll(g, this.arena.name, 36, alt);
+    drawStageArrow(g, 20, 180, -1);
+    drawStageArrow(g, 224, 180, 1);
   }
+}
+
+/** A stage picture in its pale frame; `dim` shades cards further back. */
+function drawCard(g: Gfx, img: HTMLCanvasElement, x: number, y: number, w: number, h: number, dim: number): void {
+  x = Math.round(x);
+  g.rect(x - 3, y - 3, w + 6, h + 6, '#6a6a20');
+  g.rect(x - 2, y - 2, w + 4, h + 4, '#f4ec98');
+  g.rect(x - 1, y - 1, w + 2, h + 2, '#b8b050');
+  g.ctx.imageSmoothingEnabled = true;
+  g.ctx.drawImage(img, x, y, w, h);
+  g.ctx.imageSmoothingEnabled = false;
+  if (dim > 0) {
+    g.ctx.globalAlpha = dim;
+    g.rect(x - 3, y - 3, w + 6, h + 6, '#281830');
+    g.ctx.globalAlpha = 1;
+  }
+}
+
+/** The stage's name on an orange scroll with red rolled ends; alternates get pink lettering. */
+function drawScroll(g: Gfx, name: string, y: number, alternate: boolean): void {
+  const w = Math.max(120, textWidth(name) + 36);
+  const x = Math.round((g.width - w) / 2);
+  const h = 15;
+  const band = ['#b05010', '#f0a030', '#ffd060', '#fff0a0', '#ffd868', '#f8b840', '#f0a030', '#e89028', '#d88020', '#c87018', '#b86010', '#a85010', '#984808', '#883c08', '#702c04'];
+  for (let i = 0; i < h; i++) g.rect(x, y + i, w, 1, band[i]);
+  for (const ex of [x - 5, x + w - 2]) {
+    g.rect(ex, y - 1, 7, h + 2, '#601008');
+    g.rect(ex + 1, y, 5, h, '#e03818');
+    g.rect(ex + 2, y + 1, 1, h - 2, '#ff9070');
+  }
+  g.text(name, g.width / 2, y + 4, { align: 'center', color: alternate ? '#ffa0e0' : '#78f060', outline: alternate ? '#501040' : '#104010' });
+}
+
+/** The yellow arrow buttons in the bottom corners: a triangle and a bar. */
+function drawStageArrow(g: Gfx, x: number, y: number, dir: -1 | 1): void {
+  const ink = (dx: number, dy: number, w: number, h: number, color: string): void => g.rect(dir < 0 ? x + dx : x - dx - w, y + dy, w, h, color);
+  for (let i = 0; i < 8; i++) {
+    const h = 2 + i * 2;
+    ink(i, 8 - i - 1, 1, h + 2, '#804010');
+    ink(i, 8 - i, 1, h, i < 2 ? '#ffe890' : '#f8c830');
+  }
+  ink(10, -1, 5, 20, '#804010');
+  ink(11, 0, 3, 18, '#f8c830');
+  ink(11, 0, 1, 18, '#ffe890');
 }
 
 // ------------------------------------------------------------------ custom setting
