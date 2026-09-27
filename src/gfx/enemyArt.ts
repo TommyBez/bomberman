@@ -89,224 +89,163 @@ function bigEyes(p: PixelCanvas, xs: [number, number], y: number, look: Look, de
   }
 }
 
-/**
- * The PlayStation's Modern designs for the monsters that look different from the 1985 ones:
- * a pale-blue drop (Onil), a red barrel (Dahl), an orange ball with a gaping mouth (Minvo),
- * a teal blob (Doria), a pink octopus (Ovape), a yellow tiger (Pass), a pink coin (Pontan).
- */
-function drawModern(p: PixelCanvas, kind: EnemyKind, f: number, look: Look, dead: boolean): boolean {
-  const bob = f === 1 || f === 2 ? 1 : 0;
-  switch (kind) {
-    case 'oneal': {
-      // The drop's tip leans with the sway.
-      const sway = [0, 1, 0, -1][f];
-      body(p, 7.5, 9.5, 6.2, 5.4 - (f % 2) * 0.3, '#b8e0ff');
-      for (let i = 0; i < 4; i++) {
-        const dx = i < 2 ? sway : 0;
-        p.rect(7 - i + dx, 1 + i, 2 + i * 2, 1, '#000000');
-        if (i > 0) p.rect(8 - i + dx, 1 + i, i * 2, 1, i === 1 ? '#e8f6ff' : '#b8e0ff');
-      }
-      eyes(p, { ex: [5, 10], ey: 9, look, mood: dead ? 'dead' : 'angry', mouthY: 13 });
-      mouth(p, 8, 13, dead ? 'dead' : 'plain', 1);
-      return true;
-    }
-    case 'doll': {
-      const y0 = 2 + bob;
-      p.roundRect(1, y0, 14, 13 - bob, '#000000', 4);
-      p.roundRect(2, y0 + 1, 12, 11 - bob, '#d82020', 3);
-      p.rect(2, y0 + 4, 12, 1, '#901010');
-      p.rect(2, y0 + 8, 12, 1, '#901010');
-      p.rect(4, y0 + 1, 3, 2, '#ff9080');
-      bigEyes(p, [5.5, 10.5], y0 + 6, look, dead, '#1830c0');
-      return true;
-    }
-    case 'minvo': {
-      body(p, 7.5, 8, 6.4, 6.2 - (f % 2) * 0.4, '#ff6a18');
-      bigEyes(p, [5, 10], 6, look, dead);
-      if (dead) mouth(p, 8, 12, 'dead', 2);
-      else {
-        p.ellipse(8.5, 12, 3, 1.6 + (f % 2) * 0.6, '#000000');
-        p.ellipse(8.5, 12, 2, 0.8 + (f % 2) * 0.6, '#a01818');
-      }
-      return true;
-    }
-    case 'kondoria': {
-      p.ctx.globalAlpha = 0.92;
-      p.ellipse(3.5, 3.5, 2.4, 2.4, '#000000');
-      p.ellipse(11.5, 3.5, 2.4, 2.4, '#000000');
-      p.ellipse(7.5, 9, 7, 5.8, '#000000');
-      p.ellipse(3.5, 3.5, 1.4, 1.4, '#30c0b0');
-      p.ellipse(11.5, 3.5, 1.4, 1.4, '#30c0b0');
-      p.ellipse(7.5, 9, 6, 4.8, '#30c0b0');
-      p.ellipse(6, 7, 3, 2, '#90f0e0');
-      const wave = f % 2;
-      for (let x = 2; x < 14; x++) if ((x + wave) % 3 === 0) p.px(x, 14, '#30c0b0');
-      p.ctx.globalAlpha = 1;
-      eyes(p, { ex: [5, 10], ey: 9, look, mood: dead ? 'dead' : 'happy', mouthY: 12 });
-      mouth(p, 8, 12, dead ? 'dead' : 'happy', 1);
-      return true;
-    }
-    case 'ovapi': {
-      p.ellipse(7.5, 6.5, 6.4, 5.8, '#000000');
-      p.ellipse(7.5, 6.5, 5.4, 4.8, '#f068a8');
-      p.ellipse(5.5, 4, 1.8, 1.2, '#ffc0dc');
-      // Four wriggling legs.
-      for (let n = 0; n < 4; n++) {
-        const x = 2 + n * 3.4;
-        const kick = (n + f) % 2;
-        p.rect(Math.round(x) - 1, 10, 4, 5 - kick, '#000000');
-        p.rect(Math.round(x), 10, 2, 4 - kick, '#f068a8');
-      }
-      p.rect(3, 10, 10, 1, '#f068a8');
-      bigEyes(p, [5.5, 9.5], 6, look, dead, '#108080');
-      return true;
-    }
-    case 'pass': {
-      p.rect(1, 1, 4, 4, '#000000');
-      p.rect(11, 1, 4, 4, '#000000');
-      p.rect(2, 2, 2, 2, '#ffe060');
-      p.rect(12, 2, 2, 2, '#ffe060');
-      body(p, 7.5, 8.5, 6.4, 6, '#ffd02a');
-      p.rect(7, 3, 2, 2, '#c07000');
-      p.px(1, 8, '#c07000');
-      p.px(2, 9, '#c07000');
-      p.px(14, 8, '#c07000');
-      p.px(13, 9, '#c07000');
-      eyes(p, { ex: [5, 10], ey: 7, look, mood: dead ? 'dead' : 'angry', mouthY: 11 });
-      if (!dead) {
-        p.rect(6, 11, 4, 2, '#000000');
-        p.px(6, 13, '#ffffff');
-        p.px(9, 13, '#ffffff');
-        p.px(7, 11, '#ff3060');
-        p.px(8, 11, '#ff3060');
-      } else mouth(p, 8, 11, 'dead');
-      return true;
-    }
-    case 'pontan': {
-      const rx = [6.6, 4.8, 2.2, 4.8][f];
-      p.ellipse(7.5, 7.5, rx + 1, 7.4, '#000000');
-      p.ellipse(7.5, 7.5, rx, 6.4, '#b01860');
-      p.ellipse(7.5 - rx * 0.12, 7, rx * 0.82, 5.6, '#ff58a8');
-      if (rx > 4) {
-        p.ellipse(7.5 - rx * 0.4, 4.5, 1.4, 1.2, '#ffe860');
-        eyes(p, { ex: [f === 0 ? 5 : 6, f === 0 ? 10 : 9], ey: 7, look, mood: dead ? 'dead' : 'angry', mouthY: 11 });
-        mouth(p, 8, 11, dead ? 'dead' : 'angry', f === 0 ? 2 : 1);
-      } else p.rect(7, 2, 1, 11, '#ffe860');
-      return true;
-    }
-    default:
-      return false;
-  }
-}
+/** Body colours: the PlayStation's Modern designs, and its Retro (1985 NES palette) ones. */
+const MODERN: Record<EnemyKind, string> = {
+  balloom: '#ff8c1a',
+  oneal: '#b8e0ff',
+  doll: '#d82020',
+  minvo: '#ff6a18',
+  kondoria: '#30c0b0',
+  ovapi: '#f068a8',
+  pass: '#ffd02a',
+  pontan: '#ff58a8',
+};
+const RETRO: Record<EnemyKind, string> = {
+  balloom: '#f87858',
+  oneal: '#40c0f8',
+  doll: '#b8108c',
+  minvo: '#f87858',
+  kondoria: '#40c0f8',
+  ovapi: '#b8108c',
+  pass: '#f87858',
+  pontan: '#f87858',
+};
 
-/** `retro` draws the 1985 designs in flat, NES-like colours without shading. */
+/**
+ * The eight monsters (16×16). Modern follows the PlayStation's designs: an orange balloon
+ * (Ballom), a pale-blue drop (Onil), a red barrel (Dahl), an orange ball with a gaping mouth
+ * (Minvo), a teal blob (Doria), a pink octopus (Ovape), a yellow tiger (Pass), a pink coin
+ * (Pontan). Retro (`retro`) is its 1985 look: the same shapes, flat, in the NES palette,
+ * with Minvo grinning, Ovape a ghost and Pass spotted.
+ */
 export function drawEnemy(kind: EnemyKind, frame: number, look: Look, dead = false, retro = false): HTMLCanvasElement {
   flat = retro;
   const p = new PixelCanvas(16, 16);
   const f = frame % ENEMY_ANIM_FRAMES;
   const bob = f === 1 || f === 2 ? 1 : 0;
   const mood = (m: Face['mood']): Face['mood'] => (dead ? 'dead' : m);
-  if (!retro && drawModern(p, kind, f, look, dead)) return p.canvas;
+  const col = (retro ? RETRO : MODERN)[kind];
+  const lite = mix(col, '#ffffff', 0.55);
   switch (kind) {
     case 'balloom': {
-      // Orange balloon with a tied knot, bobbing gently.
+      // A balloon with a tied knot, bobbing gently.
       const sq = f % 2 ? 0.4 : 0;
       p.px(8, 15, '#000000');
       p.rect(7, 13 + bob - 1, 3, 2, '#000000');
-      p.px(8, 13 + bob - 1, '#c05010');
-      body(p, 7.5, 7 + bob * 0.5, 6.4 + sq, 6.2 - sq, '#ff8c1a');
+      p.px(8, 13 + bob - 1, mix(col, '#000000', 0.3));
+      body(p, 7.5, 7 + bob * 0.5, 6.4 + sq, 6.2 - sq, col);
       eyes(p, { ex: [5, 10], ey: 6 + bob, look, mood: mood('happy'), mouthY: 10 });
       mouth(p, 8, 10 + bob, mood('happy'));
       break;
     }
     case 'oneal': {
-      // Blue onion creature with a swaying sprout.
+      // A drop whose tip leans with the sway.
       const sway = [0, 1, 0, -1][f];
-      p.rect(7 + sway, 1, 2, 3, '#000000');
-      p.px(8 + sway, 2, '#80e060');
-      p.px(8 + sway, 1, '#40a030');
-      body(p, 7.5, 9, 6.6, 5.6 - (f % 2) * 0.3, '#3c78ff');
-      p.ellipse(7.5, 4.6, 3.2, 1.6, '#000000');
-      p.ellipse(7.5, 4.8, 2.4, 1.1, '#3c78ff');
-      eyes(p, { ex: [5, 10], ey: 8, look, mood: mood('angry'), mouthY: 12 });
-      mouth(p, 8, 12, mood('plain'));
+      body(p, 7.5, 9.5, 6.2, 5.4 - (f % 2) * 0.3, col);
+      for (let i = 0; i < 4; i++) {
+        const dx = i < 2 ? sway : 0;
+        p.rect(7 - i + dx, 1 + i, 2 + i * 2, 1, '#000000');
+        if (i > 0) p.rect(8 - i + dx, 1 + i, i * 2, 1, i === 1 ? lite : col);
+      }
+      p.px(5, 7, '#ffffff');
+      eyes(p, { ex: [5, 10], ey: 9, look, mood: mood('angry'), mouthY: 13 });
+      mouth(p, 8, 13, mood('plain'), 1);
       break;
     }
     case 'doll': {
-      // Pink round doll with rosy cheeks and tiny hands.
-      const hand = f % 2;
-      body(p, 7.5, 8 + bob * 0.5, 6.2, 6.4, '#ff8ccf');
-      p.rect(0, 9 - hand, 2, 2, '#000000');
-      p.px(0, 9 - hand, '#ffd0e8');
-      p.rect(14, 8 + hand, 2, 2, '#000000');
-      p.px(15, 8 + hand, '#ffd0e8');
-      eyes(p, { ex: [5, 10], ey: 7 + bob, look, mood: mood('happy'), mouthY: 11 });
-      if (!dead) {
-        p.px(3, 10 + bob, '#ff4090');
-        p.px(12, 10 + bob, '#ff4090');
-      }
-      mouth(p, 8, 11 + bob, mood('happy'), 1);
+      // A barrel with bands and big round eyes.
+      const y0 = 2 + bob;
+      const band = mix(col, '#000000', 0.4);
+      p.roundRect(1, y0, 14, 13 - bob, '#000000', 4);
+      p.roundRect(2, y0 + 1, 12, 11 - bob, col, 3);
+      p.rect(2, y0 + 4, 12, 1, band);
+      p.rect(2, y0 + 8, 12, 1, band);
+      p.rect(4, y0 + 1, 3, 2, lite);
+      bigEyes(p, [5.5, 10.5], y0 + 6, look, dead, retro ? '#000000' : '#1830c0');
       break;
     }
     case 'minvo': {
-      // Red sun-face with rotating spikes and a toothy grin.
-      const spikes: [number, number][] = f % 2 ? [[7, 0], [15, 7], [7, 15], [0, 7]] : [[2, 2], [13, 2], [13, 13], [2, 13]];
-      for (const [x, y] of spikes) {
-        p.rect(x, y, 2, 2, '#000000');
-        p.px(x + (x < 8 ? 1 : 0), y + (y < 8 ? 1 : 0), '#ffd040');
+      body(p, 7.5, 8, 6.4, 6.2 - (f % 2) * 0.4, col);
+      if (retro) {
+        // A wide, toothy grin.
+        eyes(p, { ex: [5, 10], ey: 6, look, mood: mood('happy'), mouthY: 10 });
+        if (dead) mouth(p, 8, 11, 'dead', 3);
+        else {
+          p.rect(4, 10, 8, 3, '#000000');
+          for (let x = 5; x < 11; x += 2) p.px(x, 10, '#ffffff');
+        }
+      } else {
+        bigEyes(p, [5, 10], 6, look, dead);
+        if (dead) mouth(p, 8, 12, 'dead', 2);
+        else {
+          p.ellipse(8.5, 12, 3, 1.6 + (f % 2) * 0.6, '#000000');
+          p.ellipse(8.5, 12, 2, 0.8 + (f % 2) * 0.6, '#a01818');
+        }
       }
-      body(p, 7.5, 7.5, 5.8, 5.8, '#f03838');
-      eyes(p, { ex: [5, 10], ey: 6, look, mood: mood('angry'), mouthY: 10 });
-      mouth(p, 8, 10, mood('angry'), 3);
       break;
     }
     case 'kondoria': {
-      // Translucent blue droplet that drifts through walls.
-      p.ctx.globalAlpha = 0.9;
-      p.ellipse(7.5, 9.5, 6.6, 5.6, '#000000');
-      p.rect(6, 1 + bob, 3, 5, '#000000');
-      p.ellipse(7.5, 9.5, 5.6, 4.6, '#2090d0');
-      p.rect(7, 2 + bob, 1, 4, '#2090d0');
-      p.ellipse(7.5, 8.8, 4.6, 3.8, '#58c0f0');
-      p.px(5, 7, '#e0f8ff');
-      p.px(4, 8, '#e0f8ff');
+      // A blob with two ear bumps and a wavering base.
+      p.ctx.globalAlpha = retro ? 1 : 0.92;
+      p.ellipse(3.5, 3.5, 2.4, 2.4, '#000000');
+      p.ellipse(11.5, 3.5, 2.4, 2.4, '#000000');
+      p.ellipse(7.5, 9, 7, 5.8, '#000000');
+      p.ellipse(3.5, 3.5, 1.4, 1.4, col);
+      p.ellipse(11.5, 3.5, 1.4, 1.4, col);
+      p.ellipse(7.5, 9, 6, 4.8, col);
+      p.ellipse(6, 7, 3, 2, lite);
+      const wave = f % 2;
+      for (let x = 2; x < 14; x++) if ((x + wave) % 3 === 0) p.px(x, 14, col);
       p.ctx.globalAlpha = 1;
-      eyes(p, { ex: [5, 10], ey: 9, look, mood: mood('sleepy'), mouthY: 12 });
-      mouth(p, 8, 12, mood('plain'), 1);
+      eyes(p, { ex: [5, 10], ey: 9, look, mood: mood('happy'), mouthY: 12 });
+      mouth(p, 8, 12, mood('happy'), 1);
       break;
     }
     case 'ovapi': {
-      // Purple ghost with a wavy hem.
-      p.ctx.globalAlpha = 0.92;
-      p.ellipse(7.5, 7, 6.8, 6.4, '#000000');
-      p.rect(1, 7, 14, 7, '#000000');
-      p.ellipse(7.5, 7, 5.8, 5.4, '#9048d8');
-      p.rect(2, 7, 12, 6, '#9048d8');
-      const wave = f % 2;
-      for (let x = 1; x < 15; x++) {
-        const down = (x + wave) % 3 === 0;
-        p.px(x, 13, down ? '#9048d8' : '#000000');
-        p.px(x, 14, down ? '#000000' : 'rgba(0,0,0,0)');
+      if (retro) {
+        // A ghost with a wavy hem.
+        p.ellipse(7.5, 7, 6.8, 6.4, '#000000');
+        p.rect(1, 7, 14, 7, '#000000');
+        p.ellipse(7.5, 7, 5.8, 5.4, col);
+        p.rect(2, 7, 12, 6, col);
+        const wave = f % 2;
+        for (let x = 1; x < 15; x++) {
+          const down = (x + wave) % 3 === 0;
+          p.px(x, 13, down ? col : '#000000');
+          p.px(x, 14, down ? '#000000' : 'rgba(0,0,0,0)');
+        }
+        eyes(p, { ex: [5, 10], ey: 7, look, mood: mood('plain'), mouthY: 11 });
+        mouth(p, 8, 11, mood('plain'), 1);
+        break;
       }
-      p.ellipse(5.5, 4.5, 1.6, 1.2, '#c8a0ff');
-      p.ctx.globalAlpha = 1;
-      eyes(p, { ex: [5, 10], ey: 7, look, mood: mood('plain'), mouthY: 11 });
-      mouth(p, 8, 11, mood('plain'), 1);
+      // An octopus on four wriggling legs.
+      p.ellipse(7.5, 6.5, 6.4, 5.8, '#000000');
+      p.ellipse(7.5, 6.5, 5.4, 4.8, col);
+      p.ellipse(5.5, 4, 1.8, 1.2, lite);
+      for (let n = 0; n < 4; n++) {
+        const x = 2 + n * 3.4;
+        const kick = (n + f) % 2;
+        p.rect(Math.round(x) - 1, 10, 4, 5 - kick, '#000000');
+        p.rect(Math.round(x), 10, 2, 4 - kick, col);
+      }
+      p.rect(3, 10, 10, 1, col);
+      bigEyes(p, [5.5, 9.5], 6, look, dead, '#108080');
       break;
     }
     case 'pass': {
-      // Orange tiger face with ears, stripes and fangs.
+      // A tiger's face: ears, stripes (spots in Retro) and fangs.
+      const mark = retro ? '#ffffff' : mix(col, '#000000', 0.35);
       p.rect(1, 1, 4, 4, '#000000');
       p.rect(11, 1, 4, 4, '#000000');
-      p.rect(2, 2, 2, 2, '#ffa030');
-      p.rect(12, 2, 2, 2, '#ffa030');
-      body(p, 7.5, 8.5, 6.4, 6, '#ff9020');
-      p.rect(7, 3, 2, 2, '#402000');
-      p.px(1, 8, '#402000');
-      p.px(2, 9, '#402000');
-      p.px(14, 8, '#402000');
-      p.px(13, 9, '#402000');
-      eyes(p, { ex: [5, 10], ey: 7 + bob * 0, look, mood: mood('angry'), mouthY: 11 });
+      p.rect(2, 2, 2, 2, lite);
+      p.rect(12, 2, 2, 2, lite);
+      body(p, 7.5, 8.5, 6.4, 6, col);
+      p.rect(7, 3, 2, 2, mark);
+      p.px(1, 8, mark);
+      p.px(2, 9, mark);
+      p.px(14, 8, mark);
+      p.px(13, 9, mark);
+      eyes(p, { ex: [5, 10], ey: 7, look, mood: mood('angry'), mouthY: 11 });
       if (!dead) {
         p.rect(6, 11, 4, 2, '#000000');
         p.px(6, 13, '#ffffff');
@@ -317,19 +256,17 @@ export function drawEnemy(kind: EnemyKind, frame: number, look: Look, dead = fal
       break;
     }
     case 'pontan': {
-      // Golden coin with a face, spinning.
-      const widths = [6.6, 4.8, 2.2, 4.8];
-      const rx = widths[f];
+      // A coin with a face, spinning.
+      const rx = [6.6, 4.8, 2.2, 4.8][f];
+      const rim = retro ? '#b8108c' : '#b01860';
       p.ellipse(7.5, 7.5, rx + 1, 7.4, '#000000');
-      p.ellipse(7.5, 7.5, rx, 6.4, '#c08000');
-      p.ellipse(7.5 - rx * 0.12, 7, rx * 0.82, 5.6, '#ffd030');
+      p.ellipse(7.5, 7.5, rx, 6.4, rim);
+      p.ellipse(7.5 - rx * 0.12, 7, rx * 0.82, 5.6, col);
       if (rx > 4) {
-        p.ellipse(7.5 - rx * 0.4, 4.5, 1.2, 1.2, '#fff8c0');
-        eyes(p, { ex: [f === 0 ? 5 : 6, f === 0 ? 10 : 9], ey: 6, look, mood: mood('angry'), mouthY: 10 });
-        mouth(p, 8, 10, mood('angry'), f === 0 ? 2 : 1);
-      } else {
-        p.rect(7, 2, 1, 11, '#fff8c0');
-      }
+        p.ellipse(7.5 - rx * 0.4, 4.5, 1.4, 1.2, retro ? '#ffffff' : '#ffe860');
+        eyes(p, { ex: [f === 0 ? 5 : 6, f === 0 ? 10 : 9], ey: 7, look, mood: mood('angry'), mouthY: 11 });
+        mouth(p, 8, 11, mood('angry'), f === 0 ? 2 : 1);
+      } else p.rect(7, 2, 1, 11, retro ? '#ffffff' : '#ffe860');
       break;
     }
   }
