@@ -282,17 +282,54 @@ export class StageScene implements Scene {
       g.text(text, g.width / 2, g.height / 2 - 4, { align: 'center', color: '#fcfcfc' });
       return;
     }
-    // A burst of blue light with Bomberman standing in it, and the stage in white on blue.
-    drawLightBurst(g, g.width / 2, 92, this.timer);
-    const img = sprites().bombers[0].walk.down[0];
-    g.ctx.imageSmoothingEnabled = false;
-    g.ctx.drawImage(img, g.width / 2 - 16, 58, 32, 48);
-    const label = this.bonus ? 'BONUS' : `STAGE ${this.session.stageNumber}`;
-    g.text(label, g.width / 2, 150, { align: 'center', scale: 2, color: '#ffffff', outline: '#1848a8' });
-    if (!this.bonus) {
-      g.image(hudIcons().heads[0], g.width / 2 - 20, 176);
-      g.text(`× ${String(Math.max(0, this.session.lives)).padStart(2, '0')}`, g.width / 2 - 6, 178, { color: '#ffffff', outline: '#1848a8' });
+    // A burst of blue light; Bomberman beams down into it as a streak of light, lands with
+    // his back to us and turns round. Then the stage, in white on blue.
+    const t = this.timer;
+    drawLightBurst(g, g.width / 2, 92, t);
+    const ctx = g.ctx;
+    ctx.imageSmoothingEnabled = false;
+    if (t < BEAM_TICKS) drawBeam(g, g.width / 2, 106 * (t / BEAM_TICKS), t);
+    else {
+      const walk = sprites().bombers[0].walk;
+      const img = t < BEAM_TICKS + 22 ? walk.up[0] : t < BEAM_TICKS + 27 ? walk.left[0] : walk.down[0];
+      ctx.drawImage(img, g.width / 2 - 16, 58, 32, 48);
+      // The flash as he lands.
+      const f = t - BEAM_TICKS;
+      if (f < 8) {
+        ctx.globalAlpha = 1 - f / 8;
+        g.rect(g.width / 2 - 20 - f * 2, 56, 40 + f * 4, 52, '#ffffff');
+        ctx.globalAlpha = 1;
+      }
     }
+    if (t >= BEAM_TICKS + 27) {
+      const label = this.bonus ? 'BONUS' : `STAGE ${this.session.stageNumber}`;
+      g.text(label, g.width / 2, 150, { align: 'center', scale: 2, color: '#ffffff', outline: '#1848a8' });
+      if (!this.bonus) {
+        g.image(hudIcons().heads[0], g.width / 2 - 20, 176);
+        g.text(`× ${String(Math.max(0, this.session.lives)).padStart(2, '0')}`, g.width / 2 - 6, 178, { color: '#ffffff', outline: '#1848a8' });
+      }
+    }
+  }
+}
+
+/** Ticks Bomberman takes to beam down on the stage card. */
+const BEAM_TICKS = 24;
+
+/** Bomberman beaming down: a streak of white light with pink and red edges, its foot at y. */
+function drawBeam(g: Gfx, cx: number, y: number, t: number): void {
+  const top = y - 90;
+  const bands: [number, string][] = [
+    [9, '#c02858'],
+    [7, '#ff6090'],
+    [5, '#ffc0d8'],
+    [2, '#ffffff'],
+  ];
+  for (const [half, color] of bands) g.rect(cx - half, top, half * 2, y - top, color);
+  // Sparks thrown off either side.
+  for (let k = 0; k < 6; k++) {
+    const sy = top + ((t * 7 + k * 31) % Math.max(1, y - top));
+    const sx = cx + (k % 2 ? 1 : -1) * (11 + ((t + k * 5) % 5));
+    g.rect(sx, sy, 2, 2, k % 3 ? '#ffffff' : '#ffc0e0');
   }
 }
 
