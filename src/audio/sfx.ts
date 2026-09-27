@@ -57,6 +57,36 @@ function noise(
   n.onended = () => g.disconnect();
 }
 
+/** A cartoon voice: a sawtooth through two vowel formants, gliding in pitch. */
+function vowel(s: Synth, out: AudioNode, t: number, f0: number, f1: number, dur: number, formants: [number, number], vol: number): void {
+  const ctx = s.ctx;
+  const o = ctx.createOscillator();
+  o.type = 'sawtooth';
+  o.frequency.setValueAtTime(f0, t);
+  o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.02);
+  g.gain.setValueAtTime(vol, t + dur * 0.6);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  for (const [freq, q, gain] of [
+    [formants[0], 6, 1],
+    [formants[1], 9, 0.6],
+  ]) {
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = freq;
+    bp.Q.value = q;
+    const fg = ctx.createGain();
+    fg.gain.value = gain;
+    o.connect(bp).connect(fg).connect(g);
+  }
+  g.connect(out);
+  o.start(t);
+  o.stop(t + dur + 0.02);
+  o.onended = () => g.disconnect();
+}
+
 function arp(s: Synth, out: AudioNode, t: number, notes: number[], stepDur: number, vol: number, inst: 'bell' | 'lead' | 'square' | 'pluck' = 'square'): void {
   notes.forEach((m, i) => s.note(inst, m, t + i * stepDur, stepDur * 0.9, vol, out, 0, 0.25));
 }
@@ -128,4 +158,11 @@ export const SFX: Record<string, SfxFn> = {
   conveyor: (s, t, o) => noise(s, o, t, 0.05, 0.08, 'bandpass', 800, 700, 4),
   coin: (s, t, o) => arp(s, o, t, [88, 95], 0.06, 0.3, 'square'),
   select: (s, t, o) => tone(s, o, t, s.pulse(0.25), 660, 990, 0.06, 0.25, 'lin'),
+  // Bomberman's voice (Modern): a quick "hai!" for an item, "ya-tta!" for a cleared stage.
+  voiceItem: (s, t, o) => vowel(s, o, t, 470, 660, 0.16, [860, 1320], 1.4),
+  voiceClear: (s, t, o) => {
+    vowel(s, o, t, 430, 560, 0.14, [800, 1250], 1.3);
+    noise(s, o, t + 0.15, 0.03, 0.25, 'highpass', 4200, 3200);
+    vowel(s, o, t + 0.18, 620, 720, 0.24, [880, 1380], 1.5);
+  },
 };

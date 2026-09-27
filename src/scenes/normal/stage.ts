@@ -118,6 +118,7 @@ export class StageScene implements Scene {
         this.phase = 'clear';
         this.timer = 0;
         if (this.bonus) this.app.audio.sfx('timeUp');
+        else if (!this.retro) this.app.audio.sfx('voiceClear');
         this.app.audio.music(this.retro ? 'stageClearRetro' : 'stageClear', { restart: true });
       }
       if (!this.bonus && this.world.timeLeft === 30 * 60) this.app.audio.tempo(1.2);
@@ -156,6 +157,8 @@ export class StageScene implements Scene {
         break;
       case 'item':
         a.sfx(e.item.startsWith('secret') ? 'bigItem' : 'item');
+        // In the Modern version Bomberman speaks up when he gets an item.
+        if (!this.retro) a.sfx('voiceItem');
         break;
       case 'enemyDeath':
         a.sfx('enemyDie');

@@ -30,7 +30,7 @@ sound in this project are original; only the game rules are reproduced.
 | Caps | Bombs 10, Fire 5 |
 | Bonus stage | After stages 5, 10, …, 45: invincible, endless monsters of one kind, 30 s of score attack |
 | Game over | Continue (same stage) / Save (3 files) / Quit + 8-character password (0–9, A–G) |
-| Versions | **Modern** (5 themes, changing every 10 stages, "Bomberman Show Time" intermission every 10 stages) or **Retro** (NES look and sound) |
+| Versions | **Modern** (5 themes, changing every 10 stages, "Bomberman Show Time" intermission every 10 stages, Bomberman's voice on items and stage clears) or **Retro** (NES look and sound) |
 
 Soft blocks per attempt: 50 + 2 × stage number (the exit and the item hide under two of
 them). Layouts are random every attempt; the enemy roster and the item are fixed per stage.
