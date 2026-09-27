@@ -14,17 +14,15 @@ export type Button = Dir | 'a' | 'b' | 'c' | 'd' | 'start' | 'select';
 export const DIRS: readonly Dir[] = ['up', 'down', 'left', 'right'];
 const BUTTONS: readonly Button[] = ['up', 'down', 'left', 'right', 'a', 'b', 'c', 'd', 'start', 'select'];
 
+/** The four functions a gamepad's face buttons can be given. */
+export type FaceButton = 'a' | 'b' | 'c' | 'd';
 /**
- * Gamepad face-button layouts (Option → Controller), listed as the buttons for the
- * bottom, right, left and top face buttons. Type B is the original PlayStation layout
- * (○ bombs, × specials).
+ * What a gamepad's bottom, right, left and top face buttons do (Option → Controller
+ * Options). The default puts bombs on the bottom button; the PlayStation original has
+ * them on ○ (right) and specials on × (bottom).
  */
-export const PAD_LAYOUTS: { name: string; face: [Button, Button, Button, Button] }[] = [
-  { name: 'TYPE A', face: ['a', 'b', 'c', 'd'] },
-  { name: 'TYPE B', face: ['b', 'a', 'c', 'd'] },
-  { name: 'TYPE C', face: ['a', 'c', 'b', 'd'] },
-  { name: 'TYPE D', face: ['c', 'b', 'a', 'd'] },
-];
+export type PadFaces = [FaceButton, FaceButton, FaceButton, FaceButton];
+export const DEFAULT_FACES: Readonly<PadFaces> = ['a', 'b', 'c', 'd'];
 
 export type DeviceId = 'kb' | 'kb1' | 'kb2' | 'pad0' | 'pad1' | 'pad2' | 'pad3' | 'touch';
 export const ALL_DEVICES: readonly DeviceId[] = ['kb', 'pad0', 'pad1', 'pad2', 'pad3', 'touch'];
@@ -155,10 +153,10 @@ export class Input {
   touchActive = false;
   /** While typing text (passwords), letter/digit keys and Backspace are not buttons. */
   textEntry = false;
-  /** Gamepad vibration (Option → Controller). */
-  vibration = true;
-  /** Face-button layout (index into PAD_LAYOUTS) for each of the four gamepads. */
-  padLayouts: number[] = [0, 0, 0, 0];
+  /** Vibration on or off for each of the four gamepads (Option → Controller Options). */
+  vibration = [true, true, true, true];
+  /** What each gamepad's face buttons do. */
+  padFaces: PadFaces[] = [0, 1, 2, 3].map(() => [...DEFAULT_FACES] as PadFaces);
   private focusLost = false;
   private softReset = false;
   private resetHeld = [false, false, false, false];
@@ -340,10 +338,10 @@ export class Input {
 
   /** Rumble every gamepad among `devices` (strength 0..1). */
   rumble(devices: readonly DeviceId[], strength: number, ms: number): void {
-    if (!this.vibration || typeof navigator === 'undefined' || !navigator.getGamepads) return;
+    if (typeof navigator === 'undefined' || !navigator.getGamepads) return;
     const pads = navigator.getGamepads();
     for (const d of devices) {
-      if (!d.startsWith('pad')) continue;
+      if (!d.startsWith('pad') || !this.vibration[Number(d.slice(3))]) continue;
       const act = (pads[Number(d.slice(3))] as (Gamepad & { vibrationActuator?: GamepadHapticActuator | null }) | null)?.vibrationActuator;
       if (!act || !('playEffect' in act)) continue;
       const s = Math.max(0, Math.min(1, strength));
@@ -372,7 +370,7 @@ export class Input {
       if (btn(13) || ay > 0.5) s.add('down');
       if (btn(14) || ax < -0.5) s.add('left');
       if (btn(15) || ax > 0.5) s.add('right');
-      const face = (PAD_LAYOUTS[this.padLayouts[i]] ?? PAD_LAYOUTS[0]).face;
+      const face = this.padFaces[i] ?? DEFAULT_FACES;
       for (let k = 0; k < 4; k++) if (btn(k)) s.add(face[k]);
       if (btn(4) || btn(5)) s.add('b');
       if (btn(6) || btn(7)) s.add('c');

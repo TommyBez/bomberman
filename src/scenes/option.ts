@@ -3,8 +3,9 @@ import type { Gfx } from '../engine/gfx';
 import type { Scene } from '../engine/scene';
 import { SONGS } from '../audio/songs';
 import { SFX } from '../audio/sfx';
-import { PAD_LAYOUTS } from '../engine/input';
-import { drawHand, drawMenuBackdrop, drawMenuWindow, drawWindow, Menu, MENU_TEXT, MENU_VALUE, type MenuItem } from '../render/ui';
+import type { DeviceId, FaceButton, PadFaces } from '../engine/input';
+import { PixelCanvas } from '../gfx/pixel';
+import { drawHand, drawMenuBackdrop, drawMenuWindow, drawWindow, Menu, MENU_TEXT, MENU_VALUE } from '../render/ui';
 import { applyScreenOffset, loadSettings, saveSettings } from '../settings';
 import { goMainMenu } from './nav';
 import { PasswordScene } from './normal/password';
@@ -173,48 +174,25 @@ function drawReadBanner(g: Gfx): void {
   g.text('● CAN YOU READ THIS? ●', g.width / 2, y + 4, { align: 'center', color: '#e02010', outline: '#fff8e8' });
 }
 
-/** Colours of the bottom, right, left and top face buttons in the diagram. */
-const FACE_COLORS = ['#6080ff', '#ff6060', '#e080ff', '#40c080'];
-
-/** CONTROLLER: a button layout for each gamepad, vibration, and the keyboard keys. */
+/** CONTROLLER OPTIONS: a page for each gamepad, and the keyboard keys. */
 class ControllerScene implements Scene {
-  private settings = loadSettings();
   private readonly menu: Menu;
   private keys = false;
 
-  constructor(private readonly app: App) {
-    const input = app.input;
-    const layoutItem = (i: number): MenuItem => ({
-      label: `PAD ${i + 1}`,
-      value: () => PAD_LAYOUTS[this.settings.padLayouts[i]].name,
-      change: (d) => {
-        this.settings.padLayouts[i] = (this.settings.padLayouts[i] + d + PAD_LAYOUTS.length) % PAD_LAYOUTS.length;
-        input.padLayouts = [...this.settings.padLayouts];
-        saveSettings(this.settings);
-      },
-    });
+  constructor(
+    private readonly app: App,
+    index = 0,
+  ) {
     this.menu = new Menu(
       app,
       [
-        layoutItem(0),
-        layoutItem(1),
-        layoutItem(2),
-        layoutItem(3),
-        {
-          label: 'VIBRATION',
-          value: () => (this.settings.vibration ? 'ON' : 'OFF'),
-          change: () => {
-            this.settings.vibration = !this.settings.vibration;
-            saveSettings(this.settings);
-            input.vibration = this.settings.vibration;
-            if (this.settings.vibration) input.rumble(input.menu.devices, 0.8, 250);
-          },
-        },
+        ...[0, 1, 2, 3].map((i) => ({ label: `CONTROLLER ${i + 1}`, action: () => app.scenes.go(new PadScene(app, i)) })),
         { label: 'KEYBOARD', action: () => (this.keys = true) },
         { label: 'EXIT', action: () => this.leave() },
       ],
       () => this.leave(),
     );
+    this.menu.index = index;
   }
 
   private leave(): void {
@@ -237,23 +215,7 @@ class ControllerScene implements Scene {
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
     if (this.keys) return this.renderKeys(g);
-    drawWindow(g, 'CONTROLLER OPTIONS', 12, 22, 232, 136);
-    this.menu.draw(g, 30, 42, { lineH: 16, valueX: 128 });
-    // The selected gamepad's face buttons (bottom, right, left, top).
-    const sel = this.menu.index;
-    if (sel <= 3) {
-      const layout = PAD_LAYOUTS[this.settings.padLayouts[sel]];
-      const cx = 205;
-      const cy = 78;
-      const pos: [number, number][] = [[0, 15], [15, 0], [-15, 0], [0, -15]];
-      layout.face.forEach((fn, k) => {
-        const [dx, dy] = pos[k];
-        g.rect(cx + dx - 6, cy + dy - 6, 13, 13, '#101830');
-        g.rect(cx + dx - 5, cy + dy - 5, 11, 11, FACE_COLORS[k]);
-        g.text(fn.toUpperCase(), cx + dx + 1, cy + dy - 3, { align: 'center', color: '#ffffff', outline: '#000000' });
-      });
-      g.text('A BOMB  B SPECIAL  C PUNCH  D STOP', g.width / 2, 174, { align: 'center', ...MENU_TEXT });
-    }
+    drawMenuWindow(g, 'CONTROLLER OPTIONS', this.menu, { lineH: 22 });
   }
 
   private renderKeys(g: Gfx): void {
@@ -277,4 +239,121 @@ class ControllerScene implements Scene {
       if (b) g.text(b, 238, y, { color: MENU_VALUE, outline: MENU_TEXT.outline, align: 'right' });
     });
   }
+}
+
+/** The four functions, in the order the controller page lists them, with their names. */
+const FUNCTIONS: [FaceButton, string, string][] = [
+  ['a', 'SET BOMB', 'POWER GLOVE'],
+  ['b', 'REMOTE CONTROL', 'SPECIAL'],
+  ['d', 'KICK STOP', ''],
+  ['c', 'PUSH & PUNCH', 'MULTI BOMB'],
+];
+/** Face buttons in the PlayStation's order: ○ (right), × (bottom), △ (top), □ (left). */
+const FACE_ORDER = [1, 0, 3, 2];
+
+/**
+ * CONTROLLER n: vibration, and which face button does each function. Moving a function to
+ * another button swaps it with the one that was there.
+ */
+class PadScene implements Scene {
+  private settings = loadSettings();
+  private row = 0;
+
+  constructor(
+    private readonly app: App,
+    private readonly pad: number,
+  ) {}
+
+  private leave(): void {
+    this.app.scenes.go(new ControllerScene(this.app, this.pad));
+  }
+
+  private apply(): void {
+    saveSettings(this.settings);
+    this.app.input.vibration = [...this.settings.vibration];
+    this.app.input.padFaces = this.settings.padFaces.map((f) => [...f] as PadFaces);
+  }
+
+  update(): void {
+    const pad = this.app.input.menu;
+    const rows = FUNCTIONS.length + 1;
+    if (pad.repeat('up') || pad.repeat('down')) {
+      this.row = (this.row + (pad.repeat('up') ? rows - 1 : 1)) % rows;
+      this.app.audio.sfx('menuMove');
+    }
+    const d = pad.repeat('left') ? -1 : pad.repeat('right') || pad.pressed('a') ? 1 : 0;
+    if (d) {
+      if (this.row === 0) {
+        const on = !this.settings.vibration[this.pad];
+        this.settings.vibration[this.pad] = on;
+        this.apply();
+        if (on) this.app.input.rumble([`pad${this.pad}` as DeviceId], 0.8, 250);
+      } else {
+        const faces = this.settings.padFaces[this.pad];
+        const fn = FUNCTIONS[this.row - 1][0];
+        const from = faces.indexOf(fn);
+        const to = FACE_ORDER[(FACE_ORDER.indexOf(from) + d + 4) % 4];
+        [faces[from], faces[to]] = [faces[to], faces[from]];
+        this.apply();
+      }
+      this.app.audio.sfx('select');
+    } else if (pad.pressed('b') || pad.pressed('d') || pad.pressed('start') || pad.pressed('select')) {
+      pad.swallow();
+      this.app.audio.sfx('menuBack');
+      this.leave();
+    }
+  }
+
+  render(g: Gfx): void {
+    drawMenuBackdrop(g, this.app.frame);
+    drawWindow(g, `CONTROLLER ${this.pad + 1}`, 14, 24, 228, 184, 'option');
+    const cursor = (y: number): void => drawHand(g, 26, y, this.app.frame);
+    g.text('VIBRATION', 46, 44, MENU_TEXT);
+    g.text(this.settings.vibration[this.pad] ? 'ON' : 'OFF', 196, 44, { align: 'center', color: MENU_VALUE, outline: MENU_TEXT.outline });
+    if (this.row === 0) cursor(43);
+    const faces = this.settings.padFaces[this.pad];
+    FUNCTIONS.forEach(([fn, line1, line2], k) => {
+      const y = 62 + k * 34;
+      drawPennant(g, 42, y, 136, 26);
+      const ink = { color: '#503010' };
+      if (line2) {
+        g.text(line1, 50, y + 5, ink);
+        g.text(line2, 58, y + 14, ink);
+      } else g.text(line1, 50, y + 10, ink);
+      g.image(faceIcon(faces.indexOf(fn)), 188, y + 5);
+      if (this.row === k + 1) cursor(y + 9);
+    });
+  }
+}
+
+/** A yellow label with a pointed right end, like the original's function tags. */
+function drawPennant(g: Gfx, x: number, y: number, w: number, h: number): void {
+  const tip = 10;
+  for (let i = 0; i < h; i++) {
+    const inset = Math.round(Math.abs(i - (h - 1) / 2) * (tip / (h / 2)));
+    g.rect(x, y + i, w - inset, 1, '#6a4a10');
+    if (i > 0 && i < h - 1) g.rect(x + 1, y + i, w - inset - 2, 1, i < 3 ? '#fff4a0' : i > h - 5 ? '#e0b830' : '#f8dc58');
+  }
+}
+
+/** Colours and symbols of the bottom (×), right (○), left (□) and top (△) face buttons. */
+const FACE_ICONS: [string, string[]][] = [
+  ['#7890ff', ['k.....k', '.k...k.', '..k.k..', '...k...', '..k.k..', '.k...k.', 'k.....k']],
+  ['#ff5858', ['..kkk..', '.k...k.', 'k.....k', 'k.....k', 'k.....k', '.k...k.', '..kkk..']],
+  ['#f080d8', ['kkkkkkk', 'k.....k', 'k.....k', 'k.....k', 'k.....k', 'k.....k', 'kkkkkkk']],
+  ['#48d090', ['...k...', '..k.k..', '..k.k..', '.k...k.', '.k...k.', 'k.....k', 'kkkkkkk']],
+];
+const faceIcons: HTMLCanvasElement[] = [];
+
+/** A round dark button with its coloured symbol. */
+function faceIcon(k: number): HTMLCanvasElement {
+  if (faceIcons[k]) return faceIcons[k];
+  const [color, rows] = FACE_ICONS[k];
+  const p = new PixelCanvas(17, 17);
+  p.circle(8, 8, 8.2, '#101018');
+  p.circle(8, 8, 7.2, '#404454');
+  p.circle(7.5, 7.5, 6, '#2c2e3a');
+  p.rows(rows, { k: color }, 5, 5);
+  faceIcons[k] = p.canvas;
+  return p.canvas;
 }

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { Input, PAD_LAYOUTS } from '../../src/engine/input';
+import { Input } from '../../src/engine/input';
+import { loadSettings } from '../../src/settings';
 
 type Nav = { getGamepads?: () => unknown[] };
 const g = globalThis as unknown as { navigator?: Nav };
@@ -16,16 +17,16 @@ function withPad(pressed: number[]): void {
 describe('gamepad layouts', () => {
   afterEach(() => Object.defineProperty(globalThis, 'navigator', { value: original, configurable: true }));
 
-  it('Type A: bottom bombs, right specials, left punches, top stops', () => {
+  it('by default: bottom bombs, right specials, left punches, top stops', () => {
     const input = new Input();
     withPad([0, 3]);
     input.poll();
     expect([...input.deviceState('pad0')].sort()).toEqual(['a', 'd']);
   });
 
-  it('Type B is the PlayStation layout: circle (right) bombs, cross (bottom) specials', () => {
+  it('each gamepad can be set up like the PlayStation: circle (right) bombs, cross (bottom) specials', () => {
     const input = new Input();
-    input.padLayouts = [PAD_LAYOUTS.findIndex((l) => l.name === 'TYPE B'), 0, 0, 0];
+    input.padFaces[0] = ['b', 'a', 'c', 'd'];
     withPad([1]);
     input.poll();
     expect([...input.deviceState('pad0')]).toEqual(['a']);
@@ -46,7 +47,27 @@ describe('gamepad layouts', () => {
     expect(input.takeSoftReset()).toBe(false);
   });
 
-  it('every layout maps the four face buttons to four different functions', () => {
-    for (const l of PAD_LAYOUTS) expect(new Set(l.face).size).toBe(4);
+  it('settings keep a gamepad set up with an old numbered layout, and reject broken ones', () => {
+    const store = new Map<string, string>();
+    const saved = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+    Object.defineProperty(globalThis, 'localStorage', {
+      value: { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => store.set(k, v), removeItem: (k: string) => store.delete(k) },
+      configurable: true,
+    });
+    try {
+      store.set('bomberman.settings', JSON.stringify({ padLayouts: [1, 0, 0, 0], vibration: false }));
+      let s = loadSettings();
+      expect(s.padFaces[0]).toEqual(['b', 'a', 'c', 'd']);
+      expect(s.padFaces[1]).toEqual(['a', 'b', 'c', 'd']);
+      expect(s.vibration).toEqual([false, false, false, false]);
+      store.set('bomberman.settings', JSON.stringify({ padFaces: [['a', 'a', 'c', 'd'], ['d', 'c', 'b', 'a']], vibration: [true, false] }));
+      s = loadSettings();
+      expect(s.padFaces[0]).toEqual(['a', 'b', 'c', 'd']);
+      expect(s.padFaces[1]).toEqual(['d', 'c', 'b', 'a']);
+      expect(s.vibration).toEqual([true, false, true, true]);
+    } finally {
+      if (saved) Object.defineProperty(globalThis, 'localStorage', saved);
+      else delete (globalThis as { localStorage?: unknown }).localStorage;
+    }
   });
 });

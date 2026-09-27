@@ -24,8 +24,8 @@ function boot(): void {
   input.onGesture(() => audio.unlock());
   const settings = loadSettings();
   audio.setStereo(settings.stereo);
-  input.vibration = settings.vibration;
-  input.padLayouts = [...settings.padLayouts];
+  input.vibration = [...settings.vibration];
+  input.padFaces = settings.padFaces.map((f) => [...f] as typeof f);
   applyScreenOffset(settings.offsetY);
 
   const app: App = {

@@ -28,7 +28,7 @@ The game needs no backend.
 
 ## Controls
 
-| | Keyboard (one player and menus) | Gamepad (layout Type A) | Touch |
+| | Keyboard (one player and menus) | Gamepad (default) | Touch |
 |---|---|---|---|
 | Move | Arrows / WASD | D-pad / left stick | on-screen pad |
 | **A**: bomb, confirm, Power Glove (hold) | Space / X / J / F | bottom face button | A |
@@ -39,9 +39,10 @@ The game needs no backend.
 | Select / back | Esc / Backspace / Tab | Back | SELECT |
 
 In the Battle Game, B with a direction fires an Advanced character's special; B on its
-own uses the partner's ability. Option → Controller sets a face-button layout for each
-gamepad. Type B is the original PlayStation layout (○ bombs, × specials, □ punches,
-△ stops kicked bombs).
+own uses the partner's ability. Option → Controller Options has a page for each gamepad,
+as in the original: vibration on or off, and which face button does each function. The
+PlayStation original puts bombs on ○, specials on ×, stopping kicked bombs on △ and
+punches on □.
 
 In the Battle Game two people can share one keyboard.
 
@@ -136,7 +137,7 @@ letters directly.
   a character roller.
 - **Options:** stereo/mono audio, music and SE volume, numbered music and SE tests,
   screen position (move the picture until the "Can you read this?" banner shows),
-  gamepad button layouts, vibration and a keyboard reference.
+  vibration and face buttons for each gamepad, and a keyboard reference.
 - **Audio:** a small WebAudio synthesiser plays every tune and effect from note data.
   It includes pulse, saw and triangle voices, noise drums, reverb and NES-style voices
   for the Retro version.

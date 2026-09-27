@@ -955,7 +955,6 @@ export class BattleWorld extends World {
     if (b.stats.lineBomb) this.lineBomb(b);
   }
 
-  /** Multi Bomb: lay the remaining bombs (up to four) in a row ahead. */
   /** Lay bombs in a line ahead: the Multi Bomb item lays up to four. */
   private lineBomb(b: Bomber, most = 4): boolean {
     const d = b.facing;

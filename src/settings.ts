@@ -1,25 +1,41 @@
-import { PAD_LAYOUTS } from './engine/input';
+import { DEFAULT_FACES, type FaceButton, type PadFaces } from './engine/input';
 import { load, save } from './engine/storage';
 
 /** Options that are not sound volumes (those live with the AudioManager). */
 export interface Settings {
   /** Screen position nudge in pixels ("Can you read this?"). */
   offsetY: number;
-  vibration: boolean;
+  /** Vibration for each of the four gamepads. */
+  vibration: boolean[];
   stereo: boolean;
-  /** Face-button layout per gamepad (index into PAD_LAYOUTS). */
-  padLayouts: number[];
+  /** What each gamepad's bottom, right, left and top face buttons do. */
+  padFaces: PadFaces[];
+}
+
+/** The face-button presets that earlier versions stored by number. */
+const OLD_LAYOUTS: PadFaces[] = [
+  ['a', 'b', 'c', 'd'],
+  ['b', 'a', 'c', 'd'],
+  ['a', 'c', 'b', 'd'],
+  ['c', 'b', 'a', 'd'],
+];
+
+function validFaces(v: unknown): v is PadFaces {
+  return Array.isArray(v) && v.length === 4 && new Set(v).size === 4 && v.every((b) => (['a', 'b', 'c', 'd'] as unknown[]).includes(b));
 }
 
 export function loadSettings(): Settings {
-  const s = load<Partial<Settings>>('settings', {});
+  const s = load<Partial<Settings> & { padLayouts?: unknown; vibration?: unknown }>('settings', {});
+  const vib = s.vibration;
   return {
     offsetY: typeof s.offsetY === 'number' && Math.abs(s.offsetY) <= 16 ? Math.round(s.offsetY) : 0,
-    vibration: typeof s.vibration === 'boolean' ? s.vibration : true,
+    vibration: [0, 1, 2, 3].map((i) => (typeof vib === 'boolean' ? vib : Array.isArray(vib) && typeof vib[i] === 'boolean' ? vib[i] : true)),
     stereo: typeof s.stereo === 'boolean' ? s.stereo : true,
-    padLayouts: [0, 1, 2, 3].map((i) => {
-      const v = Array.isArray(s.padLayouts) ? s.padLayouts[i] : 0;
-      return Number.isInteger(v) && v >= 0 && v < PAD_LAYOUTS.length ? v : 0;
+    padFaces: [0, 1, 2, 3].map((i) => {
+      const faces = Array.isArray(s.padFaces) ? s.padFaces[i] : undefined;
+      if (validFaces(faces)) return [...faces] as PadFaces;
+      const old = Array.isArray(s.padLayouts) ? s.padLayouts[i] : undefined;
+      return [...(typeof old === 'number' && OLD_LAYOUTS[old] ? OLD_LAYOUTS[old] : DEFAULT_FACES)] as [FaceButton, FaceButton, FaceButton, FaceButton];
     }),
   };
 }
