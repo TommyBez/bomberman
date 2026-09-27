@@ -9,7 +9,7 @@ export interface Theme {
   backdrop: string;
   floor: string;
   floorAlt: string;
-  floorStyle: 'grass' | 'checker' | 'plain' | 'tiles' | 'carpet' | 'sand' | 'ice' | 'metal' | 'nes' | 'wood' | 'water' | 'stars' | 'dots' | 'harlequin' | 'sky';
+  floorStyle: 'grass' | 'checker' | 'plain' | 'tiles' | 'carpet' | 'sand' | 'ice' | 'metal' | 'nes' | 'wood' | 'water' | 'stars' | 'dots' | 'harlequin' | 'diamond' | 'sky';
   hard: string;
   hardAlt?: string;
   hardStyle: 'bevel' | 'metal' | 'gem' | 'checker' | 'goldArrow' | 'candy' | 'nes' | 'stone' | 'crystal' | 'pillar' | 'boulder' | 'orb' | 'capsule' | 'drum' | 'pyramid' | 'roof' | 'hedgeBlock';
@@ -18,7 +18,7 @@ export interface Theme {
   wallStyle: 'bevel' | 'metal' | 'balloon' | 'candy' | 'stone' | 'brick' | 'nes' | 'hedge' | 'panel';
   soft: string;
   softAlt?: string;
-  softStyle: 'brick' | 'crate' | 'toy' | 'rock' | 'bush' | 'ice' | 'nes' | 'barrel' | 'snow' | 'gear' | 'mushroom' | 'leaf' | 'star' | 'buoy' | 'ball' | 'skull' | 'hazard';
+  softStyle: 'brick' | 'crate' | 'toy' | 'rock' | 'bush' | 'ice' | 'nes' | 'barrel' | 'snow' | 'gear' | 'mushroom' | 'leaf' | 'star' | 'buoy' | 'ball' | 'skull' | 'hazard' | 'jelly' | 'sponge' | 'chest';
   /** Colour of pipe covers (Pipe City, Every Which Way). */
   pipe?: string;
   /** Floor shadow strength (0 = none, as on the NES). */
@@ -34,29 +34,29 @@ export const THEMES: Record<string, Theme> = {
     wall: '#b0b6c4', wallStyle: 'bevel',
     soft: '#dde1ec', softAlt: '#8894b4', softStyle: 'brick', shadow: 0.38,
   },
-  // Modern, stages 11–20: blue carpet, pink gem blocks, balloon border.
+  // Modern, stages 11–20: blue carpet, pink gem blocks, balloon border, green jelly blocks.
   m2: {
     name: 'm2', backdrop: '#101030',
     floor: '#3456c0', floorAlt: '#3c62d0', floorStyle: 'carpet',
     hard: '#f06aa8', hardStyle: 'gem',
     wall: '#28206a', wallAlt: '#ffd040', wallStyle: 'balloon',
-    soft: '#f0c040', softAlt: '#e05050', softStyle: 'toy', shadow: 0.35,
+    soft: '#40c858', softStyle: 'jelly', shadow: 0.35,
   },
-  // Modern, stages 21–30: teal/pink checker blocks.
+  // Modern, stages 21–30: rippled indigo floor, teal and red checker blocks, orange sponges.
   m3: {
     name: 'm3', backdrop: '#101c1c',
-    floor: '#b8a8d8', floorAlt: '#c4b6e2', floorStyle: 'tiles',
-    hard: '#30b0a8', hardAlt: '#f080b0', hardStyle: 'checker',
+    floor: '#4640c0', floorAlt: '#5048cc', floorStyle: 'water',
+    hard: '#30b8a8', hardAlt: '#e84850', hardStyle: 'checker',
     wall: '#208880', wallStyle: 'bevel',
-    soft: '#f4a0c4', softStyle: 'crate', shadow: 0.3,
+    soft: '#f08a30', softStyle: 'sponge', shadow: 0.3,
   },
-  // Modern, stages 31–40: green floor, gold arrow blocks.
+  // Modern, stages 31–40: diamond-checked green floor, gold arrow blocks, treasure chests.
   m4: {
     name: 'm4', backdrop: '#141008',
-    floor: '#2e8850', floorAlt: '#389458', floorStyle: 'plain',
+    floor: '#2a8048', floorAlt: '#3a9c5a', floorStyle: 'diamond',
     hard: '#e0b030', hardStyle: 'goldArrow',
     wall: '#a07818', wallStyle: 'stone',
-    soft: '#a8a0a0', softStyle: 'rock', shadow: 0.36,
+    soft: '#a86428', softStyle: 'chest', shadow: 0.36,
   },
   // Modern, stages 41–50: blue checker floor, pink blocks, candy-panel border.
   m5: {
@@ -218,6 +218,15 @@ function floorTile(t: Theme, shadow: boolean): HTMLCanvasElement {
       p.circle(11.5, 11.5, 2.2, t.floorAlt);
       p.px(3, 2, mix(t.floorAlt, '#ffffff', 0.3));
       p.px(11, 10, mix(t.floorAlt, '#ffffff', 0.3));
+      break;
+    case 'diamond':
+      // A diamond on every tile, so the floor reads as a diamond checkerboard.
+      for (let y = 0; y < 16; y++) {
+        for (let x = 0; x < 16; x++) {
+          const d = Math.abs(x - 7.5) + Math.abs(y - 7.5);
+          p.px(x, y, d < 7.5 ? t.floorAlt : d < 8.5 ? mix(t.floor, t.floorAlt, 0.5) : t.floor);
+        }
+      }
       break;
     case 'harlequin': {
       // Four triangles of bright colour per tile, like a toy mat.
@@ -690,6 +699,44 @@ function softTile(t: Theme): HTMLCanvasElement {
       p.px(7, 9, '#301810');
       p.px(8, 9, '#301810');
       p.rect(4, 3, 3, 1, light);
+      break;
+    case 'jelly':
+      // A glossy block with rounded corners, like a gumdrop.
+      p.roundRect(0, 1, 16, 15, mix(base, '#000000', 0.6), 3);
+      p.roundRect(1, 2, 14, 12, mix(base, '#000000', 0.28), 3);
+      p.roundRect(1, 2, 14, 9, base, 3);
+      p.rect(3, 3, 10, 2, light);
+      p.rect(3, 3, 3, 1, '#ffffff');
+      p.rect(2, 12, 12, 1, mix(base, '#000000', 0.45));
+      break;
+    case 'sponge': {
+      // A spongy orange block: speckled on top, a darker face below.
+      p.rect(0, 0, 16, 16, mix(base, '#000000', 0.55));
+      p.rect(0, 0, 16, 12, base);
+      p.rect(0, 12, 16, 3, mix(base, '#000000', 0.3));
+      p.rect(0, 0, 16, 1, light);
+      for (let i = 0; i < 26; i++) {
+        const x = (i * 7 + (i >> 2) * 3) % 16;
+        const y = 1 + ((i * 5) % 11);
+        p.px(x, y, i % 3 ? mix(base, '#000000', 0.18) : light);
+      }
+      break;
+    }
+    case 'chest':
+      // A wooden treasure chest with gold studs and a lock.
+      p.rect(0, 1, 16, 15, '#200c04');
+      p.rect(1, 2, 14, 13, base);
+      p.rect(1, 2, 14, 5, light);
+      p.rect(1, 7, 14, 1, mix(base, '#000000', 0.55));
+      p.rect(1, 14, 14, 1, dark);
+      p.rect(3, 2, 1, 13, dark);
+      p.rect(12, 2, 1, 13, dark);
+      for (let x = 2; x < 15; x += 3) {
+        p.px(x, 3, '#f0c030');
+        p.px(x, 13, '#f0c030');
+      }
+      p.rect(7, 7, 2, 3, '#f0d040');
+      p.px(7, 9, '#604000');
       break;
     case 'hazard': {
       // A block with yellow and black warning stripes.

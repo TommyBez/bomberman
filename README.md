@@ -79,9 +79,13 @@ letters directly.
   each with its original trigger condition. A panel is out only briefly, somewhere on
   the stage.
 - **Versions:**
-  - **Modern:** five world themes and "Bomberman Show Time" skits after stages 10, 20,
-    30 and 40: wordless gags on the original's four sets (a circus tent, a shopping
-    street, a hall with red doors, a forest) with its props.
+  - **Modern:** five world themes after the original's (grass and stone bricks; blue
+    carpet, pink gems and green jelly blocks inside a balloon wall; rippled indigo with
+    checked blocks and orange sponges; diamond-checked green with gold arrow blocks and
+    treasure chests; blue checks with pink blocks and gold crates) and "Bomberman Show
+    Time" skits after stages 10, 20, 30 and 40: wordless gags on the original's four
+    sets (a circus tent, a shopping street, a hall with red doors, a forest) with its
+    props.
   - **Retro:** NES-style tiles, sprites, flames and chiptune arrangements.
 - **Progress:**
   - Game Over offers Continue, Save or Quit.
