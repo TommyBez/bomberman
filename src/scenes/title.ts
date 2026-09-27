@@ -10,6 +10,8 @@ import { openContinue, openNewGame } from './mainMenu';
 import { OptionScene } from './option';
 
 const DEMO_IDLE_TICKS = 20 * 60;
+/** How long the cursor bomb takes to go off when a choice is made. */
+const POP_TICKS = 22;
 /** Left alone this long, Bomberman nods off (a bubble at his nose) until the demo starts. */
 const DOZE_TICKS = 10 * 60;
 
@@ -27,6 +29,8 @@ export class TitleScene implements Scene {
   /** Ticks left of the startled look (woken up) and of the happy one (menu opened). */
   private startled = 0;
   private pleased = 0;
+  /** The cursor bomb going off on a choice; the choice happens when it's done. */
+  private pop: { t: number; then: () => void } | null = null;
   /**
    * NORMAL GAME / BATTLE GAME / OPTION once START has been pressed, and in its place
    * NEW GAME / CONTINUE once NORMAL GAME has been chosen.
@@ -46,6 +50,11 @@ export class TitleScene implements Scene {
     if (this.menu) this.t = 90;
   }
 
+  /** The cursor bomb swells, bursts and blows away as smoke, then the choice goes ahead. */
+  private detonate(then: () => void): void {
+    this.pop = { t: 0, then };
+  }
+
   /** Which face Bomberman pulls. */
   private expression(): Expression {
     if (this.startled > 0) return 'wide';
@@ -61,9 +70,9 @@ export class TitleScene implements Scene {
     this.menu = new Menu(
       app,
       [
-        { label: 'NORMAL GAME', action: () => this.openNormal(0) },
-        { label: 'BATTLE GAME', action: () => new BattleSetup(app).start() },
-        { label: 'OPTION', action: () => app.scenes.go(new OptionScene(app)) },
+        { label: 'NORMAL GAME', action: () => this.detonate(() => this.openNormal(0)) },
+        { label: 'BATTLE GAME', action: () => this.detonate(() => new BattleSetup(app).start()) },
+        { label: 'OPTION', action: () => this.detonate(() => app.scenes.go(new OptionScene(app))) },
       ],
       () => {
         this.menu = null;
@@ -78,8 +87,8 @@ export class TitleScene implements Scene {
     this.menu = new Menu(
       app,
       [
-        { label: 'NEW GAME', action: () => openNewGame(app) },
-        { label: 'CONTINUE', action: () => openContinue(app) },
+        { label: 'NEW GAME', action: () => this.detonate(() => openNewGame(app)) },
+        { label: 'CONTINUE', action: () => this.detonate(() => openContinue(app)) },
       ],
       () => this.openMenu(0),
     );
@@ -98,6 +107,14 @@ export class TitleScene implements Scene {
     if (dozing && this.idle === 0) this.startled = 40;
     if (this.startled > 0) this.startled--;
     if (this.pleased > 0) this.pleased--;
+    if (this.pop) {
+      if (++this.pop.t === POP_TICKS) {
+        const then = this.pop.then;
+        this.pop = null;
+        then();
+      }
+      return;
+    }
     if (this.menu) {
       this.menu.update();
     } else if (this.t > 20 && (pad.pressed('start') || pad.pressed('a'))) {
@@ -192,13 +209,45 @@ export class TitleScene implements Scene {
       this.menu.items.forEach((it, i) => {
         const y = 144 + i * 20;
         g.text(it.label, 76, y, TITLE_TEXT);
-        if (i === this.menu!.index) g.image(sprites().bomb[Math.floor(this.t / 8) % 3], 56 + (Math.floor(this.t / 10) % 2), y - 2);
+        if (i !== this.menu!.index) return;
+        if (this.pop) drawPop(g, 64, y + 5, this.pop.t);
+        else g.image(sprites().bomb[Math.floor(this.t / 8) % 3], 56 + (Math.floor(this.t / 10) % 2), y - 2);
       });
     } else if (Math.floor(this.t / 30) % 2 === 0 || this.t < 30) {
       g.text('PRESS START BUTTON', g.width / 2, 160, { align: 'center', ...TITLE_TEXT });
     }
     if (!this.menu) g.text('FAN REMAKE - NOT AN OFFICIAL PRODUCT', g.width / 2, 206, { align: 'center', color: '#ffffff', outline: '#102060' });
   }
+}
+
+/** The cursor bomb going off: it swells, bursts in red and yellow, and leaves puffs of smoke. */
+function drawPop(g: Gfx, cx: number, cy: number, t: number): void {
+  const ctx = g.ctx;
+  if (t < 8) {
+    const size = 16 + t * 2;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(sprites().bomb[t % 3], Math.round(cx - size / 2), Math.round(cy - size / 2), size, size);
+    return;
+  }
+  if (t < 15) {
+    const k = (t - 8) / 7;
+    for (const [r, color] of [[14, '#e02810'], [10, '#ff9000'], [6, '#fff060']] as [number, string][]) {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * (0.6 + k * 0.6), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    return;
+  }
+  const k = (t - 15) / (POP_TICKS - 15);
+  ctx.globalAlpha = 1 - k;
+  for (let n = 0; n < 3; n++) {
+    ctx.fillStyle = '#e8e8f0';
+    ctx.beginPath();
+    ctx.arc(cx + (n - 1) * 7, cy - k * 10 - (n % 2) * 3, 5 - n % 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
 }
 
 /** A spiky yellow-and-red burst (behind the logo). */
