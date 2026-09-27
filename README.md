@@ -132,10 +132,10 @@ letters directly.
 
 - **Title and menus:** the title screen opens the mode menu under the logo, with a
   **Demo Play** attract mode after 20 s idle (Normal and Advanced characters mixed, as in
-  the original's demo). The menus follow the original's look (all
-  redrawn): pastel wallpaper, purple-and-olive checked windows with a name plate across
-  the top edge, pale-green lettering and a pointing-glove cursor. The password screen is
-  a character roller.
+  the original's demo). The menus follow the original's look (all redrawn): pastel
+  wallpaper, purple-and-olive checked windows with a name plate across the top edge,
+  pale-green lettering and a pointing-glove cursor. The password screen is a character
+  roller.
 - **Options:** stereo/mono audio, music and SE volume, numbered music and SE tests,
   screen position (move the picture until the "Can you read this?" banner shows),
   vibration and face buttons for each gamepad, and a keyboard reference.
