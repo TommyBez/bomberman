@@ -3,7 +3,7 @@ import { mix, textWidth, type Gfx } from '../engine/gfx';
 import type { Controller } from '../engine/input';
 import { PixelCanvas } from '../gfx/pixel';
 
-/** Big outlined banner text across the screen ("HURRY!", "TIME'S UP!"…). */
+/** Big outlined text on a dark band across the screen ("PLAYER 1 WINS!"). */
 export function drawBanner(g: Gfx, text: string, y: number, color = '#ffe040', scale = 2): void {
   const h = 7 * scale + 10;
   g.ctx.globalAlpha = 0.55;
@@ -14,11 +14,24 @@ export function drawBanner(g: Gfx, text: string, y: number, color = '#ffe040', s
   g.text(text, g.width / 2, y - (7 * scale) / 2, { align: 'center', scale, gradient: ['#ffffff', color], outline: '#000000' });
 }
 
-/** The big READY / START call-outs: yellow letters in a thick blue outline. */
-export function drawCallout(g: Gfx, text: string, y: number): void {
-  const top = y - 14;
-  g.text(text, g.width / 2 + 3, top + 3, { align: 'center', scale: 4, color: '#0a1850', outline: '#0a1850' });
-  g.text(text, g.width / 2, top, { align: 'center', scale: 4, gradient: ['#fffc98', '#f8b800'], outline: '#1838a0' });
+/** The original's big call-outs, each word with its own colours and outline. */
+export type WordStyle = 'ready' | 'hurry' | 'timeUp' | 'pause' | 'demo';
+
+const WORD_STYLES: Record<WordStyle, { ink: [string, string]; edge: string; scale: number }> = {
+  ready: { ink: ['#fff030', '#fffef0'], edge: '#1838a0', scale: 4 },
+  hurry: { ink: ['#e0ec38', '#fffce0'], edge: '#1c5010', scale: 3 },
+  timeUp: { ink: ['#88ecf8', '#ffffff'], edge: '#28148c', scale: 3 },
+  pause: { ink: ['#ffc088', '#fff8ec'], edge: '#c83818', scale: 3 },
+  demo: { ink: ['#a0ecff', '#ffffff'], edge: '#3c1890', scale: 2 },
+};
+
+/** A call-out word centred on the screen at height `y`, with a dark drop shadow. */
+export function drawWord(g: Gfx, text: string, y: number, style: WordStyle): void {
+  const st = WORD_STYLES[style];
+  const top = y - (7 * st.scale) / 2;
+  const shade = mix(st.edge, '#000000', 0.5);
+  g.text(text, g.width / 2 + st.scale - 1, top + st.scale - 1, { align: 'center', scale: st.scale, color: shade, outline: shade });
+  g.text(text, g.width / 2, top, { align: 'center', scale: st.scale, gradient: st.ink, outline: st.edge });
 }
 
 /** Greedy word wrap for the fixed-width font. */
@@ -328,16 +341,17 @@ export class PauseMenu {
     return null;
   }
 
-  /** Just the words, as in the original: the chosen one white, the other grey. */
+  /** PAUSE! and the choices, as in the original: the chosen word white, the other grey. */
   draw(g: Gfx): void {
     g.ctx.globalAlpha = 0.5;
     g.rect(0, 0, g.width, g.height, '#000000');
     g.ctx.globalAlpha = 1;
+    drawWord(g, 'PAUSE!', 70, 'pause');
     const options = this.confirming ? ['YES', 'NO'] : ['RESUME', 'QUIT'];
     options.forEach((o, i) => {
       const sel = i === this.sel;
       const style = sel ? { gradient: ['#ffffff', '#b8ccff'] as [string, string], outline: '#1838a0' } : { color: '#808898', outline: '#282c38' };
-      g.text(o, g.width / 2, 92 + i * 24, { align: 'center', scale: 2, ...style });
+      g.text(o, g.width / 2, 104 + i * 24, { align: 'center', scale: 2, ...style });
     });
   }
 }

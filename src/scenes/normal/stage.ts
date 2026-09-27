@@ -12,7 +12,7 @@ import { sprites } from '../../gfx/sprites';
 import { THEMES, themeForStage } from '../../gfx/tiles';
 import { FieldRenderer, type Actor, type View } from '../../render/field';
 import { clockText, HUD_HURRY, HUD_TEXT, hudIcons, hudStrip } from '../../render/hud';
-import { drawBanner, drawCallout, PauseMenu } from '../../render/ui';
+import { drawWord, PauseMenu } from '../../render/ui';
 
 type Phase = 'card' | 'ready' | 'play' | 'dying' | 'clear';
 
@@ -246,8 +246,8 @@ export class StageScene implements Scene {
       g.text(String(pop.points), v.ox + pop.x, v.oy + pop.y - 12 - pop.age / 4, { align: 'center', color: '#ffffff', outline: '#000000' });
     }
     this.renderHud(g);
-    if (this.phase === 'ready') drawCallout(g, this.timer < 55 ? 'READY' : 'START', g.height / 2 + 6);
-    if (this.phase === 'clear' && this.bonus) drawBanner(g, "TIME'S UP!", g.height / 2 + 6, '#ffe040');
+    if (this.phase === 'ready') drawWord(g, this.timer < 55 ? 'READY' : 'START', g.height / 2 + 6, 'ready');
+    if (this.phase === 'clear' && this.bonus) drawWord(g, "TIME'S UP!", g.height / 2 + 6, 'timeUp');
     if (this.world.timeUp && this.phase === 'play' && this.world.tick % 60 < 40 && this.timer < 600) {
       // flashing warning after the clock ran out
     }

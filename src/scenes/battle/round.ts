@@ -14,7 +14,7 @@ import { THEMES } from '../../gfx/tiles';
 import { BattleRenderer } from '../../render/battleField';
 import type { View } from '../../render/field';
 import { clockText, HUD_DIM, HUD_HURRY, HUD_TEXT, hudIcons, hudStrip } from '../../render/hud';
-import { drawBanner, drawCallout, PauseMenu } from '../../render/ui';
+import { drawBanner, drawWord, PauseMenu, type WordStyle } from '../../render/ui';
 import { goTitle } from '../nav';
 import { DEMO_TICKS } from './demo';
 import type { BattleMatch } from './match';
@@ -42,7 +42,7 @@ export class BattleRoundScene implements Scene {
   private t = 0;
   private paused = false;
   private readonly pauseMenu: PauseMenu;
-  private banner: { text: string; t: number; color: string } | null = null;
+  private banner: { text: string; t: number; style: WordStyle } | null = null;
   private popups: Popup[] = [];
   private shake = 0;
 
@@ -197,11 +197,11 @@ export class BattleRoundScene implements Scene {
       case 'hurry':
         a.sfx('hurry');
         a.tempo(1.25);
-        this.banner = { text: 'HURRY!', t: 0, color: '#ff6040' };
+        this.banner = { text: 'HURRY!', t: 0, style: 'hurry' };
         break;
       case 'timeUp':
         a.sfx('timeUp');
-        this.banner = { text: "TIME'S UP!", t: 0, color: '#ffe040' };
+        this.banner = { text: "TIME'S UP!", t: 0, style: 'timeUp' };
         break;
       default:
         break;
@@ -226,16 +226,16 @@ export class BattleRoundScene implements Scene {
     this.renderHud(g);
     this.renderer.drawCarts(g, v, this.app.frame);
     for (const p of this.popups) g.text(p.text, v.ox + p.x, v.oy + p.y - p.t / 3, { align: 'center', color: p.color, outline: '#000000' });
-    if (this.phase === 'ready') drawCallout(g, this.t < 60 ? 'READY' : 'START', g.height / 2 + 6);
-    if (this.banner && this.banner.t < 90) drawBanner(g, this.banner.text, g.height / 2 + 6, this.banner.color);
+    if (this.phase === 'ready') drawWord(g, this.t < 60 ? 'READY' : 'START', g.height / 2 + 6, 'ready');
+    if (this.banner && this.banner.t < 90) drawWord(g, this.banner.text, g.height / 2 + 6, this.banner.style);
     if (this.phase === 'end' && w.result && this.t > 20) {
       // A draw gets its own screen next; a time-up still says so here.
       const r = w.result;
       if (!r.draw) drawBanner(g, this.match.cfg.tag ? `TEAM ${r.team === 0 ? 'A' : 'B'} WINS!` : `PLAYER ${(r.winner ?? 0) + 1} WINS!`, g.height / 2 + 6, '#ffe040');
-      else if (r.timeUp) drawBanner(g, "TIME'S UP!", g.height / 2 + 6, '#a0c0ff');
+      else if (r.timeUp) drawWord(g, "TIME'S UP!", g.height / 2 + 6, 'timeUp');
     }
     if (this.match.demo && Math.floor(this.app.frame / 30) % 2 === 0) {
-      g.text('DEMO PLAY', g.width / 2, g.height - 12, { align: 'center', color: '#ffe040', outline: '#000000' });
+      drawWord(g, 'DEMO PLAY', g.height - 14, 'demo');
     }
     if (this.paused) this.pauseMenu.draw(g);
   }

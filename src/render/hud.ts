@@ -45,25 +45,36 @@ let icons: HudIcons | null = null;
 
 export function hudIcons(): HudIcons {
   if (icons) return icons;
+  // A round indigo bomb with a shine and a lit fuse.
   const bomb = new PixelCanvas(10, 10);
   bomb.circle(4.5, 5.5, 4.2, '#000000');
-  bomb.circle(4.5, 5.5, 3.4, '#2c2c58');
-  bomb.px(3, 4, '#9aa0e0');
+  bomb.circle(4.5, 5.5, 3.4, '#4838b0');
+  bomb.circle(3.8, 4.8, 1.8, '#7468e0');
+  bomb.px(3, 4, '#d8d0ff');
   bomb.rect(6, 1, 2, 2, '#000000');
+  bomb.px(7, 1, '#a07040');
   bomb.px(8, 0, '#ffd040');
+  // A little flame with a face.
   const fire = new PixelCanvas(10, 10);
   fire.ellipse(5, 6, 4.2, 3.8, '#000000');
-  fire.ellipse(5, 6, 3.4, 3.1, '#e02000');
-  fire.rect(4, 1, 2, 4, '#e02000');
-  fire.px(4, 0, '#000000');
-  fire.ellipse(5, 6.5, 2.2, 2.2, '#ff9000');
-  fire.ellipse(5, 7, 1.2, 1.2, '#ffe040');
+  fire.rect(3, 1, 2, 4, '#000000');
+  fire.rect(6, 0, 2, 4, '#000000');
+  fire.ellipse(5, 6, 3.4, 3.1, '#f04010');
+  fire.rect(4, 2, 1, 3, '#f04010');
+  fire.rect(7, 1, 1, 3, '#f04010');
+  fire.ellipse(5, 6.3, 2.6, 2.4, '#ffd030');
+  fire.px(4, 5, '#000000');
+  fire.px(6, 5, '#000000');
+  fire.rect(4, 7, 3, 1, '#c03000');
+  // An alarm clock with a red rim.
   const clock = new PixelCanvas(10, 10);
-  clock.circle(4.5, 5, 4.4, '#000000');
-  clock.circle(4.5, 5, 3.6, '#ffffff');
-  clock.vline(4, 2, 5, '#000000');
+  clock.circle(4.5, 5.2, 4.4, '#000000');
+  clock.circle(4.5, 5.2, 3.7, '#e02818');
+  clock.circle(4.5, 5.2, 2.7, '#ffffff');
+  clock.px(1, 0, '#e02818');
+  clock.px(8, 0, '#e02818');
+  clock.vline(4, 3, 5, '#000000');
   clock.hline(4, 6, 5, '#000000');
-  clock.px(4, 0, '#000000');
   const trophy = new PixelCanvas(10, 10);
   trophy.rect(1, 0, 8, 1, '#000000');
   trophy.rect(2, 1, 6, 4, '#ffd040');
