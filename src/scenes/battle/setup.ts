@@ -550,6 +550,12 @@ class StageSelectScene implements Scene {
     g.ctx.globalAlpha = 1;
     drawCard(g, stageSnapshot(this.arena), 65 + dx, 58, 120, 104, 0);
     drawScroll(g, this.arena.name, 36, alt);
+    // Once a level's alternates are unlocked, up/down flips to them.
+    if (this.altOpen && Math.floor(this.app.frame / 20) % 2 === 0) {
+      const x = g.width / 2 + Math.max(120, textWidth(this.arena.name) + 36) / 2 + 8;
+      g.text('↑', x, 33, { color: '#fff4a0', outline: '#402000' });
+      g.text('↓', x, 43, { color: '#fff4a0', outline: '#402000' });
+    }
     drawStageArrow(g, 20, 180, -1);
     drawStageArrow(g, 224, 180, 1);
   }
