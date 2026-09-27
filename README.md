@@ -63,10 +63,13 @@ letters directly.
   roster and power-up; the layout is random on every attempt (50 + 2 × stage soft
   blocks, with the exit and the item hidden under two of them).
 - **8 monsters** with the original speeds, points and behaviours. Pass dodges bombs.
-  Kondoria, Ovapi and Pontan go through walls. Pontan charges.
+  Kondoria, Ovapi and Pontan go through walls. Pontan charges. Modern draws them after
+  the PlayStation's designs (a red barrel Dahl, a pink octopus Ovape, a pink coin
+  Pontan…), Retro after the 1985 ones.
 - **Rules:**
   - 3:00 timer; Pontans swarm in when it runs out.
-  - Bombing the exit or the item spawns a penalty pack of monsters.
+  - Bombing the exit or the item spawns a pack of the monster that goes with the
+    stage's item (Balloms for a Bomb Up, Pontans for a Flak Jacket…).
   - Chain-kill points double.
   - Lives: ×02 at the start and +1 per cleared stage.
 - **Power-ups:** Fire, Bomb, Speed Up, Remote Control, Bomb Pass, Wall Pass, Fireman and
@@ -84,7 +87,8 @@ letters directly.
   - Game Over offers Continue, Save or Quit.
   - 8-character passwords. The original game's stage and full-power codes work too.
   - Three memory-card save files, stored in the browser.
-  - An ending with a staff roll.
+  - An ending: dawn and fireworks, then the staff roll as a cast roll of the eight
+    monsters, each alone on its own colour.
 
 ### Battle Game (1–5 players, humans and CPUs)
 
@@ -195,6 +199,7 @@ Debug URLs:
 | `#demo=<id>` | Five CPUs on a battle stage |
 | `#demo=<id>x` | The same on the alternate layout (once that level is unlocked) |
 | `#show=N` | Bomberman Show Time skit N (1–4, after stages 10, 20, 30, 40) |
+| `#ending` | The Normal Game ending |
 
 Battle stage ids run `b1`–`b8`, `n1`–`n8` and `a1`–`a8`. In the browser, `window.__bomberman`
 exposes the running app for tests.

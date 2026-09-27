@@ -3,6 +3,7 @@ import { flipX, pixelSprite, type Gfx } from '../engine/gfx';
 import type { Scene } from '../engine/scene';
 import { CampaignSession } from '../game/campaign/session';
 import { startNormalGame } from './normal/flow';
+import { EndingScene } from './normal/ending';
 import { ShowTimeScene } from './normal/showTime';
 import { goTitle } from './nav';
 import { BattleMatch } from './battle/match';
@@ -17,7 +18,7 @@ import { ENEMY_ORDER } from '../game/campaign/enemies';
 
 /**
  * First scene: routes to the title screen, or to a debug shortcut from the URL hash
- * (#play=N, #play=Nr, #battle=<stage>, #demo=<stage>, #show=N, and the #sprites / #arena /
+ * (#play=N, #play=Nr, #battle=<stage>, #demo=<stage>, #show=N, #ending, and the #sprites / #arena /
  * #enemies art previews).
  */
 export class BootScene implements Scene {
@@ -64,6 +65,8 @@ export class BootScene implements Scene {
       const chars = ['bomberman', 'cossack', 'punk', 'mexican', 'barbarian', 'great', 'jet', 'bazooka', 'hammer', 'lady'];
       if (arena.level !== 'beginner') cfg.players.forEach((p, i) => (p.character = chars[(i + (arena.level === 'advanced' ? 5 : 0)) % chars.length]));
       new BattleMatch(this.app, cfg, () => goTitle(this.app)).start();
+    } else if (h === '#ending') {
+      this.app.scenes.go(new EndingScene(this.app, new CampaignSession('modern')));
     } else if (h.startsWith('#show')) {
       // Dev shortcut: #show=1..4, the Show Time skit after stage 10, 20, 30 or 40.
       const n = Math.max(1, Math.min(4, Number(h.split('=')[1]) || 1));

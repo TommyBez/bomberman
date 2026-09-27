@@ -2,7 +2,7 @@ import { mix } from '../engine/gfx';
 import type { EnemyKind } from '../game/campaign/enemies';
 import { PixelCanvas } from './pixel';
 
-/** Original, procedurally drawn designs for the eight single-player enemies (16×16). */
+/** Procedurally drawn designs for the eight single-player enemies (16×16): Modern and Retro. */
 
 export const ENEMY_ANIM_FRAMES = 4;
 
@@ -76,13 +76,137 @@ function body(p: PixelCanvas, cx: number, cy: number, rx: number, ry: number, ba
   p.ellipse(cx - rx * 0.42, cy - ry * 0.45, Math.max(1, rx * 0.28), Math.max(1, ry * 0.22), mix(base, '#ffffff', 0.55));
 }
 
-/** `retro` draws flat, NES-like colours without shading. */
+/** Big round eyes (the Modern designs'), pupils looking the way the monster goes. */
+function bigEyes(p: PixelCanvas, xs: [number, number], y: number, look: Look, dead: boolean, pupil = '#101030'): void {
+  for (const x of xs) {
+    p.circle(x, y, 2.4, '#000000');
+    p.circle(x, y, 1.7, '#ffffff');
+    if (dead) {
+      p.px(Math.round(x) - 1, y - 1, '#000000');
+      p.px(Math.round(x), y, '#000000');
+      p.px(Math.round(x) + 1, y + 1, '#000000');
+    } else p.rect(Math.round(x) + (look === 'left' ? -1 : 0), y - 1, 1, 2, pupil);
+  }
+}
+
+/**
+ * The PlayStation's Modern designs for the monsters that look different from the 1985 ones:
+ * a pale-blue drop (Onil), a red barrel (Dahl), an orange ball with a gaping mouth (Minvo),
+ * a teal blob (Doria), a pink octopus (Ovape), a yellow tiger (Pass), a pink coin (Pontan).
+ */
+function drawModern(p: PixelCanvas, kind: EnemyKind, f: number, look: Look, dead: boolean): boolean {
+  const bob = f === 1 || f === 2 ? 1 : 0;
+  switch (kind) {
+    case 'oneal': {
+      // The drop's tip leans with the sway.
+      const sway = [0, 1, 0, -1][f];
+      body(p, 7.5, 9.5, 6.2, 5.4 - (f % 2) * 0.3, '#b8e0ff');
+      for (let i = 0; i < 4; i++) {
+        const dx = i < 2 ? sway : 0;
+        p.rect(7 - i + dx, 1 + i, 2 + i * 2, 1, '#000000');
+        if (i > 0) p.rect(8 - i + dx, 1 + i, i * 2, 1, i === 1 ? '#e8f6ff' : '#b8e0ff');
+      }
+      eyes(p, { ex: [5, 10], ey: 9, look, mood: dead ? 'dead' : 'angry', mouthY: 13 });
+      mouth(p, 8, 13, dead ? 'dead' : 'plain', 1);
+      return true;
+    }
+    case 'doll': {
+      const y0 = 2 + bob;
+      p.roundRect(1, y0, 14, 13 - bob, '#000000', 4);
+      p.roundRect(2, y0 + 1, 12, 11 - bob, '#d82020', 3);
+      p.rect(2, y0 + 4, 12, 1, '#901010');
+      p.rect(2, y0 + 8, 12, 1, '#901010');
+      p.rect(4, y0 + 1, 3, 2, '#ff9080');
+      bigEyes(p, [5.5, 10.5], y0 + 6, look, dead, '#1830c0');
+      return true;
+    }
+    case 'minvo': {
+      body(p, 7.5, 8, 6.4, 6.2 - (f % 2) * 0.4, '#ff6a18');
+      bigEyes(p, [5, 10], 6, look, dead);
+      if (dead) mouth(p, 8, 12, 'dead', 2);
+      else {
+        p.ellipse(8.5, 12, 3, 1.6 + (f % 2) * 0.6, '#000000');
+        p.ellipse(8.5, 12, 2, 0.8 + (f % 2) * 0.6, '#a01818');
+      }
+      return true;
+    }
+    case 'kondoria': {
+      p.ctx.globalAlpha = 0.92;
+      p.ellipse(3.5, 3.5, 2.4, 2.4, '#000000');
+      p.ellipse(11.5, 3.5, 2.4, 2.4, '#000000');
+      p.ellipse(7.5, 9, 7, 5.8, '#000000');
+      p.ellipse(3.5, 3.5, 1.4, 1.4, '#30c0b0');
+      p.ellipse(11.5, 3.5, 1.4, 1.4, '#30c0b0');
+      p.ellipse(7.5, 9, 6, 4.8, '#30c0b0');
+      p.ellipse(6, 7, 3, 2, '#90f0e0');
+      const wave = f % 2;
+      for (let x = 2; x < 14; x++) if ((x + wave) % 3 === 0) p.px(x, 14, '#30c0b0');
+      p.ctx.globalAlpha = 1;
+      eyes(p, { ex: [5, 10], ey: 9, look, mood: dead ? 'dead' : 'happy', mouthY: 12 });
+      mouth(p, 8, 12, dead ? 'dead' : 'happy', 1);
+      return true;
+    }
+    case 'ovapi': {
+      p.ellipse(7.5, 6.5, 6.4, 5.8, '#000000');
+      p.ellipse(7.5, 6.5, 5.4, 4.8, '#f068a8');
+      p.ellipse(5.5, 4, 1.8, 1.2, '#ffc0dc');
+      // Four wriggling legs.
+      for (let n = 0; n < 4; n++) {
+        const x = 2 + n * 3.4;
+        const kick = (n + f) % 2;
+        p.rect(Math.round(x) - 1, 10, 4, 5 - kick, '#000000');
+        p.rect(Math.round(x), 10, 2, 4 - kick, '#f068a8');
+      }
+      p.rect(3, 10, 10, 1, '#f068a8');
+      bigEyes(p, [5.5, 9.5], 6, look, dead, '#108080');
+      return true;
+    }
+    case 'pass': {
+      p.rect(1, 1, 4, 4, '#000000');
+      p.rect(11, 1, 4, 4, '#000000');
+      p.rect(2, 2, 2, 2, '#ffe060');
+      p.rect(12, 2, 2, 2, '#ffe060');
+      body(p, 7.5, 8.5, 6.4, 6, '#ffd02a');
+      p.rect(7, 3, 2, 2, '#c07000');
+      p.px(1, 8, '#c07000');
+      p.px(2, 9, '#c07000');
+      p.px(14, 8, '#c07000');
+      p.px(13, 9, '#c07000');
+      eyes(p, { ex: [5, 10], ey: 7, look, mood: dead ? 'dead' : 'angry', mouthY: 11 });
+      if (!dead) {
+        p.rect(6, 11, 4, 2, '#000000');
+        p.px(6, 13, '#ffffff');
+        p.px(9, 13, '#ffffff');
+        p.px(7, 11, '#ff3060');
+        p.px(8, 11, '#ff3060');
+      } else mouth(p, 8, 11, 'dead');
+      return true;
+    }
+    case 'pontan': {
+      const rx = [6.6, 4.8, 2.2, 4.8][f];
+      p.ellipse(7.5, 7.5, rx + 1, 7.4, '#000000');
+      p.ellipse(7.5, 7.5, rx, 6.4, '#b01860');
+      p.ellipse(7.5 - rx * 0.12, 7, rx * 0.82, 5.6, '#ff58a8');
+      if (rx > 4) {
+        p.ellipse(7.5 - rx * 0.4, 4.5, 1.4, 1.2, '#ffe860');
+        eyes(p, { ex: [f === 0 ? 5 : 6, f === 0 ? 10 : 9], ey: 7, look, mood: dead ? 'dead' : 'angry', mouthY: 11 });
+        mouth(p, 8, 11, dead ? 'dead' : 'angry', f === 0 ? 2 : 1);
+      } else p.rect(7, 2, 1, 11, '#ffe860');
+      return true;
+    }
+    default:
+      return false;
+  }
+}
+
+/** `retro` draws the 1985 designs in flat, NES-like colours without shading. */
 export function drawEnemy(kind: EnemyKind, frame: number, look: Look, dead = false, retro = false): HTMLCanvasElement {
   flat = retro;
   const p = new PixelCanvas(16, 16);
   const f = frame % ENEMY_ANIM_FRAMES;
   const bob = f === 1 || f === 2 ? 1 : 0;
   const mood = (m: Face['mood']): Face['mood'] => (dead ? 'dead' : m);
+  if (!retro && drawModern(p, kind, f, look, dead)) return p.canvas;
   switch (kind) {
     case 'balloom': {
       // Orange balloon with a tied knot, bobbing gently.
