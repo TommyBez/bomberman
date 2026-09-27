@@ -6,47 +6,47 @@ import type { Theme } from './tiles';
 /** Arena colour themes for the battle stages. */
 export const BATTLE_THEMES: Record<string, Theme> = {
   // SeeSaw Park: an orange checkered floor, hedge blocks, footballs.
-  seesawpark: { name: 'seesawpark', backdrop: '#102010', floor: '#f0a040', floorAlt: '#f8c860', floorStyle: 'checker', hard: '#3a9a3c', hardStyle: 'hedgeBlock', wall: '#806040', wallStyle: 'hedge', soft: '#f8f8f8', softStyle: 'ball', hud: ['#3a7a30', '#1a4010'], shadow: 0.3 },
+  seesawpark: { name: 'seesawpark', backdrop: '#102010', floor: '#f0a040', floorAlt: '#f8c860', floorStyle: 'checker', hard: '#3a9a3c', hardStyle: 'hedgeBlock', wall: '#806040', wallStyle: 'hedge', soft: '#f8f8f8', softStyle: 'ball', shadow: 0.3 },
   // SeeSaw Land: a teal polka-dot floor, red roofs, grey rocks.
-  seesawland: { name: 'seesawland', backdrop: '#081818', floor: '#2a8a8a', floorAlt: '#1e6a5a', floorStyle: 'dots', hard: '#e04838', hardStyle: 'roof', wall: '#2c6a3a', wallStyle: 'hedge', soft: '#a8a8b0', softStyle: 'rock', hud: ['#2c6a3a', '#103018'], shadow: 0.3 },
+  seesawland: { name: 'seesawland', backdrop: '#081818', floor: '#2a8a8a', floorAlt: '#1e6a5a', floorStyle: 'dots', hard: '#e04838', hardStyle: 'roof', wall: '#2c6a3a', wallStyle: 'hedge', soft: '#a8a8b0', softStyle: 'rock', shadow: 0.3 },
   // Take the Train: a green forest clearing with stone cones and bushes.
-  forest: { name: 'forest', backdrop: '#081408', floor: '#4aa040', floorAlt: '#58b04c', floorStyle: 'grass', hard: '#b8bcc4', hardStyle: 'boulder', wall: '#2c7a24', wallStyle: 'hedge', soft: '#3c8a30', softStyle: 'bush', hud: ['#3a8a2c', '#185010'], shadow: 0.3 },
+  forest: { name: 'forest', backdrop: '#081408', floor: '#4aa040', floorAlt: '#58b04c', floorStyle: 'grass', hard: '#b8bcc4', hardStyle: 'boulder', wall: '#2c7a24', wallStyle: 'hedge', soft: '#3c8a30', softStyle: 'bush', shadow: 0.3 },
   // One-Way Street: a plank floor, pale blue posts, green blocks.
-  planks: { name: 'planks', backdrop: '#140c04', floor: '#d08a40', floorAlt: '#e09a50', floorStyle: 'wood', hard: '#98c8e8', hardStyle: 'drum', wall: '#8a5020', wallStyle: 'stone', soft: '#50a848', softStyle: 'crate', hud: ['#8a5020', '#402008'], shadow: 0.3 },
+  planks: { name: 'planks', backdrop: '#140c04', floor: '#d08a40', floorAlt: '#e09a50', floorStyle: 'wood', hard: '#98c8e8', hardStyle: 'drum', wall: '#8a5020', wallStyle: 'stone', soft: '#50a848', softStyle: 'crate', shadow: 0.3 },
   // Pipe City: a yellow floor, grey blocks, cream boulders, blue pipes.
-  pipecity: { name: 'pipecity', backdrop: '#141004', floor: '#f0c838', floorAlt: '#e8b828', floorStyle: 'plain', hard: '#a0a6b8', hardStyle: 'bevel', wall: '#8a7040', wallStyle: 'stone', soft: '#f0ecd8', softStyle: 'rock', pipe: '#78b8e8', hud: ['#8a7040', '#403010'], shadow: 0.3 },
+  pipecity: { name: 'pipecity', backdrop: '#141004', floor: '#f0c838', floorAlt: '#e8b828', floorStyle: 'plain', hard: '#a0a6b8', hardStyle: 'bevel', wall: '#8a7040', wallStyle: 'stone', soft: '#f0ecd8', softStyle: 'rock', pipe: '#78b8e8', shadow: 0.3 },
   // Factory: a purple floor, grey blocks, hazard-striped soft blocks.
-  plant: { name: 'plant', backdrop: '#100c18', floor: '#8878c0', floorAlt: '#9888cc', floorStyle: 'metal', hard: '#a0a4b0', hardStyle: 'metal', wall: '#505058', wallStyle: 'metal', soft: '#e8c040', softAlt: '#6a6a78', softStyle: 'hazard', hud: ['#50505a', '#202028'], shadow: 0.3 },
+  plant: { name: 'plant', backdrop: '#100c18', floor: '#8878c0', floorAlt: '#9888cc', floorStyle: 'metal', hard: '#a0a4b0', hardStyle: 'metal', wall: '#505058', wallStyle: 'metal', soft: '#e8c040', softAlt: '#6a6a78', softStyle: 'hazard', shadow: 0.3 },
   // Coming and Going: a pink floor with blue-grey blocks.
-  pinkplant: { name: 'pinkplant', backdrop: '#180c18', floor: '#d898c8', floorAlt: '#e0a8d0', floorStyle: 'metal', hard: '#8898b8', hardStyle: 'metal', wall: '#6a5070', wallStyle: 'metal', soft: '#90a8d0', softAlt: '#5a6a90', softStyle: 'hazard', hud: ['#6a5070', '#301830'], shadow: 0.3 },
+  pinkplant: { name: 'pinkplant', backdrop: '#180c18', floor: '#d898c8', floorAlt: '#e0a8d0', floorStyle: 'metal', hard: '#8898b8', hardStyle: 'metal', wall: '#6a5070', wallStyle: 'metal', soft: '#90a8d0', softAlt: '#5a6a90', softStyle: 'hazard', shadow: 0.3 },
   // Switcheroo: a green railway yard, blue orbs, orange barrels.
-  yard: { name: 'yard', backdrop: '#0c1408', floor: '#8cc850', floorAlt: '#a0d460', floorStyle: 'tiles', hard: '#5a88d8', hardStyle: 'orb', wall: '#8a6a30', wallStyle: 'stone', soft: '#f09030', softStyle: 'barrel', hud: ['#8a6a30', '#403010'], shadow: 0.3 },
+  yard: { name: 'yard', backdrop: '#0c1408', floor: '#8cc850', floorAlt: '#a0d460', floorStyle: 'tiles', hard: '#5a88d8', hardStyle: 'orb', wall: '#8a6a30', wallStyle: 'stone', soft: '#f09030', softStyle: 'barrel', shadow: 0.3 },
   // Every Which Way: an icy white floor, bushes, orange pipes.
-  frost: { name: 'frost', backdrop: '#0c1418', floor: '#dcecf4', floorAlt: '#c4dcec', floorStyle: 'ice', hard: '#d86040', hardStyle: 'bevel', wall: '#5a8aa0', wallStyle: 'stone', soft: '#58a848', softStyle: 'bush', pipe: '#e08830', hud: ['#5a8aa0', '#203848'], shadow: 0.2 },
-  road: { name: 'road', backdrop: '#101010', floor: '#707078', floorAlt: '#808088', floorStyle: 'plain', hard: '#d83838', hardStyle: 'bevel', wall: '#50505a', wallStyle: 'metal', soft: '#303038', softStyle: 'rock', hud: ['#50505a', '#202028'], shadow: 0.3 },
+  frost: { name: 'frost', backdrop: '#0c1418', floor: '#dcecf4', floorAlt: '#c4dcec', floorStyle: 'ice', hard: '#d86040', hardStyle: 'bevel', wall: '#5a8aa0', wallStyle: 'stone', soft: '#58a848', softStyle: 'bush', pipe: '#e08830', shadow: 0.2 },
+  road: { name: 'road', backdrop: '#101010', floor: '#707078', floorAlt: '#808088', floorStyle: 'plain', hard: '#d83838', hardStyle: 'bevel', wall: '#50505a', wallStyle: 'metal', soft: '#303038', softStyle: 'rock', shadow: 0.3 },
   // Warp Desert: sand, pyramids, skulls.
-  desert: { name: 'desert', backdrop: '#201408', floor: '#f0d060', floorAlt: '#e0c050', floorStyle: 'sand', hard: '#b87838', hardStyle: 'pyramid', wall: '#a06a40', wallStyle: 'stone', soft: '#f4f0e0', softStyle: 'skull', hud: ['#a06a40', '#502c10'], shadow: 0.3 },
+  desert: { name: 'desert', backdrop: '#201408', floor: '#f0d060', floorAlt: '#e0c050', floorStyle: 'sand', hard: '#b87838', hardStyle: 'pyramid', wall: '#a06a40', wallStyle: 'stone', soft: '#f4f0e0', softStyle: 'skull', shadow: 0.3 },
   // Head in the Clouds: sky floor, cloud puffs, orange lanterns.
-  sky: { name: 'sky', backdrop: '#3060c0', floor: '#2c6ad8', floorAlt: '#5a92ec', floorStyle: 'sky', hard: '#f8fbff', hardStyle: 'boulder', wall: '#5080e0', wallStyle: 'bevel', soft: '#f08830', softAlt: '#ffd070', softStyle: 'buoy', hud: ['#4070d0', '#183070'], shadow: 0.18 },
+  sky: { name: 'sky', backdrop: '#3060c0', floor: '#2c6ad8', floorAlt: '#5a92ec', floorStyle: 'sky', hard: '#f8fbff', hardStyle: 'boulder', wall: '#5080e0', wallStyle: 'bevel', soft: '#f08830', softAlt: '#ffd070', softStyle: 'buoy', shadow: 0.18 },
   // Block World: a harlequin floor with toy blocks.
-  toy: { name: 'toy', backdrop: '#200820', floor: '#f0c030', floorAlt: '#8040c0', floorStyle: 'harlequin', hard: '#e05050', hardAlt: '#40a050', hardStyle: 'checker', wall: '#8040a0', wallStyle: 'bevel', soft: '#e04040', softAlt: '#40b050', softStyle: 'toy', hud: ['#8040a0', '#401850'], shadow: 0.3 },
-  snow: { name: 'snow', backdrop: '#101828', floor: '#e8f0f8', floorAlt: '#d0e0f0', floorStyle: 'plain', hard: '#7aa8d8', hardStyle: 'crystal', wall: '#6890b8', wallStyle: 'stone', soft: '#ffffff', softStyle: 'snow', hud: ['#5078a8', '#203858'], shadow: 0.2 },
+  toy: { name: 'toy', backdrop: '#200820', floor: '#f0c030', floorAlt: '#8040c0', floorStyle: 'harlequin', hard: '#e05050', hardAlt: '#40a050', hardStyle: 'checker', wall: '#8040a0', wallStyle: 'bevel', soft: '#e04040', softAlt: '#40b050', softStyle: 'toy', shadow: 0.3 },
+  snow: { name: 'snow', backdrop: '#101828', floor: '#e8f0f8', floorAlt: '#d0e0f0', floorStyle: 'plain', hard: '#7aa8d8', hardStyle: 'crystal', wall: '#6890b8', wallStyle: 'stone', soft: '#ffffff', softStyle: 'snow', shadow: 0.2 },
   // King of the Jungle: orange dirt, tree stumps, red mushrooms.
-  jungle: { name: 'jungle', backdrop: '#081408', floor: '#d8a448', floorAlt: '#c89034', floorStyle: 'sand', hard: '#9a6430', hardStyle: 'drum', wall: '#2c7a24', wallStyle: 'hedge', soft: '#e03a30', softStyle: 'mushroom', hud: ['#3a8a2c', '#185010'], shadow: 0.3 },
+  jungle: { name: 'jungle', backdrop: '#081408', floor: '#d8a448', floorAlt: '#c89034', floorStyle: 'sand', hard: '#9a6430', hardStyle: 'drum', wall: '#2c7a24', wallStyle: 'hedge', soft: '#e03a30', softStyle: 'mushroom', shadow: 0.3 },
   // The Seven Seas: wooden decks, golden barrels, red-and-white floats.
-  sea: { name: 'sea', backdrop: '#081830', floor: '#b08050', floorAlt: '#a07040', floorStyle: 'wood', hard: '#e8b830', hardStyle: 'drum', wall: '#503018', wallStyle: 'stone', soft: '#e03030', softAlt: '#fff4f0', softStyle: 'buoy', hud: ['#2050a0', '#0c2050'], shadow: 0.3 },
+  sea: { name: 'sea', backdrop: '#081830', floor: '#b08050', floorAlt: '#a07040', floorStyle: 'wood', hard: '#e8b830', hardStyle: 'drum', wall: '#503018', wallStyle: 'stone', soft: '#e03030', softAlt: '#fff4f0', softStyle: 'buoy', shadow: 0.3 },
   // Super Power: the standard green arena (with the big emblem in the middle).
-  superpower: { name: 'superpower', backdrop: '#101820', floor: '#3c9a3a', floorAlt: '#48aa44', floorStyle: 'grass', hard: '#a4aabc', hardStyle: 'bevel', wall: '#b0b6c4', wallStyle: 'bevel', soft: '#dde1ec', softAlt: '#8894b4', softStyle: 'brick', hud: ['#c8ccd8', '#9ca2b4'], shadow: 0.38 },
+  superpower: { name: 'superpower', backdrop: '#101820', floor: '#3c9a3a', floorAlt: '#48aa44', floorStyle: 'grass', hard: '#a4aabc', hardStyle: 'bevel', wall: '#b0b6c4', wallStyle: 'bevel', soft: '#dde1ec', softAlt: '#8894b4', softStyle: 'brick', shadow: 0.38 },
   // Robo Bomber: city pavement, orange blocks, red soft blocks, skyscraper walls.
-  robocity: { name: 'robocity', backdrop: '#100c20', floor: '#6a7282', floorAlt: '#76808e', floorStyle: 'tiles', hard: '#e89840', hardStyle: 'bevel', wall: '#5a4a90', wallStyle: 'brick', soft: '#d83a34', softStyle: 'brick', hud: ['#5a4a90', '#281c50'], shadow: 0.32 },
+  robocity: { name: 'robocity', backdrop: '#100c20', floor: '#6a7282', floorAlt: '#76808e', floorStyle: 'tiles', hard: '#e89840', hardStyle: 'bevel', wall: '#5a4a90', wallStyle: 'brick', soft: '#d83a34', softStyle: 'brick', shadow: 0.32 },
   // Round and Round: a blue pond, grey boulders, lily pads.
-  pond: { name: 'pond', backdrop: '#081810', floor: '#5a84d8', floorAlt: '#78a0ea', floorStyle: 'water', hard: '#9aa0aa', hardStyle: 'boulder', wall: '#3a8a30', wallStyle: 'hedge', soft: '#58b840', softStyle: 'leaf', hud: ['#3a8a30', '#185010'], shadow: 0.25 },
+  pond: { name: 'pond', backdrop: '#081810', floor: '#5a84d8', floorAlt: '#78a0ea', floorStyle: 'water', hard: '#9aa0aa', hardStyle: 'boulder', wall: '#3a8a30', wallStyle: 'hedge', soft: '#58b840', softStyle: 'leaf', shadow: 0.25 },
   // Destination Unknown: a starry purple floor, white capsules, yellow stars.
-  space: { name: 'space', backdrop: '#0c0820', floor: '#5a3ca8', floorAlt: '#ffe060', floorStyle: 'stars', hard: '#eef2ff', hardAlt: '#4a7ae0', hardStyle: 'capsule', wall: '#b8c0d0', wallStyle: 'metal', soft: '#ffd030', softStyle: 'star', hud: ['#8890b0', '#404868'], shadow: 0.3 },
+  space: { name: 'space', backdrop: '#0c0820', floor: '#5a3ca8', floorAlt: '#ffe060', floorStyle: 'stars', hard: '#eef2ff', hardAlt: '#4a7ae0', hardStyle: 'capsule', wall: '#b8c0d0', wallStyle: 'metal', soft: '#ffd030', softStyle: 'star', shadow: 0.3 },
   // Incoming!: purple tiles, orange orbs, pale crystal blocks, brass pipes.
-  incoming: { name: 'incoming', backdrop: '#100818', floor: '#9a7ac8', floorAlt: '#a888d4', floorStyle: 'tiles', hard: '#e88838', hardStyle: 'orb', wall: '#c89838', wallStyle: 'metal', soft: '#dce6ff', softStyle: 'ice', hud: ['#b08030', '#584010'], shadow: 0.3 },
+  incoming: { name: 'incoming', backdrop: '#100818', floor: '#9a7ac8', floorAlt: '#a888d4', floorStyle: 'tiles', hard: '#e88838', hardStyle: 'orb', wall: '#c89838', wallStyle: 'metal', soft: '#dce6ff', softStyle: 'ice', shadow: 0.3 },
   // The Fast Lane: green floor, grey drums, pink cogs, a brass frame.
-  fastlane: { name: 'fastlane', backdrop: '#101008', floor: '#5aa83a', floorAlt: '#68b448', floorStyle: 'grass', hard: '#a8acb8', hardStyle: 'drum', wall: '#d8a838', wallStyle: 'metal', soft: '#f09080', softStyle: 'gear', hud: ['#c89830', '#604810'], shadow: 0.32 },
+  fastlane: { name: 'fastlane', backdrop: '#101008', floor: '#5aa83a', floorAlt: '#68b448', floorStyle: 'grass', hard: '#a8acb8', hardStyle: 'drum', wall: '#d8a838', wallStyle: 'metal', soft: '#f09080', softStyle: 'gear', shadow: 0.32 },
 };
 
 // ------------------------------------------------------------------ floor gimmicks

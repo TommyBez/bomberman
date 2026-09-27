@@ -8,6 +8,7 @@ import type { CampaignSession } from '../../game/campaign/session';
 import type { BonusStageDef } from '../../game/campaign/stages';
 import type { GameEvent } from '../../game/core/events';
 import { TILE } from '../../game/core/types';
+import { sprites } from '../../gfx/sprites';
 import { THEMES, themeForStage } from '../../gfx/tiles';
 import { FieldRenderer, type Actor, type View } from '../../render/field';
 import { clockText, HUD_HURRY, HUD_TEXT, hudIcons, hudStrip } from '../../render/hud';
@@ -196,7 +197,7 @@ export class StageScene implements Scene {
     const w = this.world;
     const s = this.field.s;
     // The tall top wall (HUD strip) sits behind the field so heads in row 1 overlap it.
-    hudStrip(g, theme, HUD_H);
+    hudStrip(g, theme, HUD_H, v.ox);
     this.field.drawTiles(g, w, v, true);
     if (w.exitRevealed()) {
       const open = w.livingEnemies() === 0;
@@ -280,25 +281,50 @@ export class StageScene implements Scene {
 
   private renderCard(g: Gfx): void {
     g.clear('#000000');
-    if (this.bonus && this.retro) {
-      g.text('BONUS STAGE', g.width / 2, g.height / 2 - 4, { align: 'center', color: '#fcfcfc' });
-      return;
-    }
-    if (this.bonus) {
-      g.text('BONUS STAGE', g.width / 2, g.height / 2 - 20, { align: 'center', scale: 2, gradient: ['#fff8a0', '#ff9020'], outline: '#401000' });
-      g.text('DEFEAT AS MANY MONSTERS', g.width / 2, g.height / 2 + 10, { align: 'center', color: '#ffffff' });
-      g.text('AS YOU CAN IN 30 SECONDS!', g.width / 2, g.height / 2 + 22, { align: 'center', color: '#ffffff' });
-      return;
-    }
-    const n = this.session.stageNumber;
     if (this.retro) {
       // Plain white on black, like 1985.
-      g.text(`STAGE ${String(n).padStart(2, ' ')}`, g.width / 2, g.height / 2 - 4, { align: 'center', color: '#fcfcfc' });
+      const text = this.bonus ? 'BONUS STAGE' : `STAGE ${String(this.session.stageNumber).padStart(2, ' ')}`;
+      g.text(text, g.width / 2, g.height / 2 - 4, { align: 'center', color: '#fcfcfc' });
       return;
     }
-    g.text(`STAGE ${n}`, g.width / 2, g.height / 2 - 12, { align: 'center', scale: 2, gradient: ['#ffffff', '#a0c8ff'], outline: '#102040' });
-    const icons = hudIcons();
-    g.image(icons.heads[0], g.width / 2 - 20, g.height / 2 + 14);
-    g.text(`× ${String(Math.max(0, this.session.lives)).padStart(2, '0')}`, g.width / 2 - 6, g.height / 2 + 16, { color: '#ffffff' });
+    // A burst of blue light with Bomberman standing in it, and the stage in white on blue.
+    drawLightBurst(g, g.width / 2, 92, this.timer);
+    const img = sprites().bombers[0].walk.down[0];
+    g.ctx.imageSmoothingEnabled = false;
+    g.ctx.drawImage(img, g.width / 2 - 16, 58, 32, 48);
+    const label = this.bonus ? 'BONUS' : `STAGE ${this.session.stageNumber}`;
+    g.text(label, g.width / 2, 150, { align: 'center', scale: 2, color: '#ffffff', outline: '#1848a8' });
+    if (!this.bonus) {
+      g.image(hudIcons().heads[0], g.width / 2 - 20, 176);
+      g.text(`× ${String(Math.max(0, this.session.lives)).padStart(2, '0')}`, g.width / 2 - 6, 178, { color: '#ffffff', outline: '#1848a8' });
+    }
   }
+}
+
+/** Rays of pale light spreading from a bright centre into deep blue, turning slowly. */
+function drawLightBurst(g: Gfx, cx: number, cy: number, t: number): void {
+  const ctx = g.ctx;
+  const glow = ctx.createRadialGradient(cx, cy, 4, cx, cy, 190);
+  glow.addColorStop(0, '#f4ffff');
+  glow.addColorStop(0.12, '#9cecfc');
+  glow.addColorStop(0.35, '#2aa8e0');
+  glow.addColorStop(0.7, '#1466b8');
+  glow.addColorStop(1, '#0a3478');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, g.width, g.height);
+  ctx.save();
+  ctx.globalAlpha = 0.18;
+  ctx.fillStyle = '#e8ffff';
+  const turn = t / 240;
+  for (let k = 0; k < 14; k++) {
+    const a = turn + (k * Math.PI * 2) / 14;
+    const spread = 0.07 + (k % 3) * 0.025;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(a - spread) * 260, cy + Math.sin(a - spread) * 260);
+    ctx.lineTo(cx + Math.cos(a + spread) * 260, cy + Math.sin(a + spread) * 260);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
 }

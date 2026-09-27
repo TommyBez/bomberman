@@ -2,13 +2,17 @@ import type { App } from '../app';
 import { mix, type Gfx } from '../engine/gfx';
 import type { Scene } from '../engine/scene';
 import { PixelCanvas } from '../gfx/pixel';
-import { drawPanel, Menu } from '../render/ui';
+import { sprites } from '../gfx/sprites';
+import { Menu } from '../render/ui';
 import { startDemo } from './battle/demo';
 import { BattleSetup } from './battle/setup';
 import { openNormalGame } from './mainMenu';
 import { OptionScene } from './option';
 
 const DEMO_IDLE_TICKS = 20 * 60;
+
+/** The title's big orange lettering. */
+const TITLE_TEXT = { scale: 2, gradient: ['#fff070', '#f07800'] as [string, string], outline: '#3c1400' };
 
 /**
  * Title screen: the logo over a tiled blue wallpaper, Bomberman's big face and PRESS
@@ -77,11 +81,12 @@ export class TitleScene implements Scene {
       const wave = this.t > 80 ? Math.round(Math.sin((this.t + i * 9) / 18) * 1.5) : 0;
       return { ch, x: x0 + i * adv, y: top + fall + wave };
     });
-    for (const p of pos) if (p.ch !== 'O') for (let d = 4; d >= 1; d--) g.text(p.ch, p.x + d, p.y + d, { scale: s, color: '#0a1034' });
-    for (const p of pos) if (p.ch !== 'O') g.text(p.ch, p.x, p.y, { scale: s, color: '#102060', outline: '#102060' });
+    // Red-to-yellow letters with a dark red extrusion.
+    for (const p of pos) if (p.ch !== 'O') for (let d = 4; d >= 1; d--) g.text(p.ch, p.x + d, p.y + d, { scale: s, color: '#3c0a04' });
+    for (const p of pos) if (p.ch !== 'O') g.text(p.ch, p.x, p.y, { scale: s, color: '#2a0602', outline: '#2a0602' });
     for (const p of pos) {
       if (p.ch === 'O') this.drawBombLetter(g, p.x + 10, p.y + 15);
-      else g.text(p.ch, p.x, p.y, { scale: s, gradient: ['#ffffff', '#40a0ff'] });
+      else g.text(p.ch, p.x, p.y, { scale: s, gradient: ['#fff060', '#e82410'] });
     }
   }
 
@@ -92,8 +97,8 @@ export class TitleScene implements Scene {
         g.rect(x - w, y + dy, w * 2 + 1, 1, color);
       }
     };
-    for (let d = 4; d >= 1; d--) disc(cx + d, cy + d, 13, '#0a1034');
-    disc(cx, cy, 13, '#102060');
+    for (let d = 4; d >= 1; d--) disc(cx + d, cy + d, 13, '#3c0a04');
+    disc(cx, cy, 13, '#2a0602');
     disc(cx, cy, 10, '#202848');
     disc(cx - 1, cy - 1, 8, '#343c64');
     disc(cx - 4, cy - 4, 3, '#8890c0');
@@ -130,10 +135,14 @@ export class TitleScene implements Scene {
     g.ctx.imageSmoothingEnabled = false;
     g.ctx.drawImage(bigHead(), g.width / 2 - 40, 58 + bob, 80, 72);
     if (this.menu) {
-      drawPanel(g, 66, 142, 124, 62, '#503080', '#281040');
-      this.menu.draw(g, 100, 150, { lineH: 18 });
+      // The modes in the title's orange lettering, straight on the wallpaper, with a bomb for a cursor.
+      this.menu.items.forEach((it, i) => {
+        const y = 144 + i * 20;
+        g.text(it.label, 76, y, TITLE_TEXT);
+        if (i === this.menu!.index) g.image(sprites().bomb[Math.floor(this.t / 8) % 3], 56 + (Math.floor(this.t / 10) % 2), y - 2);
+      });
     } else if (Math.floor(this.t / 30) % 2 === 0 || this.t < 30) {
-      g.text('PRESS START BUTTON', g.width / 2, 164, { align: 'center', scale: 1, gradient: ['#fff070', '#ff8000'], outline: '#402000' });
+      g.text('PRESS START BUTTON', g.width / 2, 160, { align: 'center', ...TITLE_TEXT });
     }
     if (!this.menu) g.text('FAN REMAKE - NOT AN OFFICIAL PRODUCT', g.width / 2, 206, { align: 'center', color: '#ffffff', outline: '#102060' });
   }

@@ -21,8 +21,6 @@ export interface Theme {
   softStyle: 'brick' | 'crate' | 'toy' | 'rock' | 'bush' | 'ice' | 'nes' | 'barrel' | 'snow' | 'gear' | 'mushroom' | 'leaf' | 'star' | 'buoy' | 'ball' | 'skull' | 'hazard';
   /** Colour of pipe covers (Pipe City, Every Which Way). */
   pipe?: string;
-  /** HUD strip colours (the tall top wall). */
-  hud: [string, string];
   /** Floor shadow strength (0 = none, as on the NES). */
   shadow: number;
 }
@@ -34,8 +32,7 @@ export const THEMES: Record<string, Theme> = {
     floor: '#3c9a3a', floorAlt: '#48aa44', floorStyle: 'grass',
     hard: '#a4aabc', hardStyle: 'bevel',
     wall: '#b0b6c4', wallStyle: 'bevel',
-    soft: '#dde1ec', softAlt: '#8894b4', softStyle: 'brick',
-    hud: ['#c8ccd8', '#9ca2b4'], shadow: 0.38,
+    soft: '#dde1ec', softAlt: '#8894b4', softStyle: 'brick', shadow: 0.38,
   },
   // Modern, stages 11–20: blue carpet, pink gem blocks, balloon border.
   m2: {
@@ -43,8 +40,7 @@ export const THEMES: Record<string, Theme> = {
     floor: '#3456c0', floorAlt: '#3c62d0', floorStyle: 'carpet',
     hard: '#f06aa8', hardStyle: 'gem',
     wall: '#28206a', wallAlt: '#ffd040', wallStyle: 'balloon',
-    soft: '#f0c040', softAlt: '#e05050', softStyle: 'toy',
-    hud: ['#3a2c88', '#1c1448'], shadow: 0.35,
+    soft: '#f0c040', softAlt: '#e05050', softStyle: 'toy', shadow: 0.35,
   },
   // Modern, stages 21–30: teal/pink checker blocks.
   m3: {
@@ -52,8 +48,7 @@ export const THEMES: Record<string, Theme> = {
     floor: '#b8a8d8', floorAlt: '#c4b6e2', floorStyle: 'tiles',
     hard: '#30b0a8', hardAlt: '#f080b0', hardStyle: 'checker',
     wall: '#208880', wallStyle: 'bevel',
-    soft: '#f4a0c4', softStyle: 'crate',
-    hud: ['#2a8a84', '#145450'], shadow: 0.3,
+    soft: '#f4a0c4', softStyle: 'crate', shadow: 0.3,
   },
   // Modern, stages 31–40: green floor, gold arrow blocks.
   m4: {
@@ -61,8 +56,7 @@ export const THEMES: Record<string, Theme> = {
     floor: '#2e8850', floorAlt: '#389458', floorStyle: 'plain',
     hard: '#e0b030', hardStyle: 'goldArrow',
     wall: '#a07818', wallStyle: 'stone',
-    soft: '#a8a0a0', softStyle: 'rock',
-    hud: ['#8a6a18', '#4a3808'], shadow: 0.36,
+    soft: '#a8a0a0', softStyle: 'rock', shadow: 0.36,
   },
   // Modern, stages 41–50: blue checker floor, pink blocks, candy-panel border.
   m5: {
@@ -70,8 +64,7 @@ export const THEMES: Record<string, Theme> = {
     floor: '#4a78e0', floorAlt: '#3c66cc', floorStyle: 'checker',
     hard: '#f278b8', hardStyle: 'candy',
     wall: '#f070b0', wallStyle: 'panel',
-    soft: '#f4c438', softAlt: '#d09018', softStyle: 'crate',
-    hud: ['#c03880', '#681848'], shadow: 0.3,
+    soft: '#f4c438', softAlt: '#d09018', softStyle: 'crate', shadow: 0.3,
   },
   // Retro: the 1985 look.
   retro: {
@@ -79,8 +72,7 @@ export const THEMES: Record<string, Theme> = {
     floor: '#388700', floorAlt: '#388700', floorStyle: 'nes',
     hard: '#bcbcbc', hardStyle: 'nes',
     wall: '#bcbcbc', wallStyle: 'nes',
-    soft: '#bcbcbc', softStyle: 'nes',
-    hud: ['#bcbcbc', '#bcbcbc'], shadow: 0,
+    soft: '#bcbcbc', softStyle: 'nes', shadow: 0,
   },
   ...BATTLE_THEMES,
   // Battle arena default (Beginner "Normal"): grass, grey stone, pale stone bricks.
@@ -89,8 +81,7 @@ export const THEMES: Record<string, Theme> = {
     floor: '#3c9a3a', floorAlt: '#48aa44', floorStyle: 'grass',
     hard: '#a4aabc', hardStyle: 'bevel',
     wall: '#b0b6c4', wallStyle: 'bevel',
-    soft: '#dde1ec', softAlt: '#8894b4', softStyle: 'brick',
-    hud: ['#c8ccd8', '#9ca2b4'], shadow: 0.38,
+    soft: '#dde1ec', softAlt: '#8894b4', softStyle: 'brick', shadow: 0.38,
   },
 };
 

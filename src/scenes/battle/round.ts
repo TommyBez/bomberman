@@ -221,7 +221,7 @@ export class BattleRoundScene implements Scene {
     g.clear(theme.backdrop);
     const sy = this.shake > 0 ? (this.shake % 2 ? 1 : -1) : 0;
     const v: View = { ox: OX, oy: OY + sy, x0: 0, x1: w.grid.w * TILE };
-    hudStrip(g, theme, HUD_H);
+    hudStrip(g, theme, HUD_H, OX, OX, OX + w.grid.w * TILE);
     this.renderer.draw(g, v, this.app.frame, true);
     this.renderHud(g);
     this.renderer.drawCarts(g, v, this.app.frame);

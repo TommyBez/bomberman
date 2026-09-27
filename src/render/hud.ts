@@ -1,7 +1,7 @@
 import type { Gfx, Sprite } from '../engine/gfx';
-import { mix } from '../engine/gfx';
 import { PixelCanvas } from '../gfx/pixel';
-import { BOMBER_COLORS, type BomberColors } from '../gfx/sprites';
+import { TILE } from '../game/core/types';
+import { BOMBER_COLORS, tileSet, type BomberColors } from '../gfx/sprites';
 import type { Theme } from '../gfx/tiles';
 
 /** Small 9×9 icons used on the HUD strip. */
@@ -86,13 +86,30 @@ export function hudIcons(): HudIcons {
   return icons;
 }
 
-/** The tall top wall that carries the HUD. */
-export function hudStrip(g: Gfx, theme: Theme, h = 32): void {
-  const [top, bottom] = theme.hud;
-  for (let y = 0; y < h; y++) g.rect(0, y, g.width, 1, mix(top, bottom, y / (h - 1)));
-  g.rect(0, 0, g.width, 1, mix(top, '#ffffff', 0.35));
-  g.rect(0, h - 3, g.width, 1, mix(bottom, '#000000', 0.3));
-  g.rect(0, h - 2, g.width, 2, '#000000');
+/**
+ * The tall top wall that carries the HUD: two rows of the stage's own wall blocks, lined
+ * up with the columns of a field whose left edge is at `ox`, between `x0` and `x1`.
+ */
+export function hudStrip(g: Gfx, theme: Theme, h = 32, ox = 0, x0 = 0, x1 = g.width): void {
+  const walls = tileSet(theme.name).walls;
+  const n = walls.length;
+  const first = Math.floor((x0 - ox) / TILE);
+  const last = Math.ceil((x1 - ox) / TILE);
+  g.ctx.save();
+  g.ctx.beginPath();
+  g.ctx.rect(x0, 0, x1 - x0, h);
+  g.ctx.clip();
+  for (let row = 0; row * TILE < h; row++) {
+    const y = h - TILE * (row + 1);
+    for (let tx = first; tx < last; tx++) g.image(walls[(((tx * 7 + row * 3) % n) + n) % n], ox + tx * TILE, y);
+    // Rows above the field's own top row are the wall's top, catching more light.
+    if (row > 0) {
+      g.ctx.globalAlpha = 0.16;
+      g.rect(x0, y, x1 - x0, TILE, '#ffffff');
+      g.ctx.globalAlpha = 1;
+    }
+  }
+  g.ctx.restore();
 }
 
 /** The golden HUD digits of the original (yellow fading to orange, black outline). */
