@@ -16,30 +16,18 @@ import { buildTiles, THEMES } from '../gfx/tiles';
 import { drawEnemy, ENEMY_ANIM_FRAMES } from '../gfx/enemyArt';
 import { ENEMY_ORDER } from '../game/campaign/enemies';
 
+const PREVIEWS = ['#arena', '#enemies', '#sprites'];
+
 /**
  * First scene: routes to the title screen, or to a debug shortcut from the URL hash
  * (#play=N, #play=Nr, #battle=<stage>, #demo=<stage>, #show=N, #ending, and the #sprites / #arena /
  * #enemies art previews).
  */
 export class BootScene implements Scene {
-  private bombs = [0, 1, 2].map((i) => drawBomb(i));
-  private flames: HTMLCanvasElement[][] = [];
-  private puffs = [0, 1, 2, 3].map((i) => drawPuff(i));
-  private bomber = Object.fromEntries(Object.entries(BOMBER_FRAMES).map(([k, v]) => [k, pixelSprite(v, BOMBER_PALETTE)]));
+  private started = false;
+  private preview: ArtPreview | null = null;
 
-  constructor(private readonly app: App) {
-    const shapes = [
-      FLAME_CENTER | FLAME_LEFT | FLAME_RIGHT | FLAME_UP | FLAME_DOWN,
-      FLAME_LEFT | FLAME_RIGHT,
-      FLAME_UP | FLAME_DOWN,
-      FLAME_LEFT,
-      FLAME_RIGHT,
-      FLAME_UP,
-      FLAME_DOWN,
-      FLAME_CENTER,
-    ];
-    for (let ph = 0; ph < FLAME_PHASES; ph++) this.flames.push(shapes.map((b) => drawFlame(b, ph)));
-  }
+  constructor(private readonly app: App) {}
 
   update(): void {
     if (this.started) return;
@@ -71,14 +59,44 @@ export class BootScene implements Scene {
       // Dev shortcut: #show=1..4, the Show Time skit after stage 10, 20, 30 or 40.
       const n = Math.max(1, Math.min(4, Number(h.split('=')[1]) || 1));
       this.app.scenes.go(new ShowTimeScene(this.app, n, () => goTitle(this.app)));
-    } else if (!['#arena', '#enemies', '#sprites'].includes(h)) {
+    } else if (!PREVIEWS.includes(h)) {
       goTitle(this.app);
     }
   }
 
-  private started = false;
+  render(g: Gfx): void {
+    if (!PREVIEWS.includes(location.hash)) {
+      // The next scene is chosen on the first update; stay black, like the page's loading
+      // screen, while it fades in.
+      g.clear('#000000');
+      return;
+    }
+    this.preview ??= new ArtPreview(this.app);
+    this.preview.render(g);
+  }
+}
 
+/** The #sprites, #arena and #enemies art previews (built only when asked for). */
+class ArtPreview {
+  private bombs = [0, 1, 2].map((i) => drawBomb(i));
+  private flames: HTMLCanvasElement[][] = [];
+  private puffs = [0, 1, 2, 3].map((i) => drawPuff(i));
+  private bomber = Object.fromEntries(Object.entries(BOMBER_FRAMES).map(([k, v]) => [k, pixelSprite(v, BOMBER_PALETTE)]));
   private tiles = buildTiles(THEMES.m1);
+
+  constructor(private readonly app: App) {
+    const shapes = [
+      FLAME_CENTER | FLAME_LEFT | FLAME_RIGHT | FLAME_UP | FLAME_DOWN,
+      FLAME_LEFT | FLAME_RIGHT,
+      FLAME_UP | FLAME_DOWN,
+      FLAME_LEFT,
+      FLAME_RIGHT,
+      FLAME_UP,
+      FLAME_DOWN,
+      FLAME_CENTER,
+    ];
+    for (let ph = 0; ph < FLAME_PHASES; ph++) this.flames.push(shapes.map((b) => drawFlame(b, ph)));
+  }
 
   render(g: Gfx): void {
     if (location.hash === '#arena') return this.renderArena(g);

@@ -17,7 +17,11 @@ const SFX_LIST = Object.keys(SFX);
 export class OptionScene implements Scene {
   private readonly menu: Menu;
 
-  constructor(private readonly app: App) {
+  /** `index`: the row to start on (the one a sub-screen was opened from). */
+  constructor(
+    private readonly app: App,
+    index = 0,
+  ) {
     this.menu = new Menu(
       app,
       [
@@ -28,6 +32,7 @@ export class OptionScene implements Scene {
       ],
       () => goMainMenu(app, 2),
     );
+    this.menu.index = index;
   }
 
   update(): void {
@@ -97,7 +102,7 @@ class SoundScene implements Scene {
 
   private leave(): void {
     this.app.audio.music('title');
-    this.app.scenes.go(new OptionScene(this.app));
+    this.app.scenes.go(new OptionScene(this.app, 1));
   }
 
   update(): void {
@@ -138,7 +143,7 @@ class ScreenScene implements Scene {
       pad.swallow();
       saveSettings(this.settings);
       this.app.audio.sfx('menuBack');
-      this.app.scenes.go(new OptionScene(this.app));
+      this.app.scenes.go(new OptionScene(this.app, 2));
     }
   }
 
@@ -195,7 +200,7 @@ class ControllerScene implements Scene {
   }
 
   private leave(): void {
-    this.app.scenes.go(new OptionScene(this.app));
+    this.app.scenes.go(new OptionScene(this.app, 3));
   }
 
   update(): void {
