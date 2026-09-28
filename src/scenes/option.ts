@@ -7,13 +7,14 @@ import type { DeviceId, FaceButton, PadFaces } from '../engine/input';
 import { PixelCanvas } from '../gfx/pixel';
 import { drawHand, drawMenuBackdrop, drawMenuWindow, drawWindow, Menu, MENU_TEXT, MENU_VALUE } from '../render/ui';
 import { applyScreenOffset, loadSettings, saveSettings } from '../settings';
+import { CommandsScene } from './commands';
 import { goMainMenu } from './nav';
 import { PasswordScene } from './normal/password';
 
 const SONG_LIST = Object.keys(SONGS);
 const SFX_LIST = Object.keys(SFX);
 
-/** OPTION: Password / Sound / Screen / Controller. */
+/** OPTION: Commands / Password / Sound / Screen / Controller. */
 export class OptionScene implements Scene {
   private readonly menu: Menu;
 
@@ -25,7 +26,8 @@ export class OptionScene implements Scene {
     this.menu = new Menu(
       app,
       [
-        { label: 'PASSWORD', action: () => app.scenes.go(new PasswordScene(app, () => app.scenes.go(new OptionScene(app)))) },
+        { label: 'COMMANDS', action: () => app.scenes.go(new CommandsScene(app, () => app.scenes.go(new OptionScene(app, 0)))) },
+        { label: 'PASSWORD', action: () => app.scenes.go(new PasswordScene(app, () => app.scenes.go(new OptionScene(app, 1)))) },
         { label: 'SOUND OPTIONS', action: () => app.scenes.go(new SoundScene(app)) },
         { label: 'SCREEN OPTIONS', action: () => app.scenes.go(new ScreenScene(app)) },
         { label: 'CONTROLLER', action: () => app.scenes.go(new ControllerScene(app)) },
@@ -102,7 +104,7 @@ class SoundScene implements Scene {
 
   private leave(): void {
     this.app.audio.music('title');
-    this.app.scenes.go(new OptionScene(this.app, 1));
+    this.app.scenes.go(new OptionScene(this.app, 2));
   }
 
   update(): void {
@@ -143,7 +145,7 @@ class ScreenScene implements Scene {
       pad.swallow();
       saveSettings(this.settings);
       this.app.audio.sfx('menuBack');
-      this.app.scenes.go(new OptionScene(this.app, 2));
+      this.app.scenes.go(new OptionScene(this.app, 3));
     }
   }
 
@@ -179,10 +181,9 @@ function drawReadBanner(g: Gfx): void {
   g.text('● CAN YOU READ THIS? ●', g.width / 2, y + 4, { align: 'center', color: '#e02010', outline: '#fff8e8' });
 }
 
-/** CONTROLLER OPTIONS: a page for each gamepad, and the keyboard keys. */
+/** CONTROLLER OPTIONS: a page for each gamepad, and the keyboard commands. */
 class ControllerScene implements Scene {
   private readonly menu: Menu;
-  private keys = false;
 
   constructor(
     private readonly app: App,
@@ -192,7 +193,10 @@ class ControllerScene implements Scene {
       app,
       [
         ...[0, 1, 2, 3].map((i) => ({ label: `CONTROLLER ${i + 1}`, action: () => app.scenes.go(new PadScene(app, i)) })),
-        { label: 'KEYBOARD', action: () => (this.keys = true) },
+        {
+          label: 'KEYBOARD',
+          action: () => app.scenes.go(new CommandsScene(app, () => app.scenes.go(new ControllerScene(app, 4)), 1)),
+        },
       ],
       () => this.leave(),
     );
@@ -200,48 +204,16 @@ class ControllerScene implements Scene {
   }
 
   private leave(): void {
-    this.app.scenes.go(new OptionScene(this.app, 3));
+    this.app.scenes.go(new OptionScene(this.app, 4));
   }
 
   update(): void {
-    if (this.keys) {
-      const pad = this.app.input.menu;
-      if (pad.pressed('a') || pad.pressed('b') || pad.pressed('d') || pad.pressed('start') || pad.pressed('select')) {
-        pad.swallow();
-        this.keys = false;
-        this.app.audio.sfx('menuBack');
-      }
-      return;
-    }
     this.menu.update();
   }
 
   render(g: Gfx): void {
     drawMenuBackdrop(g, this.app.frame);
-    if (this.keys) return this.renderKeys(g);
     drawMenuWindow(g, 'CONTROLLER OPTIONS', this.menu, { lineH: 22 });
-  }
-
-  private renderKeys(g: Gfx): void {
-    drawWindow(g, 'CONTROLLER OPTIONS', 8, 22, 240, 190);
-    const lines: [string, string][] = [
-      ['ONE PLAYER / MENUS', ''],
-      ['MOVE', 'ARROWS / WASD'],
-      ['BOMB (A)', 'SPACE / X / J'],
-      ['SPECIAL (B)', 'Z / SHIFT / K'],
-      ['PUNCH, PUSH (C)', 'C / E / L'],
-      ['STOP KICK (D)', 'Q / V / I'],
-      ['PAUSE', 'ENTER / P'],
-      ['BACK', 'ESC / BACKSPACE'],
-      ['BATTLE P1', 'WASD SPC LSHIFT E Q'],
-      ['BATTLE P2', 'ARROWS ENTER RSHIFT RCTRL \''],
-      ['TOUCH', 'ON-SCREEN PAD'],
-    ];
-    lines.forEach(([a, b], i) => {
-      const y = 44 + i * 15;
-      g.text(a, 18, y, { color: b ? MENU_TEXT.color : MENU_VALUE, outline: MENU_TEXT.outline });
-      if (b) g.text(b, 238, y, { color: MENU_VALUE, outline: MENU_TEXT.outline, align: 'right' });
-    });
   }
 }
 

@@ -15,6 +15,7 @@ import { THEMES } from '../../gfx/tiles';
 import { BattleRenderer } from '../../render/battleField';
 import type { View } from '../../render/field';
 import { clockText, HUD_DIM, HUD_HURRY, HUD_TEXT, hudIcons, hudStrip } from '../../render/hud';
+import { CommandsHelp } from '../../render/commands';
 import { drawWord, PauseMenu, type WordStyle } from '../../render/ui';
 import { goTitle } from '../nav';
 import { DEMO_TICKS } from './demo';
@@ -43,6 +44,8 @@ export class BattleRoundScene implements Scene {
   private t = 0;
   private paused = false;
   private readonly pauseMenu: PauseMenu;
+  /** Commands reference, opened from the pause menu. */
+  private help: CommandsHelp | null = null;
   private banner: { text: string; t: number; style: WordStyle } | null = null;
   private popups: Popup[] = [];
   private shake = 0;
@@ -134,10 +137,17 @@ export class BattleRoundScene implements Scene {
   }
 
   private updatePause(): void {
-    const choice = this.pauseMenu.update(this.app.input.menu);
+    const pad = this.app.input.menu;
+    if (this.help) {
+      if (this.help.update(pad, (n) => this.app.audio.sfx(n))) this.help = null;
+      return;
+    }
+    const choice = this.pauseMenu.update(pad);
     if (choice === 'continue') {
       this.paused = false;
       this.app.audio.sfx('pause');
+    } else if (choice === 'commands') {
+      this.help = new CommandsHelp();
     } else if (choice === 'quit') {
       this.app.audio.sfx('menuBack');
       this.match.abandon();
@@ -235,7 +245,10 @@ export class BattleRoundScene implements Scene {
     if (this.match.demo && Math.floor(this.app.frame / 30) % 2 === 0) {
       drawWord(g, 'DEMO PLAY', g.height - 14, 'demo');
     }
-    if (this.paused) this.pauseMenu.draw(g);
+    if (this.paused) {
+      if (this.help) this.help.draw(g, true);
+      else this.pauseMenu.draw(g);
+    }
   }
 
   private renderHud(g: Gfx): void {

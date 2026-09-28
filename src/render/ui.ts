@@ -286,7 +286,7 @@ export class Menu {
   }
 }
 
-/** In-game pause: RESUME / QUIT, and QUIT asks YES / NO first (as on PlayStation). */
+/** In-game pause: RESUME / COMMANDS / QUIT. QUIT asks YES / NO first (as on PlayStation). */
 export class PauseMenu {
   private sel = 0;
   private confirming = false;
@@ -299,16 +299,21 @@ export class PauseMenu {
   }
 
   /** Feed one tick of input; returns what the player chose, if anything. */
-  update(pad: Controller): 'continue' | 'quit' | null {
+  update(pad: Controller): 'continue' | 'quit' | 'commands' | null {
     const sfx = (n: string): void => this.app.audio.sfx(n);
+    const rows = this.confirming ? 2 : 3;
     if (pad.repeat('up') || pad.repeat('down')) {
-      this.sel = 1 - this.sel;
+      this.sel = (this.sel + (pad.repeat('up') ? rows - 1 : 1)) % rows;
       sfx('menuMove');
     }
     if (pad.pressed('start') || pad.pressed('a')) {
       pad.swallow();
       if (!this.confirming) {
         if (this.sel === 0) return 'continue';
+        if (this.sel === 1) {
+          sfx('menuOk');
+          return 'commands';
+        }
         this.confirming = true;
         this.sel = 1; // NO is the safe default
         sfx('menuOk');
@@ -316,7 +321,7 @@ export class PauseMenu {
       }
       if (this.sel === 0) return 'quit';
       this.confirming = false;
-      this.sel = 1;
+      this.sel = 2;
       sfx('menuBack');
       return null;
     }
@@ -324,7 +329,7 @@ export class PauseMenu {
       pad.swallow();
       if (!this.confirming) return 'continue';
       this.confirming = false;
-      this.sel = 1;
+      this.sel = 2;
       sfx('menuBack');
     }
     return null;
@@ -335,12 +340,14 @@ export class PauseMenu {
     g.ctx.globalAlpha = 0.5;
     g.rect(0, 0, g.width, g.height, '#000000');
     g.ctx.globalAlpha = 1;
-    drawWord(g, 'PAUSE!', 70, 'pause');
-    const options = this.confirming ? ['YES', 'NO'] : ['RESUME', 'QUIT'];
+    drawWord(g, 'PAUSE!', 62, 'pause');
+    const options = this.confirming ? ['YES', 'NO'] : ['RESUME', 'COMMANDS', 'QUIT'];
+    const y0 = this.confirming ? 108 : 96;
+    const lh = this.confirming ? 24 : 22;
     options.forEach((o, i) => {
       const sel = i === this.sel;
       const style = sel ? { gradient: ['#ffffff', '#b8ccff'] as [string, string], outline: '#1838a0' } : { color: '#808898', outline: '#282c38' };
-      g.text(o, g.width / 2, 104 + i * 24, { align: 'center', scale: 2, ...style });
+      g.text(o, g.width / 2, y0 + i * lh, { align: 'center', scale: 2, ...style });
     });
   }
 }

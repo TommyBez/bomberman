@@ -12,6 +12,7 @@ import { sprites } from '../../gfx/sprites';
 import { THEMES, themeForStage } from '../../gfx/tiles';
 import { FieldRenderer, type Actor, type View } from '../../render/field';
 import { clockText, HUD_HURRY, HUD_TEXT, hudIcons, hudStrip } from '../../render/hud';
+import { CommandsHelp } from '../../render/commands';
 import { drawWord, PauseMenu } from '../../render/ui';
 
 type Phase = 'card' | 'ready' | 'play' | 'dying' | 'clear';
@@ -32,6 +33,8 @@ export class StageScene implements Scene {
   private timer = 0;
   private paused = false;
   private readonly pauseMenu: PauseMenu;
+  /** Commands reference, opened from the pause menu. */
+  private help: CommandsHelp | null = null;
   private camX = 0;
   private shake = 0;
   private readonly field: FieldRenderer;
@@ -135,10 +138,17 @@ export class StageScene implements Scene {
   }
 
   private updatePause(): void {
-    const choice = this.pauseMenu.update(this.app.input.players[0]);
+    const pad = this.app.input.players[0];
+    if (this.help) {
+      if (this.help.update(pad, (n) => this.app.audio.sfx(n))) this.help = null;
+      return;
+    }
+    const choice = this.pauseMenu.update(pad);
     if (choice === 'continue') {
       this.paused = false;
       this.app.audio.sfx('pause');
+    } else if (choice === 'commands') {
+      this.help = new CommandsHelp();
     } else if (choice === 'quit') {
       this.app.audio.sfx('menuBack');
       this.app.audio.stopMusic();
@@ -254,7 +264,10 @@ export class StageScene implements Scene {
     this.renderHud(g);
     if (this.phase === 'ready') drawWord(g, this.timer < 55 ? 'READY' : 'START', g.height / 2 + 6, 'ready');
     if (this.phase === 'clear' && this.bonus) drawWord(g, "TIME'S UP!", g.height / 2 + 6, 'timeUp');
-    if (this.paused) this.pauseMenu.draw(g);
+    if (this.paused) {
+      if (this.help) this.help.draw(g, true);
+      else this.pauseMenu.draw(g);
+    }
   }
 
   /** Score, clock, lives, bombs and fire. Retro uses the same bar as Modern, on its grey strip. */
